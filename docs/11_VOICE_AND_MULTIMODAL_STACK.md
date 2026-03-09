@@ -2,199 +2,118 @@
 
 ## Goal
 
-Klava should support world-class voice interaction without turning the desktop product into a fragile demo.
+Voice should add power without becoming part of the core product complexity.
 
-Voice must be:
-- fast;
-- accurate;
-- optional;
-- interruptible;
-- modular;
-- updateable independently from the shell.
+Default rule:
+- `OpenClaw` remains the core runtime;
+- voice is an optional module;
+- the product must stay strong even when voice is disabled.
 
 ## Product Decision
 
-Voice is an add-on subsystem, not a side effect of the chat box.
+Voice is not a launch dependency.
+Voice is a modular capability pack.
 
 That means:
-- its engines are swappable;
-- models are downloadable separately;
-- settings and errors are explicit;
-- voice identity is controlled through policy and curated packs.
+- installable separately;
+- removable separately;
+- testable separately;
+- updateable separately.
 
-## Recommended Stack
+## Simple Recommended Stack
 
-### Input Pipeline
+### Input
 
-- `Silero VAD` for very fast local voice activity detection.
-- `whisper.cpp` as the primary local/native speech-to-text engine for desktop packaging and low-latency use.
-- `faster-whisper` as a secondary local engine for higher-accuracy or batch transcription when the device can support it.
-- Optional cloud fallback through `gpt-4o-mini-transcribe` or `Realtime`-class voice endpoints when the user enables cloud voice acceleration.
+- `Silero VAD`
+- `whisper.cpp`
+- optional `faster-whisper` fallback for stronger hardware
 
-Why this stack:
-- it is commercially workable from a licensing standpoint;
-- it supports both Windows and macOS paths;
-- it allows low-latency local voice without forcing all audio through the cloud.
+### Output
 
-### Output Pipeline
+- `Kokoro-82M`
+- local playback controller
+- optional cloud fallback later
 
-- `Kokoro-82M` as the primary local high-quality TTS engine.
-- Optional cloud fallback or premium mode via `gpt-4o-mini-tts` or realtime audio output.
-- local playback controller with queueing, cancellation, ducking, and interruption.
+Rule:
+- start with the smallest stack that gives good local quality.
 
-Why this stack:
-- Kokoro is open-weight and Apache-licensed;
-- it is lightweight enough to package as a downloadable subsystem;
-- it supports a curated multi-voice model strategy.
+## Supported Modes
 
-## Modes
+Ship in this order:
+1. `push-to-talk`
+2. optional `hold-to-talk`
+3. optional continuous mode
 
-Recommended voice modes:
-- `push-to-talk`
-- `hold-to-talk`
-- `continuous voice with VAD`
-- optional future `wake phrase`
+Rule:
+- do not make wake phrase a launch goal.
 
-Launch recommendation:
-- ship `push-to-talk` first;
-- add continuous mode second;
-- keep wake phrase optional until commercial licensing and false-trigger quality are acceptable.
+## Voice Pack Model
 
-## Wake Phrase Decision
+Voice packs should remain optional downloadable assets.
 
-Do not tie product success to always-on wake word on day one.
-
-Reason:
-- the current wake-word ecosystem is fragmented;
-- some popular options have commercial restrictions or non-commercial pretrained models;
-- wake phrase quality is only worth shipping when false positives and packaging cost are controlled.
-
-## Voice Pack System
-
-Voice must be delivered through a formal `Voice Pack Registry`.
-
-Voice pack contents:
-- model or adapter reference;
-- metadata;
+Each pack should define:
+- id;
+- version;
+- checksum;
 - supported languages;
 - style tags;
-- sample rate and latency profile;
-- checksum;
-- signature;
-- license and provenance fields.
+- license and provenance.
 
-Voice pack classes:
-- `system default`
-- `curated synthetic`
-- `licensed branded`
-- `user-provided custom`
-- `enterprise private`
-
-Resolution flow:
-1. Klava interprets the user's request.
-2. Voice resolver checks installed packs.
-3. If no local match exists, resolver checks the curated registry.
-4. If still not found, Klava returns a precise error and suggested alternatives.
-
-Important rule:
-- search the registry, not the open internet.
+Rule:
+- if a requested pack is unavailable, Klava should fail clearly and offer a safe fallback.
 
 ## Real-Person Voice Policy
 
-Direct real-person imitation should not be a default consumer feature.
+Default policy:
+- no unlicensed real-person imitation;
+- no auto-download from the open internet;
+- no unclear provenance.
 
-Operational rule:
-- Klava should not auto-download or enable an unlicensed pack for a real person.
-- If the user requests a real person's voice and no verified licensed pack exists, Klava should refuse cleanly.
+If a requested voice is not allowed, Klava should:
+- refuse clearly;
+- offer installed alternatives.
 
-Example response:
-- "I can't use that voice here."
-- "I can switch to a similar installed style or show available voices."
+## Error UX
 
-If the company later signs legal rights for licensed voices, those packs can be distributed through the same registry with explicit provenance.
-
-## Error Handling
-
-Voice errors need first-class UX.
-
-Examples:
+Voice errors must stay simple:
 - microphone unavailable;
 - permission denied;
 - no speech detected;
-- voice pack download failed;
-- requested voice not found;
-- requested voice blocked by policy;
-- audio engine crashed;
 - local model missing;
-- cloud voice service unavailable.
+- requested voice unavailable;
+- playback failed.
 
-User-facing response style:
-- short plain-language explanation;
-- one recovery action when possible;
+User-facing rule:
+- short explanation;
+- one recovery action;
 - one safe fallback when possible.
 
-Examples:
-- "Microphone access is off. Turn it on in Settings to use voice."
-- "That voice is not available in your installed pack list."
-- "I can't use that real-person voice in this setup."
-
-## Performance Targets
-
-Suggested targets on mainstream hardware:
-- voice activity detection under 50 ms reaction;
-- first transcription tokens under 500 to 900 ms in local fast path;
-- first audible speech chunk under 700 to 1200 ms in local TTS fast path;
-- stop-speaking interruption that feels immediate.
-
-These are target ranges, not launch guarantees.
-
-## Packaging Strategy
-
-Audio components should be distributed as separate assets:
-- base voice runtime;
-- STT models;
-- TTS models;
-- voice packs;
-- optional language packs.
-
-Benefits:
-- smaller initial installer;
-- faster updates;
-- easier premium differentiation;
-- simpler platform-specific optimization.
-
-## Update Strategy
+## Packaging and Updates
 
 Voice assets should update independently from:
 - the shell;
-- the OpenClaw runtime;
-- the privileged helper.
+- the `OpenClaw` runtime;
+- the optional helper.
 
-Each voice asset should track:
-- semantic version;
-- compatible runtime range;
-- checksum;
-- rollback candidate;
-- download source;
-- license and policy flags.
+Reason:
+- smaller installer;
+- cheaper updates;
+- easier rollback;
+- easier premium or optional distribution later.
 
-## Suggested Implementation Order
+## Implementation Order
 
-1. push-to-talk;
-2. local VAD;
-3. whisper.cpp path;
-4. Kokoro local playback;
-5. interruption and barge-in;
-6. curated voice registry;
-7. cloud voice fallback;
-8. advanced pack and premium voice distribution.
+1. keep current voice abstraction;
+2. replace browser voice with local STT/TTS module;
+3. add push-to-talk polish;
+4. add interruption;
+5. add optional voice packs;
+6. add optional cloud fallback only if needed.
 
-## Reference Inputs
+## Practical Rule
 
-Primary sources used for this stack:
-- `whisper.cpp` official repo: https://github.com/ggml-org/whisper.cpp
-- `faster-whisper` official repo: https://github.com/SYSTRAN/faster-whisper
-- `Silero VAD` official repo: https://github.com/snakers4/silero-vad
-- `Kokoro-82M` official model card: https://huggingface.co/hexgrad/Kokoro-82M
-- OpenAI audio docs: https://developers.openai.com/api/docs/guides/audio/quickstart
-- OpenAI text-to-speech docs: https://developers.openai.com/api/docs/guides/text-to-speech
+The voice plan is correct when:
+- voice is high quality;
+- voice is optional;
+- voice does not complicate the core architecture;
+- a medium-level programmer can work on it in isolation.

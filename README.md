@@ -1,22 +1,27 @@
 # Klava Bot
 
-`Klava Bot` is a desktop AI operator built on top of a controlled fork of `OpenClaw`.
+`Klava Bot` is a thin desktop product built around `OpenClaw`, which remains the core runtime and primary capability engine.
 
 Product goal: let a person install one application, enter an API key, and immediately start managing tasks, integrations, and local system actions through one modern dialogue interface.
 
 Core promise:
-- one installer;
-- one main window;
-- one conversation-first interface;
-- secure handling of secrets outside the chat transcript;
-- modular architecture for fast product growth and low-friction upstream sync with OpenClaw.
+- `OpenClaw` stays the core;
+- `Klava` adds desktop polish, onboarding, safety, and a modular UI shell;
+- the fork patch surface stays as small as possible;
+- extra capabilities are added as optional modules instead of rewrites.
 
 Product pillars:
-- `Chat-first, not chat-only`: every action can start from the chat, but sensitive and dangerous flows use dedicated secure UI surfaces.
-- `Headless runtime`: the AI runtime lives separately from the desktop shell.
-- `Safety by construction`: privileged actions go through typed workflows, approvals, logging, and rollback strategy.
-- `Upstream-friendly fork`: product-specific code stays outside the OpenClaw fork whenever possible.
-- `Global usability`: low-friction onboarding, localization readiness, accessibility, and supportable diagnostics.
+- `OpenClaw-first`: if `OpenClaw` already does the job, Klava reuses it rather than rebuilding it.
+- `Thin shell`: Klava owns install, onboarding, product UX, approvals, and diagnostics, not a second runtime.
+- `Modular everything`: voice, cloud, privileged flows, and future packs stay optional and removable.
+- `Apple-grade restraint`: very few interface elements, very high quality in spacing, hierarchy, motion, and states.
+- `Average-developer friendly`: clear boundaries, small modules, and predictable extension points.
+
+Implementation direction:
+- no large rewrite of `OpenClaw`;
+- no deep fork edits unless strictly required;
+- no giant UI framework beyond a compact reusable component set;
+- every major addition should land as a wrapper, module, or surface.
 
 Documentation map:
 - [Index](./docs/00_INDEX.md)
@@ -34,15 +39,21 @@ Documentation map:
 - [Cloud Gateway and Update Server](./docs/12_CLOUD_GATEWAY_AND_UPDATE_SERVER.md)
 - [Top 1 Strategy](./docs/13_TOP1_STRATEGY.md)
 - [Implementation Audit](./docs/14_IMPLEMENTATION_AUDIT.md)
+- [Execution Playbook](./docs/15_EXECUTION_PLAYBOOK.md)
+- [Tasklist](./TASKLIST.md)
+
+Execution control files:
+- `TASKLIST.md` is the hard implementation queue and definition-of-done tracker;
+- `design-system/MASTER.md` is the global UI source of truth;
+- `design-system/pages/*.md` are page-specific UI overrides when needed.
 
 Current status:
-- documentation baseline created;
-- architecture direction fixed;
-- working monorepo baseline implemented;
-- local runtime and modern shell are ready for first hands-on use;
-- compact modular UI shell with chat and terminal surfaces is in place;
-- guarded terminal approvals are now part of the runtime and UI flow;
-- Windows portable `.exe` packaging is working through the current Electron shell.
+- working npm workspace monorepo;
+- local runtime API embedded behind a thin desktop adapter;
+- Electron + React desktop shell with `Task Rail`, `Main Surface`, and `Context Pane`;
+- guarded task-local terminal with approvals and persistent history;
+- secure local secret storage with Windows DPAPI-backed key wrapping;
+- portable Windows `.exe` packaging through Electron Builder.
 
 ## Implemented in this iteration
 
@@ -50,37 +61,36 @@ Current status:
 - local runtime manager with typed HTTP API;
 - secure local secret storage abstraction with Windows DPAPI path;
 - persistent task/session store;
-- OpenAI direct onboarding with key + model validation;
+- OpenAI direct onboarding with secure key validation and automatic frontier-model selection;
 - compact multi-surface UI shell built from reusable components;
 - task-local terminal subsystem with command history and guard modes;
 - approval flow for guarded terminal commands;
 - surface registry foundation for future modes like `Pro`;
-- optional voice input/output controls;
-- local voice command resolver for task creation and voice switching;
 - `/terminal` and `$ ` chat routing into the terminal surface;
 - `guard strict|balanced|off` command routing into terminal settings;
-- OpenAI tool-calling layer so Klava can use the terminal from normal chat when it is the right tool;
+- OpenAI direct chat completion path after secure onboarding with automatic model refresh;
+- support bundle export with sanitized task metadata;
+- desktop startup logging for packaged main-process failures;
 - independent build pipeline for shell and runtime;
 - Electron desktop launcher that boots or discovers the local runtime;
 - portable Windows `.exe` artifact generation.
 
 ## Current Command UX
 
-Chat and shell shortcuts already supported:
+Chat and shell shortcuts supported:
 - `new task`
 - `/terminal <command>`
 - `$ <command>`
 - `guard strict`
 - `guard balanced`
 - `guard off`
-- `list voices`
-- `enable voice`
-- `disable voice`
+- `list voices` returns the current module status
+- `enable voice` and `disable voice` are currently explicit placeholders
 
-Natural-language terminal behavior:
-- Klava can now inspect terminal state and run task-scoped commands from ordinary chat using model tool-calls.
-- Guarded commands still do not bypass safety: they create approvals in `balanced` mode and stay blocked in `strict`.
-- Terminal results are written back into the task terminal history and reflected in task status.
+Current natural-language behavior:
+- normal chat uses direct OpenAI completion after onboarding;
+- guarded commands still do not bypass safety: they create approvals in `balanced` mode and stay blocked in `strict`;
+- terminal results are written back into the same task transcript and terminal history.
 
 Guard model:
 - `strict`: blocks guarded and blocked commands;
@@ -100,13 +110,14 @@ npm run dev
 ```
 
 What this starts:
-- runtime API on `http://127.0.0.1:4120`
-- desktop-ready shell in the browser on `http://127.0.0.1:5173`
+- Vite renderer on `http://127.0.0.1:5173`
+- Electron desktop shell
+- local runtime API on `http://127.0.0.1:4120` started by the desktop process
 
 First use:
 1. Open the shell.
 2. Paste your `OpenAI API key`.
-3. Leave `gpt-4.1-mini` or set another model you have access to.
+3. `Klava` auto-selects the strongest GPT model currently available to that key and refreshes it automatically later.
 4. Start chatting with `Klava`.
 
 Build:
@@ -128,10 +139,14 @@ Artifact:
 Verification already completed in this repo state:
 - `npm run check`
 - `npm run build`
-- `npm run dist:win --workspace @klava/desktop`
-- runtime smoke test for `guarded -> approval -> approve`
+- `npm run dist:win`
 - runtime smoke test for `guarded -> approval -> reject`
-- mocked agent-service smoke for `chat -> tool-call -> safe terminal run`
-- mocked agent-service smoke for `chat -> tool-call -> pending approval`
-- packaged desktop shell startup log confirms local runtime bootstrap on `127.0.0.1:4120`
-- TCP listener verification confirms the packaged shell owns `127.0.0.1:4120` after launch
+- runtime smoke test for task creation and guarded terminal approval generation
+- runtime smoke test for support bundle export without secret leakage
+- portable Windows artifact created at `apps/desktop/release/Klava 0.1.0.exe`
+
+Known current gaps:
+- the actual `OpenClaw` upstream fork is still only a reserved boundary in `forks/openclaw/`;
+- voice is intentionally not implemented beyond explicit placeholder responses;
+- the packaged app artifact is built successfully, but a full GUI startup smoke is still pending in a less restricted automation environment;
+- branded icon assets are not added yet, so Electron fallback icons are used in the packaged app.

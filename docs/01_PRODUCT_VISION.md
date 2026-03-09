@@ -2,7 +2,7 @@
 
 ## Product Statement
 
-`Klava Bot` is a personal desktop AI operator that people install like a normal app and use like a natural conversation.
+`Klava Bot` is the simplest high-quality desktop way to use `OpenClaw` as a personal AI operator.
 
 The user journey should be this simple:
 1. Install the app.
@@ -12,7 +12,7 @@ The user journey should be this simple:
 
 ## Mission
 
-Build the most usable, most capable, and most trustworthy desktop AI operator in the world.
+Make `OpenClaw` feel like a polished mainstream desktop product without reducing its power.
 
 ## Positioning
 
@@ -29,11 +29,14 @@ Klava should feel:
 ## Product Principles
 
 - `One app, one main window`: the user should never need terminal setup to begin.
+- `OpenClaw-first`: reuse the core runtime before building anything new.
 - `Conversation-first`: users speak naturally, but the system underneath remains typed, deterministic, and auditable.
 - `Secrets are not messages`: credentials and tokens never live as ordinary chat content.
 - `Parallel by default`: multiple tasks should be easy to create, inspect, pause, and resume.
 - `Capability with guardrails`: maximum power for the product, strict controls for risky operations.
 - `Fork discipline`: the product grows without turning the OpenClaw fork into an unmaintainable dead end.
+- `Modular by default`: every extra feature should be removable without breaking the core product.
+- `Simple to build`: an average programmer should be able to understand and extend a feature path quickly.
 - `Global readiness`: localization, accessibility, performance on modest hardware, and supportable diagnostics matter from day one.
 
 ## Target Users
@@ -50,22 +53,20 @@ Secondary users:
 
 ## Core Value Proposition
 
-Klava gives the user one place to:
-- talk to an AI;
-- manage multiple work streams;
-- connect services and messengers;
-- control local files, apps, and system operations;
-- approve sensitive actions safely;
-- keep all of that manageable without learning infrastructure.
+Klava gives the user one place to use the full practical power of `OpenClaw` through:
+- one installable desktop app;
+- one calm conversation-first workspace;
+- modular optional capabilities;
+- safe approvals and secret handling;
+- a UI that stays simple even when capability is high.
 
 ## Strategic Differentiators
 
-- Desktop-native install and onboarding.
-- Dialogue-based control plane over a strict action engine.
-- Local privileged execution with typed workflows instead of unconstrained admin shell access.
-- Best-in-class task parallelism in a consumer-friendly UI.
-- Separate runtime and shell updates for long-term maintainability.
-- Fast adoption of OpenClaw upstream improvements.
+- Best desktop productization of `OpenClaw`, not a competing runtime rewrite.
+- Apple-grade restraint in UI quality with a minimal element set.
+- Thin, modular architecture that keeps optional features outside the core.
+- Safe approvals and secret handling without reducing everyday power.
+- Fast adoption of upstream OpenClaw improvements because the fork remains small.
 
 ## Success Metrics
 
@@ -103,4 +104,5 @@ The product should feel like this:
 - ordinary people can use it immediately;
 - power users do not hit a wall after five minutes;
 - technical reviewers respect the architecture;
-- updates make the product stronger without destabilizing the fork.
+- updates make the product stronger without destabilizing the fork;
+- an average programmer can add or improve a feature without fear of breaking unrelated parts.

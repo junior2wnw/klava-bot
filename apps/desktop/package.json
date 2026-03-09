@@ -1,0 +1,53 @@
+{
+  "name": "@klava/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Klava Bot desktop shell",
+  "author": "Codex",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev:renderer": "vite --host 127.0.0.1 --port 5173",
+    "dev:main": "tsup electron/main.ts electron/preload.ts --watch --format cjs --out-dir dist-electron --external electron",
+    "dev:electron": "wait-on tcp:127.0.0.1:5173 file:dist-electron/main.js && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron dist-electron/main.js",
+    "build": "vite build && tsup electron/main.ts electron/preload.ts --format cjs --out-dir dist-electron --external electron",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "dist:win": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win portable"
+  },
+  "dependencies": {
+    "@klava/contracts": "0.1.0",
+    "@klava/runtime": "0.1.0",
+    "@klava/ui": "0.1.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "@vitejs/plugin-react": "^5.0.4",
+    "electron": "38.3.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.klava.bot",
+    "productName": "Klava",
+    "electronVersion": "38.3.0",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    }
+  }
+}

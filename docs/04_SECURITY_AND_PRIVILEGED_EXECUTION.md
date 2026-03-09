@@ -4,6 +4,12 @@
 
 Klava should be powerful enough to operate a local machine while remaining structurally safer than a naive "AI with admin terminal access" design.
 
+Default architectural stance:
+- `OpenClaw` remains the core runtime;
+- Klava adds thin security wrappers around that core;
+- privileged execution is an optional isolated module, not the center of the product;
+- safe defaults should work even without privileged features enabled.
+
 ## Core Security Principles
 
 - `Least privilege`: every component gets the minimum access it needs.

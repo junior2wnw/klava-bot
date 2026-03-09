@@ -1,160 +1,124 @@
 # Release Ops and QA
 
-## Release Philosophy
+## Goal
 
-Klava needs product-grade release discipline from the start because:
-- it installs local infrastructure;
-- it stores credentials;
-- it may perform system actions;
-- it will eventually ship privileged components.
+Release and QA should stay as simple as the product architecture.
 
-## Build and Release Artifacts
+The release system exists to protect three things:
+- the `OpenClaw` core;
+- the desktop shell quality;
+- user trust.
 
-Expected artifacts:
-- Windows installer for desktop shell;
-- shell update package;
-- runtime bundle package;
-- privileged helper package;
-- debug symbols and crash metadata;
-- support tools and diagnostics bundle generator.
+## Release Model
 
-Later:
-- macOS app bundle and DMG;
-- notarized helper packages.
+The product should ship a small number of artifacts:
+- `Desktop Shell`
+- `Runtime Bundle`
+- optional `Privileged Helper`
+- optional module assets such as voice packs
 
-## CI/CD Pipeline
+Rule:
+- do not create more release complexity than the product actually needs.
 
-The pipeline should include:
+## Minimum CI Pipeline
+
+The default pipeline should include:
 - lint and type checks;
-- unit tests;
-- integration tests for control API contracts;
-- end-to-end desktop smoke tests;
-- install and update tests;
-- privileged helper contract tests;
-- packaging and signing steps;
-- release manifest generation.
+- targeted unit tests;
+- shell/runtime integration smoke;
+- packaging check;
+- release metadata generation.
+
+Add heavier checks only when the related module exists.
 
 ## Test Strategy
 
-### Unit Tests
+### 1. Core Tests
 
-Focus:
-- schema validation;
-- action resolution;
-- approval policy logic;
-- redaction helpers;
-- migration logic.
+Always required:
+- contracts and schema validation;
+- onboarding path;
+- task creation and switching;
+- secret redaction;
+- shell/runtime handshake.
 
-### Integration Tests
+### 2. Product Smoke Tests
 
-Focus:
-- shell and runtime handshake;
-- provider onboarding;
-- vault operations;
-- update orchestration;
-- fork compatibility layer.
+Required before release:
+- app starts;
+- runtime connects;
+- first useful task works;
+- guarded approval flow works;
+- packaged build launches.
 
-### End-to-End Tests
+### 3. Optional Module Tests
 
-Focus:
-- clean machine install;
-- first-run onboarding;
-- new task creation;
-- parallel task behavior;
-- runtime crash and recovery;
-- update and rollback path.
+Run only when relevant:
+- voice module checks;
+- helper workflow checks;
+- cloud mode checks;
+- updater checks.
 
-### Privileged Workflow Tests
-
-Focus:
-- policy rejection;
-- approval requirement;
-- typed command execution;
-- audit logging;
-- malformed request resistance.
-
-### Upstream Sync Regression Tests
-
-Focus:
-- event stream shape;
-- provider connectivity smoke checks;
-- task persistence;
-- integration connector behavior;
-- restricted workflow assumptions.
-
-## Quality Gates Before Release
-
-- install success on clean target OS image;
-- onboarding passes with at least one major provider;
-- secret redaction verified;
-- update flow verified on same-channel and cross-version paths;
-- support bundle excludes raw secrets;
-- crash reporting and logs are visible in diagnostics UI.
+Rule:
+- optional modules should not slow down the core release loop unless they changed.
 
 ## Release Channels
 
-- `stable`: production users.
-- `beta`: early adopters and support-guided users.
-- `canary/internal`: engineering and aggressive validation.
+Keep channels simple:
+- `stable`
+- `beta`
+- optional `internal`
 
-Promotion rule:
-- no artifact moves to a broader channel without passing the narrower channel health checks.
+Rule:
+- do not create more channels unless they solve a real rollout problem.
+
+## Release Readiness
+
+Klava is ready to ship when:
+- install or package launch is reliable;
+- onboarding works;
+- the user can complete a normal task quickly;
+- secrets stay out of transcript and logs;
+- approvals behave predictably;
+- diagnostics are understandable.
 
 ## Observability
 
-Required signals:
-- install outcome;
-- first launch outcome;
-- onboarding completion;
-- provider validation success or failure;
+Collect only signals that help operate the product:
+- launch success;
+- onboarding success;
 - runtime health;
-- update outcome;
 - crash signals;
-- privileged workflow usage and failure rates;
-- support bundle generation.
+- update result;
+- approval flow failures.
 
-Operational dashboards should answer:
-- are installs failing;
-- are updates failing;
-- are providers failing;
-- are risky actions producing abnormal errors;
-- did the latest upstream sync destabilize the runtime.
+Rule:
+- never collect raw secrets;
+- avoid collecting full conversation content by default.
 
 ## Support Operations
 
-The product should provide:
-- in-app diagnostics page;
+The product should expose:
+- diagnostics page;
+- version information;
 - exportable support bundle;
-- version and channel visibility;
-- plain-language repair actions;
-- recovery path for broken runtime state.
+- plain-language repair actions.
 
 Support bundle should include:
-- version manifest;
-- environment diagnostics;
+- versions;
 - sanitized logs;
-- task metadata summary;
-- update state;
-- policy state.
+- environment basics;
+- task metadata summary.
 
 Support bundle should exclude:
 - raw secrets;
-- full sensitive transcripts by default;
-- arbitrary personal files.
+- sensitive transcripts by default;
+- arbitrary user files.
 
-## Release Safety for Privileged Features
+## Practical Release Rule
 
-Restricted workflows should use:
-- feature flags;
-- staged rollout;
-- opt-in beta exposure first;
-- strong telemetry and audit checks before stable release.
-
-## Definition of Release Readiness
-
-Klava is release-ready when:
-- a new user can install it easily;
-- a normal user can succeed without reading docs;
-- a power user can trust logs and approvals;
-- an engineer can diagnose failures quickly;
-- the team can update shell and runtime independently without chaos.
+The release process is correct when:
+- a small team can run it;
+- a medium-level engineer can understand it;
+- optional modules do not complicate the core path;
+- shipping improvements remains easier than maintaining the process.

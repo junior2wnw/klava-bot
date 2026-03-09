@@ -1,0 +1,2 @@
+export const DESKTOP_RUNTIME_PORT = 4120;
+export const DESKTOP_RUNTIME_URL = `http://127.0.0.1:${DESKTOP_RUNTIME_PORT}/api`;

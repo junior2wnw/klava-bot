@@ -2,164 +2,74 @@
 
 ## Goal
 
-Klava should not compete as "another chatbot with desktop actions".
+Klava becomes category-leading by doing two things at once:
+- keeping the real power of `OpenClaw`;
+- removing almost all visible complexity for the user and the developer.
 
-To become the category leader, Klava needs a compounding advantage across:
-- onboarding;
-- trust;
-- capability;
-- voice;
-- speed;
-- updates;
-- ecosystem.
+## Winning Formula
 
-## What Makes a Category Winner
+The moat is not more architecture.
+The moat is better execution on a smaller architecture:
+- `OpenClaw` as the core;
+- premium desktop shell;
+- very small but excellent UI system;
+- trustworthy approvals;
+- optional modules for extra power.
 
-The winning product will combine:
-- consumer simplicity;
-- operator-grade power;
-- premium desktop feel;
-- trustworthy safety boundaries;
-- relentless iteration speed.
+## Strategic Rules
 
-## Strategic Additions Beyond the Current Core
+### 1. Reuse Power, Do Not Rebuild It
 
-### 1. Structured Memory
+If `OpenClaw` already solves the problem, Klava should package and polish it instead of replacing it.
 
-Add a memory layer that is inspectable and editable.
+### 2. Make the UI Feel Expensive, Not Busy
 
-Needed features:
-- remember preferences;
-- remember working context;
-- summarize long task histories;
-- allow users to inspect and delete memory explicitly.
+The UI should feel Apple-grade in:
+- spacing;
+- typography;
+- motion;
+- states;
+- component behavior.
 
-### 2. Skill and Workflow Packs
+It should not feel Apple-like by adding more interface.
+It should feel that way by making every element better.
 
-Klava should ship domain packs:
-- support and troubleshooting;
-- creator workflows;
-- business operations;
-- developer workflows;
-- messenger bot setup;
-- local system repair.
+### 3. Keep Extra Capability Optional
 
-This gives product depth without hardcoding everything into the core.
+Voice, cloud, privileged workflows, and future packs should increase power without increasing baseline complexity.
 
-### 3. Screen and Context Awareness
+### 4. Build for Medium-Skill Contributors
 
-With permission, Klava should understand:
-- active window;
-- clipboard;
-- dragged files;
-- screenshots;
-- current workspace.
+A good architecture is one that a normal competent programmer can extend safely.
 
-This reduces friction dramatically and makes the assistant feel genuinely present on the machine.
+That means:
+- small modules;
+- obvious ownership;
+- predictable UI patterns;
+- low fork divergence.
 
-### 4. Strong Trust UX
+### 5. Trust Is a Feature
 
-The best assistant is not the one that can do the most dangerous thing.
-It is the one the user trusts enough to keep using.
+Power without trust is not a product advantage.
 
-Add:
-- approval clarity;
-- visible execution plans;
-- action previews;
-- rollback visibility;
-- clean logs and repair guidance.
-
-### 5. Voice as a First-Class Mode
-
-Not gimmick voice.
-Real operational voice:
-- interruption;
-- natural turn-taking;
-- optional continuous mode;
-- low-latency speech in and out;
-- curated premium voice options.
-
-### 6. Self-Healing Product Behavior
-
-Klava should diagnose itself.
-
-Examples:
-- runtime unhealthy;
-- missing pack;
-- outdated helper;
-- invalid provider key;
-- broken integration token.
-
-The app should propose and run repair flows instead of only showing errors.
-
-### 7. Ruthless Quality Infrastructure
-
-If you want to be top 1, quality needs its own product line.
-
-Build:
-- automated evals for task completion;
-- install and update regression labs;
-- voice latency benchmarks;
-- provider routing benchmarks;
-- upstream sync regression suites;
-- release health dashboards.
-
-### 8. Ecosystem Strategy
-
-Long-term moat:
-- plugin SDK;
-- voice pack registry;
-- workflow marketplace;
-- enterprise policy bundles;
-- partner integrations.
-
-### 9. Personal and Enterprise Modes
-
-The same core should support:
-- normal individual users;
-- paid power users;
-- support technicians;
-- enterprise-managed deployments.
-
-This broadens the market without splitting the architecture.
-
-## Features I Would Add Over Time
-
-- voice notes converted into structured tasks;
-- background task monitoring and proactive status updates;
-- "show me what you are about to do" mode for sensitive actions;
-- local knowledge vault over files and messages;
-- guided automation recording;
-- repair mode for common Windows problems;
-- support companion mode for family or customer devices;
-- optional mobile approval companion later.
+Users must understand:
+- what Klava is doing;
+- what is waiting for approval;
+- what changed;
+- how to recover.
 
 ## What To Avoid
 
-- shipping too many half-working integrations;
-- turning voice into a novelty instead of an operational mode;
-- letting the fork absorb product-specific complexity;
-- giving unrestricted admin power to free-form model output;
-- copying unsafe celebrity-voice gimmicks as a growth hack.
-
-## Real Competitive Moat
-
-The moat is not one model.
-The moat is a system:
-- easy install;
-- powerful local actions;
-- great voice;
-- trustworthy approvals;
-- modular updates;
-- strong quality loops;
-- fast product iteration.
+- architecture for architecture's sake;
+- rebuilding `OpenClaw` features inside Klava;
+- too many custom UI elements;
+- optional systems that become mandatory complexity;
+- deep fork changes that slow future updates.
 
 ## Immediate Strategic Priorities
 
-1. Install friction close to zero.
-2. First useful task under 5 minutes.
-3. Parallel task model better than generic chat apps.
-4. Voice input and output that feels premium and fast.
-5. One-key onboarding path through Klava Cloud.
-6. Safer privileged actions than the competition.
-7. Update system that lets the product evolve constantly without breaking users.
+1. Declare `OpenClaw` the core everywhere in the docs and architecture.
+2. Reduce the conceptual system to a thin shell plus optional modules.
+3. Raise UI quality while reducing UI element count.
+4. Keep the local-first Windows product excellent before expanding breadth.
+5. Add more power only through modular optional capability packs.

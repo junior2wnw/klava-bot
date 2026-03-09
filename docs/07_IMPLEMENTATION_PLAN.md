@@ -2,274 +2,119 @@
 
 ## Delivery Strategy
 
-The right approach is phased delivery with hard architectural gates.
+The project should move with the smallest possible amount of engineering force.
 
-This avoids two common failure modes:
-- building a pretty shell without a reliable runtime foundation;
-- building raw capability without a product-quality user experience.
+That means:
+- keep `OpenClaw` as the working core;
+- avoid rewrites;
+- keep the fork patch surface small;
+- build only thin product layers;
+- make extra capability modular and optional.
 
 ## Status Update
 
-Current implemented baseline:
-- `Phase 0`: done at monorepo and contract level;
-- `Phase 1`: baseline done with a working local runtime API;
-- `Phase 2`: baseline done with onboarding, chat shell, task rail, and inspector;
-- `Phase 3`: partially done through task sessions, approvals, and typed terminal actions;
-- `Phase 4`: partially done through a packaged Windows portable `.exe`, with full installer and repair flows still pending.
+Current baseline already exists:
+- modular repo;
+- local runtime connection;
+- desktop shell;
+- onboarding;
+- task rail and main surfaces;
+- guarded terminal approvals;
+- portable Windows package.
 
-## Phase 0. Foundation and Repo Bootstrap
+This means the project does not need a reset.
+It needs simplification, polish, and stricter modular boundaries.
 
-Duration:
-- 1 to 2 weeks
+## Phase 1. Freeze the OpenClaw-First Core
 
-Deliverables:
-- monorepo scaffold;
-- branch model;
-- fork import of OpenClaw;
-- base package boundaries;
-- typed schema strategy;
-- initial ADR set;
-- CI skeleton;
-- release naming and versioning policy.
-
-Exit criteria:
-- repo structure exists;
-- app packages compile;
-- fork is imported and pinned;
-- docs align with technical skeleton.
-
-## Phase 1. Runtime Embedding and Local Control API
-
-Duration:
-- 2 to 3 weeks
+Goal:
+- stop architectural sprawl;
+- document `OpenClaw` as the core;
+- reduce duplication between shell logic and runtime logic.
 
 Deliverables:
-- controlled OpenClaw runtime wrapper;
-- local control API contracts;
-- shell-to-runtime connection;
-- task/session lifecycle baseline;
-- local metadata store and migrations;
-- health endpoints and structured logs.
+- narrow shell-to-runtime contract;
+- explicit fork patch rules;
+- simplified module ownership;
+- removal of unnecessary architectural layers in docs and planning.
 
 Exit criteria:
-- shell can start runtime and list or create tasks;
-- runtime can stream events back to the shell;
-- shell/runtime version compatibility is enforced.
+- contributors can explain the system in a few sentences;
+- `OpenClaw` is clearly the main runtime;
+- optional modules are separated from the core plan.
 
-## Phase 2. Desktop Shell and First-Run Experience
+## Phase 2. Polish the Core Product
 
-Duration:
-- 2 to 3 weeks
+Goal:
+- make the existing product easy to install, easy to use, and easy to maintain.
 
 Deliverables:
-- premium desktop shell baseline;
-- onboarding flow;
-- provider connection flow;
-- secure key entry sheet;
-- main conversation surface;
-- task rail;
-- settings shell.
+- installer and updater path;
+- onboarding polish;
+- logs and diagnostics polish;
+- UI consistency pass;
+- compact reusable component set.
+- `design-system/MASTER.md` as the UI source of truth, with optional page overrides.
 
 Exit criteria:
-- clean first-launch onboarding works;
-- user can connect a provider and run the first task;
-- API key never persists in transcript.
+- install to first useful task is short and predictable;
+- the shell looks and behaves like a premium desktop product;
+- the UI remains understandable to a medium-level programmer.
+- any AI can continue UI work by reading the design-system files and the execution playbook.
 
-## Phase 3. Parallel Tasks, Workspaces, and Action Engine
+## Phase 3. Add Optional Capability Modules
 
-Duration:
-- 2 to 4 weeks
+Goal:
+- increase power without increasing core complexity.
 
-Deliverables:
-- one-click new task;
-- task pause, resume, clone, archive;
-- workspace model;
-- intent-to-action layer;
-- approval infrastructure;
-- artifact model and task metadata.
-
-Exit criteria:
-- at least three concurrent tasks behave independently;
-- guarded actions generate approvals;
-- task data survives shell restart.
-
-## Phase 4. Windows Runtime Packaging and Recovery
-
-Duration:
-- 3 to 4 weeks
-
-Deliverables:
-- Windows installer;
-- runtime manager;
-- hidden runtime substrate packaging;
-- auto-detection of prerequisites;
-- support for bootstrap, restart, and repair;
-- desktop shortcut and launch behavior.
-
-Current implementation status:
-- portable Windows `.exe` is already shipping from the repo;
-- the remaining work is installer UX, shortcut creation, repair, updater, and hidden substrate strategy.
+Priority optional modules:
+- local voice;
+- privileged helper workflows;
+- richer integration packs;
+- advanced artifact handling.
 
 Exit criteria:
-- install on a clean Windows machine reaches first useful prompt without manual dependency setup;
-- runtime recovery works after forced stop;
-- logs and health views explain failures.
+- each module can be added or improved independently;
+- the core product remains useful when a module is absent;
+- optional capability does not force a rewrite of the shell.
 
-## Phase 5. Secret Vault and Integration Flows
+## Phase 4. Add Hosted and Platform Expansion Only When Core Is Stable
 
-Duration:
-- 2 to 3 weeks
+Goal:
+- keep hosted services and second-platform work out of the critical path.
 
-Deliverables:
-- encrypted vault;
-- secret metadata model;
-- redaction pipeline;
-- integration setup flows for initial providers and channels;
-- browser-based auth path where applicable.
-
-Exit criteria:
-- keys and tokens are encrypted and redacted;
-- provider reconnect and rotation flows work;
-- transcript remains readable without leaking secrets.
-
-## Phase 5A. Voice Foundation
-
-Duration:
-- 2 to 3 weeks
-
-Deliverables:
-- microphone capture pipeline;
-- VAD integration;
-- push-to-talk and hold-to-talk UX;
-- first local STT engine integration;
-- first local TTS engine integration;
-- playback controller with interrupt and stop;
-- voice settings and diagnostics.
+Optional later work:
+- `Klava Cloud` key mode;
+- update manifest service;
+- pack registry;
+- macOS support.
 
 Exit criteria:
-- user can issue a command by voice and receive a spoken response;
-- voice features can be enabled or disabled cleanly;
-- unavailable voices and audio devices produce understandable errors.
-
-## Phase 6. Privileged Helper and Guarded Workflows
-
-Duration:
-- 3 to 5 weeks
-
-Deliverables:
-- Windows privileged helper;
-- capability policy framework;
-- safe, guarded, and restricted action routing;
-- first guarded workflows such as package install, service restart, and diagnostics;
-- first restricted workflow such as driver inspection or guided reinstall.
-
-Exit criteria:
-- restricted actions require explicit approval and elevation;
-- audit records are written;
-- helper rejects out-of-policy or malformed requests.
-
-## Phase 7. Updates, Release Channels, and Observability
-
-Duration:
-- 2 to 3 weeks
-
-Deliverables:
-- shell updater;
-- runtime updater;
-- stable, beta, and canary channels;
-- rollback logic;
-- telemetry and crash reporting baseline;
-- support bundle generation.
-
-Exit criteria:
-- shell and runtime can update independently;
-- failed update can be detected and rolled back or repaired;
-- diagnostics exclude raw secrets.
-
-## Phase 7A. Klava Cloud Gateway
-
-Duration:
-- 2 to 4 weeks
-
-Deliverables:
-- Klava-issued API key mode;
-- backend auth and quota service;
-- upstream model routing;
-- device bootstrap flow;
-- voice pack registry service;
-- signed manifest service for runtime and pack updates.
-
-Exit criteria:
-- a user can onboard with one Klava key;
-- provider keys remain server-side;
-- voice packs and app artifacts can be delivered through signed manifests.
-
-## Phase 8. macOS Enablement
-
-Duration:
-- 3 to 5 weeks
-
-Deliverables:
-- macOS packaging;
-- background service model;
-- platform secure storage integration;
-- parity for onboarding and task flows;
-- basic privileged workflow support for macOS-appropriate cases.
-
-Exit criteria:
-- same user-level workflow works on macOS;
-- platform-specific substrate remains hidden from the user;
-- release pipeline supports both platforms.
+- Windows product quality is already strong;
+- hosted services do not complicate the local-first architecture;
+- platform expansion reuses the same core contracts.
 
 ## Recommended Team Shape
 
-Minimum serious team:
-- 1 product/UX lead;
-- 1 desktop/frontend engineer;
-- 1 platform/runtime engineer;
-- 1 systems/security engineer;
-- 1 QA and release automation engineer.
+Lean serious mode:
+- 1 product-minded UI engineer;
+- 1 runtime/integration engineer;
+- 1 part-time QA or release owner.
 
-Possible lean mode:
-- 2 to 3 strong engineers plus AI-assisted execution, with a longer schedule and tighter scope control.
+This project should be possible for a small strong team because the architecture stays small.
 
-## First 30 Days
+## Critical Rules
 
-Priority outcomes:
-- create the monorepo;
-- import and freeze the initial OpenClaw fork baseline;
-- define control API schemas;
-- stand up the desktop shell skeleton;
-- connect onboarding to a real provider;
-- create the first task/session flow end to end.
-
-## Critical Gates
-
-Gate 1:
-- do not build more UX than necessary until shell-to-runtime contracts are stable.
-
-Gate 2:
-- do not expose privileged execution until typed workflows and audit infrastructure exist.
-
-Gate 3:
-- do not add many integrations until onboarding, vault, and diagnostics are solid.
-
-Gate 4:
-- do not let the fork patch surface grow without review.
-
-## Delivery Risks
-
-- too much product logic ending up inside the fork;
-- building an overpowered admin shell without enough safety;
-- underestimating packaging and update complexity on Windows;
-- polishing UI before action semantics are stable;
-- trying to support too many integrations before core flows are reliable.
+- Do not rewrite `OpenClaw`.
+- Do not add a new layer unless it removes real complexity.
+- Do not create optional infrastructure before the core product is already strong.
+- Do not let UI polish turn into UI complexity.
+- Do not let the fork patch surface grow without a concrete need.
 
 ## Delivery Philosophy
 
-The product should scale in layers:
-- first make it installable;
-- then make it useful;
-- then make it powerful;
-- then make it dangerous only in a controlled and auditable way;
-- then expand breadth.
+The order is:
+1. keep the core working;
+2. make it feel excellent;
+3. add optional power;
+4. expand only when the first three stay simple.

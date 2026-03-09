@@ -1,0 +1,30 @@
+{
+  "name": "klava-bot",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "packages/modules/*"
+  ],
+  "scripts": {
+    "dev": "powershell -ExecutionPolicy Bypass -File ./scripts/dev.ps1",
+    "check": "powershell -ExecutionPolicy Bypass -File ./scripts/check.ps1",
+    "build": "powershell -ExecutionPolicy Bypass -File ./scripts/build.ps1",
+    "dist:win": "powershell -ExecutionPolicy Bypass -File ./scripts/dist-win.ps1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.6.1",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "rimraf": "^6.0.1",
+    "tsup": "^8.5.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.7",
+    "wait-on": "^8.0.4"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}

@@ -2,15 +2,18 @@
 
 ## Repository Strategy
 
-Klava should start as a monorepo with explicit module boundaries.
+The repository should stay conceptually small even if it contains multiple packages.
 
-Goals:
-- keep shared contracts typed and versioned;
-- allow separate build and test pipelines;
-- keep OpenClaw vendor code isolated;
-- make Windows and macOS platform layers independent.
+Only a few boundaries are mandatory:
+- `OpenClaw` core;
+- desktop shell;
+- shared contracts;
+- reusable UI kit;
+- optional modules.
 
-## Proposed Structure
+Everything else is implementation detail.
+
+## Minimal Conceptual Structure
 
 ```text
 klava-bot/
@@ -18,185 +21,93 @@ klava-bot/
   docs/
   apps/
     desktop/
-    runtime-manager/
-    windows-helper/
-    macos-helper/
-    support-tools/
   packages/
-    control-api/
-    action-engine/
-    design-system/
-    secret-service/
-    workspace-model/
-    telemetry/
-    update-orchestrator/
-    integration-sdk/
-    plugin-sdk/
-    shared-types/
-    test-harness/
+    contracts/
+    ui/
+    modules/
+      voice/
+      helper/
+      cloud/
   forks/
     openclaw/
   tooling/
-    scripts/
-    build/
-    signing/
-  infra/
-    release/
-    ci/
-    packaging/
 ```
 
-## Module Responsibilities
+Note:
+- the physical repository may contain more folders;
+- contributors should still think in terms of these few core boundaries.
 
-### `apps/desktop`
-
-Contains:
-- Tauri app shell;
-- UI routes and state boundaries;
-- onboarding;
-- task rail;
-- conversation surface;
-- diagnostics UI;
-- settings and update UX.
-
-### `apps/runtime-manager`
-
-Contains:
-- local bootstrap logic;
-- runtime install and recovery;
-- start-stop-restart flows;
-- health checks;
-- bridge to updater and diagnostics;
-- Windows WSL lifecycle logic where required.
-
-### `apps/windows-helper`
-
-Contains:
-- privileged helper;
-- typed command executors;
-- OS integration boundaries;
-- admin workflow validators;
-- audit sink.
-
-### `apps/macos-helper`
-
-Contains:
-- macOS-specific privileged and service integration layer;
-- launchd integration;
-- platform-native workflow execution.
-
-### `packages/control-api`
-
-Contains:
-- typed local API schemas;
-- event contracts;
-- version negotiation;
-- compatibility helpers between shell and runtime.
-
-### `packages/action-engine`
-
-Contains:
-- intent-to-action mapping;
-- workflow registry;
-- approval policy logic;
-- capability class evaluation;
-- audit and result envelope helpers.
-
-### `packages/design-system`
-
-Contains:
-- visual tokens;
-- reusable shell components;
-- secure sheet components;
-- task cards;
-- status and motion patterns.
-
-### `packages/secret-service`
-
-Contains:
-- vault abstraction;
-- secret metadata schema;
-- rotation hooks;
-- secure redaction helpers.
-
-### `packages/workspace-model`
-
-Contains:
-- workspace, task, run, artifact, and policy schemas;
-- migrations;
-- repository or data-access boundaries.
-
-### `packages/telemetry`
-
-Contains:
-- metrics envelopes;
-- crash and health reporting hooks;
-- privacy-aware event filters.
-
-### `packages/update-orchestrator`
-
-Contains:
-- shell update logic;
-- runtime update logic;
-- channel selection;
-- rollback helpers.
-
-### `packages/integration-sdk`
-
-Contains:
-- provider and channel connector contracts;
-- onboarding handshake helpers;
-- connector lifecycle model.
-
-### `packages/plugin-sdk`
-
-Contains:
-- extension boundaries for future providers, tools, and action packs.
-
-### `packages/test-harness`
-
-Contains:
-- end-to-end test fixtures;
-- install and update test flows;
-- privileged workflow mocks;
-- regression suites for upstream sync.
+## Required Ownership
 
 ### `forks/openclaw`
 
-Contains:
-- the controlled vendor fork only;
-- minimal patches;
-- compatibility hooks;
-- upstream tracking metadata.
+Owns:
+- core runtime behavior;
+- provider and tool capabilities;
+- upstream sync boundary.
+
+Rule:
+- minimal patches only.
+
+### `apps/desktop`
+
+Owns:
+- shell frame;
+- onboarding;
+- task rail;
+- main surfaces;
+- diagnostics;
+- packaging entry points.
+
+Rule:
+- product shell only, not duplicated runtime logic.
+
+### `packages/contracts`
+
+Owns:
+- shell-to-runtime types;
+- event shapes;
+- health and version contracts.
+
+Rule:
+- keep contracts small and stable.
+
+### `packages/ui`
+
+Owns:
+- tokens;
+- layout primitives;
+- reusable UI components;
+- shell composition helpers.
+
+Rule:
+- few components, strong reuse.
+
+### `packages/modules/*`
+
+Owns optional capability packs such as:
+- voice;
+- privileged helper adapters;
+- cloud access;
+- future integrations.
+
+Rule:
+- optional modules must not complicate the core shell.
 
 ## Engineering Rules
 
-- UI cannot import internal fork code directly.
-- Privileged helper cannot execute untyped requests.
-- All storage schemas must be versioned.
-- All local APIs must include backward-compatibility rules.
-- New invasive fork patches require an ADR.
-- Product logic should prefer wrapper packages over deep fork edits.
-
-## Branching Model
-
-Suggested branches:
-- `main`: current development line;
-- `release/*`: stabilized release branches;
-- `vendor/openclaw-main`: mirror of upstream OpenClaw;
-- `integration/openclaw`: Klava-compatible integration branch for fork testing.
-
-## Documentation Rules
-
-- Every major subsystem gets a short design note or ADR before invasive implementation.
-- Every local API change must update schemas and migration notes.
-- Every risky capability must document approval rules and rollback strategy.
+- If `OpenClaw` already solves the problem, reuse it.
+- If Klava needs product polish, build a wrapper in `apps/desktop`, `packages/contracts`, or `packages/ui`.
+- If a feature is optional, put it in `packages/modules/*`.
+- UI code must not import internal fork code directly.
+- Fork edits require a clear reason and a small patch.
+- A normal feature should not require understanding the whole repository.
 
 ## Definition of Good Modularity
 
 Modularity means:
-- the shell can change without rewriting the runtime;
-- the runtime can update without rewriting the shell;
-- Windows substrate changes do not rewrite product logic;
-- upstream OpenClaw improvements can be merged with bounded effort;
-- new capabilities can be added as new actions or connectors instead of special-casing everything.
+- contributors can locate ownership quickly;
+- optional modules can be disabled cleanly;
+- the shell can evolve without rewriting the core runtime;
+- `OpenClaw` can be updated with bounded effort;
+- a medium-level programmer can add a feature by changing a small number of files.

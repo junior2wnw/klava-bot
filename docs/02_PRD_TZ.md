@@ -8,15 +8,24 @@ Working name:
 
 ## Product Summary
 
-Klava is a desktop application that packages a controlled OpenClaw-based runtime into a consumer-friendly product. The user installs one app, authenticates a model provider, and controls tasks, integrations, and local system actions through a conversation-first interface.
+Klava is a desktop application that packages `OpenClaw` into a consumer-friendly product with minimal architectural overhead. The user installs one app, authenticates a model provider, and controls tasks, integrations, and local system actions through a conversation-first interface.
 
 ## Goals
 
 - Make setup radically simpler than current OpenClaw-style self-hosting.
+- Keep `OpenClaw` as the core runtime and default capability engine.
 - Deliver a desktop-native product for Windows first and macOS next.
 - Provide maximum practical functionality without sacrificing safety.
-- Keep architecture modular so new capabilities, providers, and system integrations can be added without rewrites.
+- Keep architecture small and modular so new capabilities, providers, and system integrations can be added without rewrites.
 - Keep the fork easy to update when OpenClaw improves.
+
+## Design Constraints
+
+- If `OpenClaw` already supports the capability, Klava must reuse it rather than rebuild it.
+- New product behavior should be added as a shell wrapper, module, or adapter before considering a fork patch.
+- Optional features such as voice, cloud, privileged workflows, and future packs must remain removable.
+- UI work must fit a small reusable component system rather than page-specific one-off implementations.
+- A feature should be understandable by an average programmer without deep knowledge of the full codebase.
 
 ## Primary User Stories
 
@@ -175,14 +184,17 @@ Klava is a desktop application that packages a controlled OpenClaw-based runtime
 
 ### NFR-04 Modularity
 
-- UI, control API, runtime, privileged helper, updater, and vault layers must evolve independently.
+- `OpenClaw`, the desktop shell, contracts, and optional modules must evolve independently.
 - Product-specific logic must live outside the OpenClaw fork whenever possible.
+- The core product must remain useful even when optional modules are disabled.
 
 ### NFR-05 Maintainability
 
 - Public internal interfaces must be typed and versioned.
 - Every storage format and local API contract must include migration rules.
 - Architectural decisions should be documented through ADRs.
+- A normal feature path should touch as few modules as possible.
+- New contributors should be able to reason about UI and runtime behavior without reading the entire repository.
 
 ### NFR-06 Portability
 
@@ -200,30 +212,28 @@ Klava is a desktop application that packages a controlled OpenClaw-based runtime
 
 ### MVP
 
-- Windows installer.
+- Windows package.
 - Desktop shell.
+- OpenClaw-based runtime integration.
 - Provider onboarding.
 - Core conversation UI.
 - Parallel tasks.
 - Secret vault.
-- Controlled local runtime.
-- Basic updates.
 - Health and logs.
-- Push-to-talk voice foundation.
-- Local STT/TTS plugin interfaces.
+- Guarded terminal approvals.
+- Compact modular UI foundation.
 
 ### V1
 
-- Privileged helper.
-- Safe and guarded local system workflows.
-- Driver/service/network repair flows.
-- Broader provider and channel support.
+- Installer and updater polish.
+- Optional local voice module.
+- Optional privileged helper workflows.
 - Better diagnostics.
+- Broader provider and channel support.
 - Signed update channels.
 - Structured policy controls.
-- Continuous voice mode with interruption.
-- Voice pack registry and managed voice downloads.
-- Klava Cloud key mode.
+- Optional voice pack registry.
+- Optional Klava Cloud key mode.
 
 ### V2
 

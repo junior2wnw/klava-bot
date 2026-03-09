@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@klava/contracts": ["packages/contracts/src/index.ts"],
+      "@klava/contracts/*": ["packages/contracts/src/*"],
+      "@klava/runtime": ["packages/runtime/src/index.ts"],
+      "@klava/runtime/*": ["packages/runtime/src/*"],
+      "@klava/ui": ["packages/ui/src/index.ts"],
+      "@klava/ui/*": ["packages/ui/src/*"]
+    }
+  }
+}

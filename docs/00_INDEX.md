@@ -17,6 +17,8 @@ Recommended reading order:
 12. [Cloud Gateway and Update Server](./12_CLOUD_GATEWAY_AND_UPDATE_SERVER.md)
 13. [Top 1 Strategy](./13_TOP1_STRATEGY.md)
 14. [Implementation Audit](./14_IMPLEMENTATION_AUDIT.md)
+15. [Execution Playbook](./15_EXECUTION_PLAYBOOK.md)
+16. [Tasklist](../TASKLIST.md)
 
 Document purpose:
 - `01`: product identity, target users, strategic principles, success metrics.
@@ -33,7 +35,10 @@ Document purpose:
 - `12`: one-key cloud access model, model routing, update server, artifact delivery.
 - `13`: product differentiators and strategic additions for category leadership.
 - `14`: implemented state, current risks, audit notes, and next hardening steps.
+- `15`: concrete repository backlog, file-level build order, and AI-friendly execution rules.
+- `16`: hard checkbox plan with file creation order, command contract, and definition of done.
 
 Top-level decision:
-- `Klava Bot` is not just a themed OpenClaw UI.
-- `Klava Bot` is a modular desktop product with a controlled OpenClaw runtime under the hood.
+- `OpenClaw` is the product core and default capability engine.
+- `Klava Bot` is a thin modular desktop layer around that core.
+- The project should prefer composition, wrappers, and optional modules over fork changes and rewrites.

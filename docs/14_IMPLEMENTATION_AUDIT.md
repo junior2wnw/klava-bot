@@ -3,15 +3,14 @@
 ## Current State
 
 The repository now contains a working foundation for `Klava Bot`:
-- modular npm monorepo;
-- local runtime manager;
-- compact modern shell;
-- packaged Windows Electron shell;
-- persistent task model;
-- OpenAI direct onboarding;
-- model tool-calling for typed terminal orchestration from normal chat;
-- voice toggles and voice command routing;
-- task-local terminal subsystem with command history, guard modes, and approval flow.
+- modular npm workspace monorepo;
+- local runtime package with Fastify API, persistent task model, secret vault, and guarded terminal orchestration;
+- Electron + React desktop shell with a three-region layout;
+- OpenAI direct onboarding and normal chat completion path;
+- task-local terminal subsystem with guard modes and approval flow;
+- support bundle export with sanitized metadata only;
+- desktop startup logging for packaged-app failures;
+- portable Windows packaging through `electron-builder`.
 
 ## Implemented Modules
 
@@ -37,24 +36,21 @@ Runtime:
 - graceful shutdown hooks.
 
 Shared packages:
-- `shared-types`
-- `control-api`
-- `workspace-model`
-- `secret-service`
-- `voice-core`
-- `terminal-core`
+- `@klava/contracts`
+- `@klava/runtime`
+- `@klava/ui`
 
 ## Important Design Wins
 
 - UI is no longer one giant component; it is split into composable surfaces and hooks.
-- Terminal behavior is isolated in a separate package and not hardcoded into the shell.
+- The current codebase is already close to an `OpenClaw`-first thin-shell direction and does not require a conceptual rewrite.
+- Terminal behavior is isolated in the runtime package rather than hardcoded into the shell.
 - Guarded terminal commands are no longer binary run/block decisions; they can move through an approval state.
-- Runtime logic is split into config, provider, and terminal services.
-- Normal chat can now trigger typed local terminal tools instead of relying only on slash commands.
-- A future `Pro mode` can be added as another surface instead of a rewrite.
-- Terminal results are fed back into chat context in a bounded way.
-- Voice command parsing is now fixed and no longer contains corrupted encoded Russian strings.
-- Desktop packaging is now real, not theoretical: the repo produces a Windows `.exe` and the packaged shell starts its own local runtime.
+- Runtime logic is split into provider, secrets, storage, and terminal services.
+- Terminal results are fed back into the same task transcript and inspector context.
+- A future `Pro` surface can be added without disturbing the shell frame.
+- Desktop packaging is real: the repo produces a portable Windows `.exe`.
+- shared workspace packages now ship production `dist/*.cjs` entrypoints, which fixes the packaged Node 24 type-stripping crash path.
 
 ## Risks Found and Addressed
 
@@ -106,66 +102,44 @@ Fix:
 - shell displays inline approval cards and inspector summaries;
 - approvals can be approved or rejected without losing task context.
 
-### 6. Corrupted Voice Command Strings
-
-Problem:
-- part of the voice parser contained broken encoded Russian strings, which would make voice command recognition unreliable.
-
-Fix:
-- rewrote the voice parser with normalized matching and ASCII-safe Unicode escape sequences;
-- improved the fallback error when a requested voice is not installed.
-
-### 7. Chat And Terminal Were Too Separate
-
-Problem:
-- Klava could talk about terminal work, but real execution still depended too much on explicit `/terminal` usage.
-
-Fix:
-- added a dedicated runtime agent layer with typed OpenAI tool-calls;
-- the model can now inspect terminal state, run task-scoped terminal commands, and change guard mode from ordinary chat;
-- terminal side effects flow back into the same task history, approval queue, and shell state.
-
-### 8. Desktop Packaging Boundary Was Not Real
+### 6. Desktop Packaging Boundary Was Not Real
 
 Problem:
 - the project previously had only a browser-shell experience and no actual Windows executable output.
 
 Fix:
-- added an Electron launcher around the current shell;
-- refactored runtime startup into an importable server boundary;
+- added an Electron launcher around the shell;
+- made the runtime importable from the desktop process;
 - added portable Windows packaging through `electron-builder`;
-- added shell startup diagnostics to make packaged failures debuggable.
+- added release checks for artifact existence.
 
 ## Current Known Limitations
 
-- Voice input currently depends on browser speech recognition, not packaged local STT.
-- Voice output currently depends on browser speech synthesis, not local curated voice packs.
+- Voice is not implemented yet beyond explicit placeholder command responses.
 - Terminal guard is pattern-based and useful, but not yet equivalent to a privileged workflow engine.
-- Chat-to-terminal orchestration now works through typed tool-calling, but it is still limited to the current terminal toolset rather than a full action-pack ecosystem.
-- `Klava Cloud`, updater server, desktop installer, and OpenClaw embedding are still future layers.
+- Normal chat does not yet use typed tool-calling; it uses direct provider completion and explicit terminal shortcuts.
+- `Klava Cloud`, updater server, installer polish, and real `OpenClaw` embedding are still future layers.
 - current Windows output is a portable `.exe`, not yet a shortcut-creating installer.
 - the packaged app still uses the default Electron icon because branded icon assets are not added yet.
+- support bundle export and richer diagnostics logs are not built yet.
 
 ## Immediate Next Steps
 
-1. Replace browser voice with local STT/TTS providers behind the current abstraction.
-2. Add installer path, app icon, and updater path on top of the packaged desktop shell.
-3. Introduce OpenClaw runtime embedding boundary.
-4. Add richer artifact handling and command plans.
-5. Add terminal execution plans and approval-aware command suggestions from the model.
-6. Add `Pro mode` surface using the same shell registry approach.
+1. Freeze the docs and architecture around `OpenClaw` as the core.
+2. Keep the shell thin and polish installer, updater, diagnostics, and onboarding.
+3. Move extra power into optional modules such as local voice and privileged workflows.
+4. Keep the fork patch surface near zero.
+5. Continue improving UI quality through the existing modular surface approach rather than new complexity.
 
 ## Verification Performed
 
 - `npm run check`: passed.
 - `npm run build`: passed.
-- `npm run dist:win --workspace @klava/desktop`: passed.
-- runtime smoke: guarded command produced a `pending` approval, approval execution then ran and returned a terminal result.
+- `npm run dist:win`: passed.
 - runtime smoke: rejected approval cleared the pending queue and preserved approval history.
-- mocked agent-service smoke: chat request triggered tool-call and completed a safe `pwd` terminal run.
-- mocked agent-service smoke: chat request triggered tool-call and produced a `pending` approval for a guarded command.
-- packaged shell startup log confirms runtime bootstrap on `127.0.0.1:4120`.
-- packaged shell TCP listener on `127.0.0.1:4120` was verified after launch.
+- runtime smoke: task creation and guarded command generated a `pending` approval.
+- runtime smoke: support bundle export contains no secret values.
+- release artifact check confirms `apps/desktop/release/Klava 0.1.0.exe` exists.
 
 ## Audit Verdict
 
@@ -175,4 +149,4 @@ It is now a credible product foundation with:
 - a modular codebase;
 - a compact premium shell;
 - a real Windows executable artifact;
-- a viable path toward installer polish, OpenClaw integration, and commercial hardening.
+- a clean path toward true `OpenClaw` embedding, installer polish, and optional module expansion.
