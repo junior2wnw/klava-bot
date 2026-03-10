@@ -1,6 +1,6 @@
 # Klava
 
-`Klava` — это OpenClaw-derived desktop agent, который поставляется как один запускаемый Windows `.exe`.
+`Klava` — это Windows-агент для локальной работы, построенный поверх OpenClaw и распространяемый как один `.exe`.
 
 [![Release](https://img.shields.io/github/v/release/junior2wnw/klava-bot?display_name=tag&sort=semver)](https://github.com/junior2wnw/klava-bot/releases/latest)
 [![License](https://img.shields.io/github/license/junior2wnw/klava-bot)](./LICENSE)
@@ -9,49 +9,49 @@
 
 Languages: [English](./README.md) | **Русский**
 
-Он объединяет local-first runtime, безопасную работу с секретами, typed approvals и современную desktop-оболочку, чтобы человек мог перейти от "помоги мне с задачей" к "проверь, измени, почини или перенастрой этот компьютер" в одном продукте.
+Он объединяет локальный рантайм, хранение секретов, подтверждения действий и журнал задач, чтобы чат, работа в терминале и изменения на машине жили в одном месте.
 
-Главная ставка простая:
+Коротко:
 
-> один исполняемый файл, один лог задач, одна модель approvals, один агент, который может реально работать с компьютером перед тобой.
+> один исполняемый файл, один журнал задач, одна модель подтверждений и один инструмент, который умеет проверить машину, внести согласованные изменения и зафиксировать результат.
 
-Этот репозиторий опубликован как самостоятельный продуктовый repo, но lineage к upstream указан явно:
+Этот проект опубликован как самостоятельный репозиторий продукта, но связь с upstream указана явно:
 
-- Upstream project: [`OpenClaw`](https://github.com/openclaw/openclaw)
-- Upstream boundary в репозитории: [forks/openclaw/README.md](./forks/openclaw/README.md)
+- Исходный проект: [`OpenClaw`](https://github.com/openclaw/openclaw)
+- Граница с upstream в репозитории: [forks/openclaw/README.md](./forks/openclaw/README.md)
 - Пояснение по форку и публикации: [UPSTREAM.md](./UPSTREAM.md)
-- Документ по открытому проекту и lineage: [docs/16_OPEN_SOURCE_AND_FORK_LINEAGE.md](./docs/16_OPEN_SOURCE_AND_FORK_LINEAGE.md)
+- Документ по открытому проекту и происхождению форка: [docs/16_OPEN_SOURCE_AND_FORK_LINEAGE.md](./docs/16_OPEN_SOURCE_AND_FORK_LINEAGE.md)
 - Публичная landing page: [junior2wnw.github.io/klava-bot](https://junior2wnw.github.io/klava-bot/)
 - Русская landing page: [junior2wnw.github.io/klava-bot/ru/](https://junior2wnw.github.io/klava-bot/ru/)
 
 ## Зачем нужен Klava
 
-Большинство агентов останавливаются на советах, shell snippets или браузерной автоматизации.
+Большинство агентских проектов заканчиваются советами, командой для терминала или автоматизацией браузера.
 
-`Klava` задуман для полного desktop loop:
+`Klava` строится вокруг простого локального цикла:
 
 - понять задачу;
 - изучить локальную машину и состояние проекта;
-- запросить approval перед рискованными действиями;
-- выполнять typed workflows вместо свободного privileged текста;
-- оставлять audit trail;
-- сохранять recovery hints и support bundles.
+- запросить подтверждение перед рискованными действиями;
+- выполнять типизированные сценарии вместо свободного привилегированного текста;
+- оставлять журнал действий;
+- сохранять подсказки для восстановления и пакеты диагностики.
 
-Итоговая форма должна ощущаться не как "LLM, прикрученная к терминалу", а как связный desktop operator, которому можно доверить серьёзную локальную работу.
+Цель — получить настольный инструмент, который умеет выполнять работу, объяснять изменения и оставлять после себя понятные записи.
 
-## Что уже реально работает
+## Что уже доступно
 
 В текущем состоянии репозитория уже есть:
 
 - Electron + React desktop shell;
-- local runtime manager с typed HTTP API;
+- локальный рантайм с типизированным HTTP API;
 - безопасное локальное хранение секретов через Windows DPAPI-backed wrapping;
-- onboarding для GONKA mainnet, валидация, balance checks и выбор сильнейшей модели;
-- task system с transcript history и export support bundle;
-- guarded terminal с approval modes;
-- portable Windows `.exe` через Electron Builder.
+- подключение к GONKA mainnet, валидация, проверка баланса и выбор доступной модели;
+- система задач с историей диалога и экспортом пакета диагностики;
+- терминал с режимами подтверждения действий;
+- переносимая Windows-сборка `.exe` через Electron Builder.
 
-Текущий command UX:
+Команды, которые уже есть:
 
 - `new task`
 - `/terminal <command>`
@@ -60,78 +60,78 @@ Languages: [English](./README.md) | **Русский**
 - `guard balanced`
 - `guard off`
 
-Текущее natural-language поведение:
+Текущее поведение чата:
 
-- обычный chat использует GONKA mainnet completion после onboarding;
-- guarded commands по-прежнему проходят через approval model;
-- terminal results пишутся обратно в task transcript и terminal history.
+- обычный чат использует GONKA mainnet completion после onboarding;
+- команды с риском по-прежнему проходят через модель подтверждений;
+- вывод терминала возвращается в журнал задачи и историю терминала.
 
-Текущая заметка по provider status:
+Текущий статус провайдера:
 
-- onboarding, валидация, balance checks и model discovery для GONKA в текущем состоянии репозитория работают;
-- публичный GONKA-backed chat path сейчас заблокирован provider-side transfer-agent panic, который отслеживается в [`gonka-ai/gonka#876`](https://github.com/gonka-ai/gonka/issues/876);
-- после исправления этой provider-side проблемы на стороне Gonka документированный signed `chat/completions` path в Klava должен снова заработать без смены клиентской архитектуры.
+- onboarding, валидация, проверка баланса и получение списка моделей для GONKA сейчас работают;
+- публичный путь чата через GONKA сейчас заблокирован из-за падения transfer agent на стороне провайдера, которое отслеживается в [`gonka-ai/gonka#876`](https://github.com/gonka-ai/gonka/issues/876);
+- после исправления этой проблемы на стороне Gonka документированный подписанный путь `chat/completions` в Klava должен снова заработать без смены клиентской архитектуры.
 
-## На что рассчитана архитектура
+## Какие сценарии заложены в архитектуру
 
-Не каждый workflow ниже уже полностью shipped. Часть уже реализована, часть является запланированной поверхностью для privileged helper, cloud modules и typed workflow packs, описанных в docs.
+Не каждый сценарий ниже уже реализован. Часть уже есть в коде, остальное относится к дальнейшему развитию привилегированного помощника, облачных модулей и библиотек типизированных сценариев.
 
-Но именно в этом и идея `Klava`: все такие кейсы должны жить в одном продукте:
+Тот же рантайм должен со временем покрывать такие задачи:
 
-- проверить сломанную workstation, подготовить restore point, переустановить GPU, audio или network driver, провалидировать состояние устройства и объяснить, что изменилось;
-- заменить BaaS в локальном проекте, переписать env/config, обновить adapters, прогнать smoke checks и оставить diff summary;
-- переключить проект с одного inference provider на другой, обновить local runtime settings, проверить новый путь и откатиться при необходимости;
-- поднять новую developer machine из одного executable: установить toolchains, клонировать repo, настроить environment, проверить services и оставить машину в рабочем состоянии;
-- починить локальное dev-окружение через проверку `PATH`, shell profiles, startup tasks, Docker/WSL state и service health;
-- вынести локальные secrets из `.env` в vault-backed setup без утечки значений в transcript или logs;
-- сбросить network adapters, перенастроить firewall rules через approved typed flows и проверить connectivity;
-- собрать logs, crash state, config snapshots и system metadata в support bundle, которым реально сможет пользоваться другой инженер;
-- показать, что именно изменилось на машине, кто это approved, какая версия helper/runtime это выполнила и какой rollback path доступен.
+- проверить неисправную рабочую станцию, создать точку восстановления, переустановить видеодрайвер, аудиодрайвер или сетевой драйвер, затем проверить результат и объяснить изменения;
+- заменить BaaS в локальном проекте, переписать конфигурацию, обновить адаптеры, прогнать smoke checks и оставить краткую сводку по изменениям;
+- переключить проект с одного inference-провайдера на другой, обновить локальные настройки, проверить новый путь и при необходимости откатиться;
+- поднять новую машину разработчика из одного исполняемого файла: установить инструменты, клонировать репозитории, настроить окружение, проверить сервисы и оставить машину в рабочем состоянии;
+- починить локальное окружение через проверку `PATH`, профилей оболочки, автозапуска, состояния Docker/WSL и сервисов;
+- вынести секреты из `.env` в локальное защищённое хранилище без утечки значений в журнал или логи;
+- сбросить сетевые адаптеры, перенастроить правила файрвола через согласованные типизированные сценарии и проверить доступность сети;
+- собрать логи, состояние после падения, снимки конфигурации и системные метаданные в пакет диагностики, которым сможет пользоваться другой инженер;
+- показать, что именно изменилось на машине, кто это подтвердил, какая версия помощника или рантайма это выполнила и как откатить изменения.
 
-Это и есть целевой дизайн: не chat toy и не prompt wrapper, а серьёзный local operator.
+Это направление развития, а не утверждение, что все эти сценарии уже доступны сегодня.
 
 ## Модель безопасности
 
-Klava специально строится вокруг жёстких правил:
+Klava строится вокруг нескольких жёстких правил:
 
-- `Local-first`: основной desktop loop должен работать без обязательного remote SaaS control plane.
-- `Secrets outside transcript`: ключи должны жить во vault, а не в chat history.
-- `Typed approvals`: опасные действия требуют явного review с impact и rollback context.
-- `Typed privileged helper`: модель не должна получать общий канал "run anything as admin".
-- `Auditability`: важные действия должны оставлять структурированные следы.
+- `Локальная работа по умолчанию`: основной цикл не должен зависеть от внешней управляющей SaaS-плоскости.
+- `Секреты вне журнала`: ключи должны жить в хранилище, а не в истории чата.
+- `Явные подтверждения`: опасные действия должны сопровождаться описанием влияния и отката.
+- `Типизированные привилегированные операции`: модель не должна получать общий канал "запусти что угодно с правами администратора".
+- `Проверяемость`: важные действия должны оставлять структурированные записи.
 
-Если Klava будет заниматься driver repair, backend replacement или system recovery, это должно происходить через typed workflows, а не через prompt improvisation.
+Если Klava будет заниматься ремонтом драйверов, заменой backend-провайдера или восстановлением системы, это должно происходить через типизированные сценарии, а не через импровизацию в промпте.
 
-## OpenClaw lineage
+## Происхождение от OpenClaw
 
-Klava — это сильно модифицированный OpenClaw-derived project.
+Klava вырос из OpenClaw и расходится с ним в нескольких понятных местах.
 
-Что сохраняется близко к upstream:
+Что остаётся близким к upstream:
 
-- runtime-first architecture;
-- приоритет composition вместо rewrite;
-- минимальная fork surface, где это возможно;
-- модульные capability seams вместо гигантских монолитных features.
+- архитектура, в которой рантайм стоит в центре;
+- приоритет композиции вместо полного переписывания;
+- минимальная поверхность форка там, где это возможно;
+- модульные границы между возможностями вместо больших монолитных функций.
 
-Что является явно klava-specific:
+Что является специфичным именно для Klava:
 
-- desktop shell и UX;
-- onboarding, approvals и diagnostics;
-- packaging и release ergonomics;
-- local vault integration;
-- продуктовые modules и surface registry;
-- более строгая security-модель вокруг privileged execution.
+- оболочка и пользовательский интерфейс;
+- onboarding, подтверждения и диагностика;
+- упаковка и выпуск релизов;
+- интеграция с локальным хранилищем секретов;
+- продуктовые модули и реестр поверхностей;
+- более строгая модель безопасности вокруг привилегированных действий.
 
-Если GitHub не показывает native fork badge, lineage всё равно явно зафиксирован через [`UPSTREAM.md`](./UPSTREAM.md) и [`forks/openclaw/README.md`](./forks/openclaw/README.md).
+Если GitHub не показывает стандартный значок форка, происхождение всё равно явно зафиксировано через [`UPSTREAM.md`](./UPSTREAM.md) и [`forks/openclaw/README.md`](./forks/openclaw/README.md).
 
 ## Структура репозитория
 
-- [`apps/desktop`](./apps/desktop) - Electron shell и UI composition
-- [`packages/runtime`](./packages/runtime) - local runtime API и provider integrations
-- [`packages/ui`](./packages/ui) - reusable UI components
-- [`packages/contracts`](./packages/contracts) - shared contracts и types
-- [`docs`](./docs) - product, architecture, security и execution docs
-- [`forks/openclaw`](./forks/openclaw) - явная upstream boundary
+- [`apps/desktop`](./apps/desktop) - оболочка Electron и основной интерфейс
+- [`packages/runtime`](./packages/runtime) - локальный runtime API и интеграции с провайдерами
+- [`packages/ui`](./packages/ui) - переиспользуемые UI-компоненты
+- [`packages/contracts`](./packages/contracts) - общие контракты и типы
+- [`docs`](./docs) - документация по продукту, архитектуре и безопасности
+- [`forks/openclaw`](./forks/openclaw) - явная граница с upstream
 
 ## Документация
 
@@ -174,7 +174,7 @@ npm run dev
 npm run build
 ```
 
-Portable Windows executable:
+Переносимая Windows-сборка:
 
 ```bash
 npm run dist:win
@@ -182,18 +182,18 @@ npm run dist:win
 
 ### Для пользователей
 
-Большинству людей dev stack не нужен.
+Большинству людей стек разработки не нужен.
 
-Klava должен потребляться как один portable executable:
+Klava рассчитан на использование как одного переносимого исполняемого файла:
 
 - `apps/desktop/release/Klava 0.1.0.exe`
 
 Первое использование:
 
 1. Запусти `Klava`.
-2. Подключи provider secret через secure onboarding flow.
-3. Дай приложению провалидировать и закэшировать provider state.
-4. Начни работать через tasks, chat и approvals.
+2. Подключи секрет провайдера через безопасный сценарий первичной настройки.
+3. Дай приложению проверить и закэшировать состояние провайдера.
+4. Начни работать через задачи, чат и подтверждения.
 
 ## Что уже проверено
 
@@ -206,18 +206,18 @@ Klava должен потребляться как один portable executable:
 - runtime smoke test для GONKA onboarding rejection на account-not-found phrase
 - packaged `Klava 0.1.0.exe` startup smoke test без main-process crash
 
-## Open source
+## Документы проекта
 
-Klava задуман как серьёзный публичный проект, а не просто code dump.
+Klava опубликован как рабочий открытый проект, а не как снимок исходников.
 
-- License: [MIT](./LICENSE)
-- Contributing guide: [CONTRIBUTING.md](./CONTRIBUTING.md)
-- Code of conduct: [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md)
-- Security policy: [SECURITY.md](./SECURITY.md)
-- Roadmap: [ROADMAP.md](./ROADMAP.md)
-- Governance: [GOVERNANCE.md](./GOVERNANCE.md)
-- Support: [SUPPORT.md](./SUPPORT.md)
-- Manifesto: [MANIFESTO.md](./MANIFESTO.md)
-- Launch post kit: [LAUNCH_POST.md](./LAUNCH_POST.md)
+- Лицензия: [MIT](./LICENSE)
+- Правила участия: [CONTRIBUTING.md](./CONTRIBUTING.md)
+- Кодекс поведения: [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md)
+- Политика безопасности: [SECURITY.md](./SECURITY.md)
+- Дорожная карта: [ROADMAP.md](./ROADMAP.md)
+- Управление проектом: [GOVERNANCE.md](./GOVERNANCE.md)
+- Поддержка: [SUPPORT.md](./SUPPORT.md)
+- Манифест: [MANIFESTO.md](./MANIFESTO.md)
+- Материалы для анонса: [LAUNCH_POST.md](./LAUNCH_POST.md)
 
-Если хочешь помочь, самые ценные вкладки — те, которые делают систему понятнее, безопаснее и более composable.
+Если хочешь помочь, самые полезные изменения — те, которые делают систему понятнее, безопаснее и проще для расширения.

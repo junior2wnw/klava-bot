@@ -1,6 +1,6 @@
 # Klava
 
-`Klava` is an OpenClaw-derived desktop agent shipped as a single Windows executable.
+`Klava` is a Windows desktop agent built on top of OpenClaw and distributed as a single executable.
 
 [![Release](https://img.shields.io/github/v/release/junior2wnw/klava-bot?display_name=tag&sort=semver)](https://github.com/junior2wnw/klava-bot/releases/latest)
 [![License](https://img.shields.io/github/license/junior2wnw/klava-bot)](./LICENSE)
@@ -9,13 +9,13 @@
 
 Languages: **English** | [Русский](./README.ru.md)
 
-It combines a local-first runtime, secure secret handling, typed approvals, and a modern desktop shell so one person can move from "help me with this task" to "inspect, change, repair, or reconfigure this machine" in one place.
+It combines a local runtime, secret storage, approvals, and task history so chat, shell work, and machine changes can be handled in one place.
 
-The ambition is simple:
+Core idea:
 
-> one executable, one task log, one approval model, one agent that can operate the computer in front of you end to end.
+> one executable, one task log, one approval model, one tool that can inspect the machine, make approved changes, and record what happened.
 
-This repository is published as a standalone product repo, but its upstream lineage is explicit:
+This repository is published as a standalone product repository, with its upstream lineage documented explicitly:
 
 - Upstream project: [`OpenClaw`](https://github.com/openclaw/openclaw)
 - Upstream boundary in-tree: [forks/openclaw/README.md](./forks/openclaw/README.md)
@@ -28,7 +28,7 @@ This repository is published as a standalone product repo, but its upstream line
 
 Most agents stop at suggestions, shell snippets, or browser automation.
 
-Klava is designed for the full desktop loop:
+Klava is built around a local work loop:
 
 - understand the task;
 - inspect the local machine and project state;
@@ -37,11 +37,11 @@ Klava is designed for the full desktop loop:
 - preserve an audit trail;
 - leave behind recovery hints and support bundles.
 
-The result should feel less like "an LLM attached to a terminal" and more like "a coherent desktop operator you can actually trust with serious work".
+The goal is a desktop tool that can do work, explain what changed, and leave usable records behind.
 
-## What ships today
+## Available today
 
-Current implemented state:
+Available in this repo:
 
 - Electron + React desktop shell;
 - local runtime manager with typed HTTP API;
@@ -51,7 +51,7 @@ Current implemented state:
 - guarded task-local terminal with approval modes;
 - portable Windows `.exe` packaging through Electron Builder.
 
-Current command UX:
+Commands available now:
 
 - `new task`
 - `/terminal <command>`
@@ -60,23 +60,23 @@ Current command UX:
 - `guard balanced`
 - `guard off`
 
-Current natural-language behavior:
+Chat behavior today:
 
 - normal chat uses GONKA mainnet completion after onboarding;
 - guarded commands still respect the approval model;
 - terminal results are written back into the same task transcript and terminal history.
 
-Current provider note:
+Current provider status:
 
 - onboarding, validation, balance checks, and model discovery on GONKA work in this repo state;
 - the public GONKA-backed chat path is currently blocked by a provider-side transfer-agent panic tracked in [`gonka-ai/gonka#876`](https://github.com/gonka-ai/gonka/issues/876);
 - once that provider-side issue is fixed on the Gonka side, Klava's documented signed `chat/completions` path should be usable again without changing the client architecture.
 
-## What the architecture is meant to support
+## Planned workflow surface
 
-Not every workflow below is fully shipped yet. Some are already implemented, some are the intended extension surface for the privileged helper, cloud modules, and typed workflow packs described in the docs.
+Not every item below is shipped today. Some are already implemented; others are planned extensions for the privileged helper, cloud modules, and workflow packs described in the docs.
 
-The point of Klava is that all of these belong in the same product shape:
+The same runtime should eventually cover workflows such as:
 
 - inspect a broken workstation, prepare a restore point, reinstall a GPU, audio, or network driver, validate the device state, and explain what changed;
 - replace a BaaS dependency in a local project, rewrite env/config files, update adapters, run smoke checks, and leave a diff summary;
@@ -89,23 +89,23 @@ The point of Klava is that all of these belong in the same product shape:
 - audit what changed on the machine, who approved it, which helper or runtime version executed it, and what rollback path exists;
 - give a non-expert user one executable that can move from "my machine is broken" to "the machine is repaired and documented" without making them stitch together five separate tools.
 
-That is the design target: not a chat toy, not a prompt wrapper, but a serious local operator.
+These examples describe direction, not a claim that every workflow is available today.
 
 ## Safety model
 
-Klava is intentionally opinionated about how a powerful agent should behave:
+Klava follows a few strict rules:
 
-- `Local-first`: the core desktop loop should work without requiring a remote SaaS control plane.
-- `Secrets outside transcript`: keys belong in the vault, not in chat history.
-- `Typed approvals`: dangerous actions require explicit review with impact and rollback context.
-- `Typed privileged helper`: the model should not get a general "run anything as admin" channel.
-- `Auditability`: important actions should leave structured records.
+- `Work locally by default`: the core desktop loop should not depend on a remote control plane.
+- `Keep secrets out of transcripts`: keys belong in the vault, not in chat history.
+- `Require explicit approval`: dangerous actions should include impact and rollback context.
+- `Use typed privileged flows`: the model should not get a general "run anything as admin" channel.
+- `Leave structured records`: important actions should be reviewable later.
 
 If Klava eventually handles driver repair, service surgery, backend replacement, or system recovery, it should do so through typed workflows, not prompt improvisation.
 
 ## OpenClaw lineage
 
-Klava is a heavily modified OpenClaw-derived project.
+Klava started from OpenClaw and diverges in a few clear areas.
 
 What stays close to upstream:
 
@@ -114,7 +114,7 @@ What stays close to upstream:
 - minimal fork surface where possible;
 - modular capability seams instead of giant monolith features.
 
-What is explicitly Klava-specific:
+What is Klava-specific:
 
 - desktop shell and UX;
 - onboarding, approvals, and diagnostics;
@@ -207,9 +207,9 @@ First use:
 - runtime smoke test for GONKA onboarding rejection on an account-not-found phrase with provider state staying disconnected
 - packaged `Klava 0.1.0.exe` startup smoke test without main-process crash
 
-## Open source
+## Project docs
 
-Klava is intended to be a serious public project, not just a code dump.
+Klava is published as a working open-source project, not as a source snapshot.
 
 - License: [MIT](./LICENSE)
 - Contributing guide: [CONTRIBUTING.md](./CONTRIBUTING.md)
@@ -219,6 +219,6 @@ Klava is intended to be a serious public project, not just a code dump.
 - Governance: [GOVERNANCE.md](./GOVERNANCE.md)
 - Support: [SUPPORT.md](./SUPPORT.md)
 - Manifesto: [MANIFESTO.md](./MANIFESTO.md)
-- Launch post kit: [LAUNCH_POST.md](./LAUNCH_POST.md)
+- Launch copy: [LAUNCH_POST.md](./LAUNCH_POST.md)
 
-If you want to help, the highest-value contributions are the ones that make the system more legible, safer, and more composable.
+If you want to help, prefer contributions that make the system clearer, safer, or easier to extend.

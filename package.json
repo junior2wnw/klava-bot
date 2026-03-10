@@ -2,7 +2,7 @@
   "name": "klava-bot",
   "version": "0.1.0",
   "private": true,
-  "description": "OpenClaw-derived desktop AI agent shipped as a single executable for local tasks, approvals, and typed computer operations.",
+  "description": "Windows desktop agent built on OpenClaw for local tasks, approvals, and controlled computer operations.",
   "license": "MIT",
   "repository": {
     "type": "git",
