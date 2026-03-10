@@ -37,8 +37,8 @@ export function ChatSurface({
               title={roleLabel(message.role)}
               subtitle={new Date(message.createdAt).toLocaleTimeString()}
               style={{
-                background: message.role === "user" ? "#f0fbfa" : undefined,
-                borderColor: message.role === "assistant" ? "#cce7e4" : undefined,
+                background: message.role === "user" ? "rgba(99, 102, 241, 0.06)" : undefined,
+                borderColor: message.role === "assistant" ? "rgba(99, 102, 241, 0.12)" : undefined,
               }}
             >
               <div className="message-content">{message.content}</div>

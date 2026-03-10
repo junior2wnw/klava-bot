@@ -12,23 +12,36 @@ export function PanelCard({ title, subtitle, actions, style, children }: CardPro
   return (
     <section
       style={{
-        background: tokens.color.surface,
+        background: tokens.color.surfaceElevated,
         border: `1px solid ${tokens.color.border}`,
         borderRadius: tokens.radius.md,
         boxShadow: tokens.shadow.panel,
         padding: tokens.spacing.md,
         display: "flex",
         flexDirection: "column",
-        gap: tokens.spacing.md,
+        gap: tokens.spacing.sm,
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
         ...style,
       }}
     >
       {(title || subtitle || actions) && (
-        <header style={{ display: "flex", justifyContent: "space-between", gap: tokens.spacing.md }}>
-          <div style={{ display: "grid", gap: 4 }}>
-            {title ? <strong style={{ fontSize: 16 }}>{title}</strong> : null}
+        <header
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: tokens.spacing.sm,
+          }}
+        >
+          <div style={{ display: "grid", gap: 2, minWidth: 0 }}>
+            {title ? (
+              <strong style={{ fontSize: 13, fontWeight: 600, color: tokens.color.text, letterSpacing: "-0.01em" }}>
+                {title}
+              </strong>
+            ) : null}
             {subtitle ? (
-              <span style={{ color: tokens.color.textMuted, fontSize: 13 }}>{subtitle}</span>
+              <span style={{ color: tokens.color.textMuted, fontSize: 11, lineHeight: 1.4 }}>{subtitle}</span>
             ) : null}
           </div>
           {actions}
@@ -59,20 +72,20 @@ export function Button({
     variant === "primary"
       ? {
           background: tokens.color.accent,
-          borderColor: tokens.color.accent,
+          borderColor: "transparent",
           color: "#ffffff",
         }
       : variant === "danger"
         ? {
-            background: tokens.color.danger,
-            borderColor: tokens.color.danger,
-            color: "#ffffff",
+            background: "rgba(248, 113, 113, 0.15)",
+            borderColor: "rgba(248, 113, 113, 0.25)",
+            color: tokens.color.danger,
           }
         : variant === "secondary"
           ? {
-              background: tokens.color.surfaceMuted,
+              background: "rgba(255, 255, 255, 0.06)",
               borderColor: tokens.color.border,
-              color: tokens.color.text,
+              color: tokens.color.textSecondary,
             }
           : {
               background: "transparent",
@@ -86,16 +99,18 @@ export function Button({
       onClick={onClick}
       type={type}
       style={{
-        height: 42,
+        height: 32,
         borderRadius: tokens.radius.sm,
         border: `1px solid ${palette.borderColor}`,
         background: palette.background,
         color: palette.color,
-        fontWeight: 600,
-        padding: "0 16px",
+        fontWeight: 500,
+        fontSize: 12,
+        padding: "0 14px",
         cursor: disabled ? "not-allowed" : "pointer",
-        opacity: disabled ? 0.55 : 1,
-        transition: `transform ${tokens.motion.fast} ease, background ${tokens.motion.fast} ease`,
+        opacity: disabled ? 0.4 : 1,
+        transition: `all ${tokens.motion.fast} ease`,
+        letterSpacing: "0.01em",
         ...style,
       }}
     >
@@ -121,7 +136,7 @@ export function TextField({
   multiline,
   onChange,
   placeholder,
-  rows = 4,
+  rows = 3,
   spellCheck,
   style,
   type = "text",
@@ -131,13 +146,14 @@ export function TextField({
     width: "100%",
     borderRadius: tokens.radius.sm,
     border: `1px solid ${tokens.color.border}`,
-    background: "#fffdfa",
+    background: "rgba(255, 255, 255, 0.03)",
     color: tokens.color.text,
-    padding: "12px 14px",
-    font: `400 14px ${tokens.typography.body}`,
-    outlineColor: tokens.color.focus,
+    padding: "8px 12px",
+    font: `400 13px ${tokens.typography.body}`,
+    outline: "none",
     resize: "vertical",
     boxSizing: "border-box",
+    transition: `border-color ${tokens.motion.fast} ease`,
     ...style,
   };
 
@@ -177,25 +193,25 @@ export function StatusPill({
 }) {
   const toneStyles =
     tone === "success"
-      ? { background: "#def7ec", color: tokens.color.success }
+      ? { background: "rgba(52, 211, 153, 0.12)", color: tokens.color.success }
       : tone === "warning"
-        ? { background: "#fff1d6", color: tokens.color.warning }
+        ? { background: "rgba(251, 191, 36, 0.12)", color: tokens.color.warning }
         : tone === "danger"
-          ? { background: "#fde8e5", color: tokens.color.danger }
+          ? { background: "rgba(248, 113, 113, 0.12)", color: tokens.color.danger }
           : tone === "accent"
-            ? { background: tokens.color.accentSoft, color: tokens.color.accentStrong }
-            : { background: tokens.color.surfaceMuted, color: tokens.color.textMuted };
+            ? { background: tokens.color.accentSoft, color: tokens.color.accent }
+            : { background: "rgba(255, 255, 255, 0.06)", color: tokens.color.textMuted };
 
   return (
     <span
       style={{
         display: "inline-flex",
         alignItems: "center",
-        minHeight: 26,
-        borderRadius: 999,
-        padding: "0 10px",
-        fontSize: 12,
-        fontWeight: 700,
+        height: 22,
+        borderRadius: 6,
+        padding: "0 8px",
+        fontSize: 11,
+        fontWeight: 600,
         letterSpacing: "0.02em",
         ...toneStyles,
       }}
@@ -207,7 +223,7 @@ export function StatusPill({
 
 export function Stack({
   children,
-  gap = tokens.spacing.md,
+  gap = tokens.spacing.sm,
 }: PropsWithChildren<{ gap?: number }>) {
   return <div style={{ display: "grid", gap }}>{children}</div>;
 }

@@ -406,7 +406,7 @@ function deriveMnemonicCandidates(mnemonic: string, options: GonkaSecretOptions 
 
     if (!exactMatch) {
       throw new Error(
-        `The recovery phrase did not derive ${normalizedExpectedAddress} across the common Gonka/Cosmos account paths checked. This usually means the wallet uses a different derivation path or a mnemonic passphrase. Enter the mnemonic passphrase or paste the raw private key instead.`,
+        `The recovery phrase did not derive ${normalizedExpectedAddress} across the common Gonka/Cosmos account paths checked. If Keplr still shows that Gonka address, it is likely an additional Gonka account imported by raw private key rather than derived from this recovery phrase, or the wallet uses a mnemonic passphrase. Enter the mnemonic passphrase or paste the raw private key instead.`,
       );
     }
 

@@ -27,7 +27,7 @@ async function createMainWindow() {
     height: 940,
     minWidth: 1180,
     minHeight: 760,
-    backgroundColor: "#f4f2eb",
+    backgroundColor: "#0a0a0f",
     webPreferences: {
       preload: path.join(appRoot, "dist-electron", "preload.js"),
       contextIsolation: true,

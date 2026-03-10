@@ -97,8 +97,10 @@ export function OnboardingSheet({
         title="Connect GONKA"
         subtitle="Secrets stay outside the transcript. Recommended input is the raw Gonka private key. Recovery phrases can also be matched against the wallet address shown in your Gonka wallet."
         style={{
-          width: "min(640px, calc(100vw - 40px))",
-          borderRadius: 28,
+          width: "min(560px, calc(100vw - 40px))",
+          borderRadius: 16,
+          background: "rgba(255, 255, 255, 0.04)",
+          border: "1px solid rgba(255, 255, 255, 0.08)",
         }}
       >
         <Stack gap={14}>
@@ -136,7 +138,7 @@ export function OnboardingSheet({
               onChange={setWalletAddress}
               placeholder="gonka1..."
             />
-            <span className="field-hint">If your wallet shows a specific gonka1... address, Klava will try to derive that exact account from the recovery phrase.</span>
+            <span className="field-hint">If your wallet shows a specific gonka1... address, Klava will try to derive that exact account from the recovery phrase. Keplr can also contain Gonka accounts imported separately by raw private key; those will not match a recovery phrase here.</span>
           </label>
 
           {trimmedWalletAddress ? (

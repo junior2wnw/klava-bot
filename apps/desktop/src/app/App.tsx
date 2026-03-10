@@ -118,8 +118,8 @@ export function App() {
       <div className="app-shell__glow" />
       <header className="app-header">
         <div>
-          <span className="eyebrow">Klava Bot</span>
-          <h1>Local-first desktop operator</h1>
+          <span className="eyebrow">Klava</span>
+          <h1>Desktop Operator</h1>
         </div>
         <div className="app-header__actions">
           <PanelCard
