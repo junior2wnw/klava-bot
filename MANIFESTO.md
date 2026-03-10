@@ -6,7 +6,7 @@ That leads to five rules.
 
 ## 1. The first run must be simple
 
-People should be able to download one executable, launch it, connect what is needed, and see the product working before they study the architecture.
+People should be able to download one desktop app, launch it, connect what is needed, and see the product working before they study the architecture.
 
 Source code still matters. A working product entry point matters too.
 

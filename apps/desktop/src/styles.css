@@ -77,55 +77,212 @@ pre {
 .app-shell {
   position: relative;
   min-height: 100vh;
-  padding: 16px;
+  padding: 14px 16px 16px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background:
+    radial-gradient(circle at top left, rgba(196, 112, 74, 0.12), transparent 28%),
+    linear-gradient(180deg, #181513 0%, #1a1816 42%, #171311 100%);
 }
 
 .app-shell__glow {
-  display: none;
+  position: absolute;
+  top: -140px;
+  left: -80px;
+  width: 420px;
+  height: 420px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(196, 112, 74, 0.22) 0%, rgba(196, 112, 74, 0.08) 34%, transparent 72%);
+  filter: blur(26px);
+  pointer-events: none;
 }
 
 .app-header {
   position: relative;
   z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  gap: 18px;
+  align-items: stretch;
+  padding: 18px 20px;
+  border: 1px solid rgba(255, 245, 235, 0.08);
+  border-radius: 18px;
+  background:
+    linear-gradient(145deg, rgba(255, 245, 235, 0.08), rgba(255, 245, 235, 0.03)),
+    rgba(18, 15, 13, 0.72);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.30);
+  overflow: hidden;
+  backdrop-filter: blur(18px);
+}
+
+.app-header::after {
+  content: "";
+  position: absolute;
+  inset: auto -12% -55% 32%;
+  height: 160px;
+  background: radial-gradient(circle, rgba(196, 112, 74, 0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.app-shell--win32 .app-header {
+  padding-right: 36px;
+}
+
+.app-shell--darwin .app-header {
+  padding-left: 28px;
+}
+
+.app-header__brand {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
   gap: 16px;
-  margin-bottom: 14px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid rgba(237, 227, 215, 0.04);
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.app-header__mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #da8b63 0%, #a44f32 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 16px 32px rgba(164, 79, 50, 0.30);
+}
+
+.app-header__mark span {
+  font-size: 20px;
+  font-weight: 600;
+  color: #fff7f1;
+}
+
+.app-header__copy {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
 }
 
 .app-header h1 {
   margin: 0;
-  font-size: 15px;
-  font-weight: 500;
+  font-size: 28px;
+  font-weight: 600;
   line-height: 1.2;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.03em;
   color: rgba(237, 227, 215, 0.90);
 }
 
 .eyebrow {
   display: inline-block;
-  color: rgba(196, 112, 74, 0.60);
-  letter-spacing: 0.06em;
+  color: rgba(196, 112, 74, 0.72);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   font-size: 10px;
-  font-weight: 500;
-  margin-bottom: 2px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.app-header__subtitle {
+  margin: 0;
+  max-width: 640px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: rgba(237, 227, 215, 0.48);
+}
+
+.app-header__side {
+  display: grid;
+  gap: 14px;
+  align-content: space-between;
+  min-width: 0;
+}
+
+.app-header__focus {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 245, 235, 0.06);
+  background: rgba(10, 9, 8, 0.24);
+  min-width: 0;
+}
+
+.app-header__label {
+  color: rgba(237, 227, 215, 0.26);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.app-header__focus strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(237, 227, 215, 0.88);
+}
+
+.app-header__focus p {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(237, 227, 215, 0.36);
+  font-size: 12px;
 }
 
 .app-header__actions {
   display: flex;
   gap: 8px;
   align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.app-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 245, 235, 0.07);
+  background: rgba(255, 245, 235, 0.04);
+  color: rgba(237, 227, 215, 0.54);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.app-badge--success {
+  border-color: rgba(125, 186, 106, 0.18);
+  background: rgba(125, 186, 106, 0.10);
+  color: #8ed67a;
+}
+
+.app-badge--danger {
+  border-color: rgba(199, 95, 95, 0.18);
+  background: rgba(199, 95, 95, 0.10);
+  color: #d97a7a;
+}
+
+.app-badge--accent {
+  border-color: rgba(196, 112, 74, 0.18);
+  background: rgba(196, 112, 74, 0.12);
+  color: rgba(232, 164, 129, 0.92);
+}
+
+.no-drag {
+  -webkit-app-region: no-drag;
 }
 
 .app-banner {
   position: relative;
   z-index: 1;
-  margin-bottom: 8px;
   padding: 10px 14px;
   border-radius: 6px;
   border: 1px solid rgba(199, 95, 95, 0.15);
@@ -144,7 +301,8 @@ pre {
   display: grid;
   gap: 12px;
   grid-template-columns: minmax(220px, 260px) minmax(0, 1fr) minmax(240px, 300px);
-  height: calc(100vh - 100px);
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -158,20 +316,37 @@ pre {
 /* ── Task cards ── */
 
 .task-card {
+  display: block;
   padding: 0;
   border: 0;
   background: transparent;
   text-align: left;
   cursor: pointer;
   width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.task-card > section {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .task-card__meta {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   color: rgba(237, 227, 215, 0.25);
   font-size: 11px;
+  min-width: 0;
+}
+
+.task-card__meta > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ── Surfaces ── */
@@ -451,6 +626,14 @@ pre {
 }
 
 @media (max-width: 1220px) {
+  .app-header {
+    grid-template-columns: 1fr;
+  }
+
+  .app-header__actions {
+    justify-content: flex-start;
+  }
+
   .app-grid {
     grid-template-columns: 240px 1fr;
   }
@@ -466,8 +649,28 @@ pre {
   }
 
   .app-header {
-    flex-direction: column;
-    align-items: flex-start;
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+
+  .app-shell--win32 .app-header,
+  .app-shell--darwin .app-header {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .app-header h1 {
+    font-size: 24px;
+  }
+
+  .app-header__actions {
+    justify-content: flex-start;
+  }
+
+  .app-header__focus p {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
   }
 
   .app-grid {
@@ -476,5 +679,9 @@ pre {
 
   .secret-input-row {
     grid-template-columns: 1fr;
+  }
+
+  .task-card__meta {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

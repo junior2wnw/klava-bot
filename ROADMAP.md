@@ -18,7 +18,7 @@ Already in the repo:
 - GONKA onboarding and provider integration
 - task transcripts and support bundle export
 - guarded terminal execution with approvals
-- portable Windows executable packaging
+- Windows release packaging and macOS packaging path
 
 ## Next
 
@@ -60,7 +60,7 @@ Examples:
 
 Goal:
 
-- make the portable executable the primary user path, not an afterthought
+- make the desktop release path the primary user path, not an afterthought
 
 Includes:
 

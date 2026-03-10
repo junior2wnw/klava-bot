@@ -16,7 +16,7 @@ Klava is an OpenClaw-derived desktop agent project.
 Its product thesis is straightforward:
 
 - a serious computer agent should feel like a real desktop product, not just a prompt wrapper;
-- one executable should be enough to start using it;
+- one desktop app should be enough to start using it;
 - powerful local actions should go through typed workflows, approvals, and logs;
 - the codebase should stay simple enough that one strong engineer can still reason about the whole system.
 
@@ -47,9 +47,9 @@ Current implemented state includes:
 - secure local secret storage;
 - guarded terminal execution with approvals;
 - provider onboarding and model selection;
-- portable Windows packaging.
+- desktop packaging for Windows and macOS.
 
-This is not just a design document repo. There is a real executable path here.
+This is not just a design document repo. There is a real desktop release path here.
 
 ## What is vision, not fake marketing
 
@@ -90,16 +90,16 @@ Public-project requirements:
 - security policy;
 - visible upstream lineage;
 - visible repo metadata;
-- release path for people who just want the executable.
+- release path for people who just want the desktop app.
 
-## Why the single executable matters
+## Why the desktop app matters
 
 The strongest version of Klava is not "another repo developers can build if they feel like it."
 
 The strongest version is:
 
 - developers can read the code and modify it;
-- non-developers can still download one executable and use it;
+- non-developers can still download one desktop app and use it;
 - both groups meet the same product, not two separate worlds.
 
 That is why packaging and open-source quality are both first-class concerns.

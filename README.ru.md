@@ -1,6 +1,6 @@
 # Klava
 
-`Klava` — это Windows-агент для локальной работы, построенный поверх OpenClaw и распространяемый как один `.exe`.
+`Klava` — это desktop-агент для локальной работы на Windows и macOS, построенный поверх OpenClaw.
 
 [![Release](https://img.shields.io/github/v/release/junior2wnw/klava-bot?display_name=tag&sort=semver)](https://github.com/junior2wnw/klava-bot/releases/latest)
 [![License](https://img.shields.io/github/license/junior2wnw/klava-bot)](./LICENSE)
@@ -45,11 +45,11 @@ Languages: [English](./README.md) | **Русский**
 
 - Electron + React desktop shell;
 - локальный рантайм с типизированным HTTP API;
-- безопасное локальное хранение секретов через Windows DPAPI-backed wrapping;
+- безопасное локальное хранение секретов через Windows DPAPI и локальное зашифрованное хранилище на macOS/Linux;
 - подключение к GONKA mainnet, валидация, проверка баланса и выбор доступной модели;
 - система задач с историей диалога и экспортом пакета диагностики;
 - терминал с режимами подтверждения действий;
-- переносимая Windows-сборка `.exe` через Electron Builder.
+- desktop-сборка через Electron Builder для Windows и macOS.
 
 Команды, которые уже есть:
 
@@ -174,19 +174,22 @@ npm run dev
 npm run build
 ```
 
-Переносимая Windows-сборка:
+Релизные desktop-сборки:
 
 ```bash
 npm run dist:win
+npm run dist:mac # запускать на macOS
 ```
 
 ### Для пользователей
 
 Большинству людей стек разработки не нужен.
 
-Klava рассчитан на использование как одного переносимого исполняемого файла:
+Klava рассчитан на поставку как desktop-приложение со встроенным локальным рантаймом:
 
 - `apps/desktop/release/Klava 0.1.0.exe`
+- `apps/desktop/release/*.dmg` при сборке на macOS
+- `apps/desktop/release/mac*/Klava.app` при сборке на macOS
 
 Первое использование:
 

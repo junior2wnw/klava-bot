@@ -28,12 +28,13 @@ import {
 } from "./constants";
 import { GonkaService } from "./gonka-service";
 import { SecretVault } from "./secrets";
-import { RuntimeStore, getAppPaths } from "./storage";
+import { RuntimeStore, getAppPaths, type AppPaths } from "./storage";
 import { assessCommand, runCommand } from "./terminal";
 
 type CreateRuntimeOptions = {
   host?: string;
   port?: number;
+  paths?: AppPaths;
 };
 
 function nowIso() {
@@ -108,8 +109,9 @@ function createApproval(taskId: string, command: string, impact: string): Approv
 }
 
 export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
-  const store = new RuntimeStore(getAppPaths());
-  const vault = new SecretVault(getAppPaths());
+  const appPaths = options.paths ?? getAppPaths();
+  const store = new RuntimeStore(appPaths);
+  const vault = new SecretVault(appPaths);
   const gonka = new GonkaService();
   await store.init();
 
@@ -467,7 +469,7 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
         createMessage(
           task.id,
           "assistant",
-          "The saved Gonka secret is unavailable on this Windows profile. Please reconnect GONKA.",
+          "The saved Gonka secret is unavailable in the current local profile. Please reconnect GONKA.",
         ),
         "failed",
       );

@@ -20,7 +20,7 @@ Current baseline already exists:
 - onboarding;
 - task rail and main surfaces;
 - guarded terminal approvals;
-- portable Windows package.
+- desktop release packaging for Windows and macOS.
 
 This means the project does not need a reset.
 It needs simplification, polish, and stricter modular boundaries.

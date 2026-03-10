@@ -18,6 +18,7 @@ Only mark a task complete when its definition of done is true.
 - [x] `npm run check` runs the fast quality gate
 - [x] `npm run build` creates the production build
 - [x] `npm run dist:win` creates the Windows `.exe`
+- [ ] `npm run dist:mac` creates the macOS `.dmg` and `.app` on a macOS host
 - [x] No required global tools beyond `Node.js` and `Git`
 - [x] Optional tools never block the core local workflow
 - [x] Build output paths are stable and documented
@@ -44,11 +45,10 @@ Definition of done:
 - [x] Create `package.json`
 - [x] Create `tsconfig.base.json`
 - [x] Create workspace config
-- [x] Create root scripts for `dev`, `check`, `build`, `dist:win`
-- [x] Create `scripts/dev.ps1`
-- [x] Create `scripts/check.ps1`
-- [x] Create `scripts/build.ps1`
-- [x] Create `scripts/dist-win.ps1`
+- [x] Create root scripts for `dev`, `check`, `build`, `dist:win`, `dist:mac`
+- [x] Create `scripts/dev.mjs`
+- [x] Create `scripts/run-workspaces.mjs`
+- [x] Create `scripts/release.mjs`
 
 ### Desktop App
 
@@ -87,7 +87,7 @@ Definition of done:
 
 - [x] Create `forks/openclaw/`
 - [x] Create `apps/desktop/electron/main.ts`
-- [ ] Create `apps/desktop/electron/openclaw.ts`
+- [x] Create `apps/desktop/electron/openclaw.ts`
 - [x] Create `apps/desktop/electron/ipc.ts`
 - [x] Create `packages/contracts/src/health.ts`
 - [x] Create `apps/desktop/src/features/diagnostics/`
@@ -137,17 +137,19 @@ Definition of done:
 - secrets stay out of plain transcript
 - guarded actions remain obvious and safe
 
-## Phase 6. Packaging, Build, And `.exe`
+## Phase 6. Packaging, Build, And Release Artifacts
 
 - [x] Make `npm run build` produce the production desktop build
 - [x] Make `npm run dist:win` produce the Windows `.exe`
+- [ ] Verify `npm run dist:mac` produces the macOS `.dmg` and `.app` on a macOS host
 - [x] Keep the `.exe` output path stable
-- [x] Create `scripts/check-release.ps1`
+- [x] Create `scripts/release.mjs`
 - [x] Add packaging diagnostics
 - [ ] Add release smoke check for packaged startup
 
 Definition of done:
 - another AI can create a Windows `.exe` with one command
+- another AI can create a macOS desktop artifact with one command on a macOS host
 - packaged startup problems are diagnosable quickly
 
 ## Phase 7. Diagnostics And Support
@@ -253,7 +255,7 @@ Definition of done:
 - [x] PR 4: onboarding plus first prompt
 - [x] PR 5: task rail plus task state
 - [x] PR 6: secrets plus approvals
-- [x] PR 7: build plus `.exe` packaging
+- [x] PR 7: build plus desktop packaging
 - [ ] PR 8: diagnostics plus support bundle
 - [ ] PR 9+: optional modules one by one
 

@@ -2,7 +2,7 @@
   "name": "klava-bot",
   "version": "0.1.0",
   "private": true,
-  "description": "Windows desktop agent built on OpenClaw for local tasks, approvals, and controlled computer operations.",
+  "description": "Desktop agent built on OpenClaw for local tasks, approvals, and controlled computer operations.",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -19,6 +19,7 @@
     "react",
     "local-first",
     "windows",
+    "macos",
     "ai-agent",
     "gonka"
   ],
@@ -28,11 +29,12 @@
     "packages/modules/*"
   ],
   "scripts": {
-    "dev": "powershell -ExecutionPolicy Bypass -File ./scripts/dev.ps1",
-    "check": "powershell -ExecutionPolicy Bypass -File ./scripts/check.ps1",
-    "test": "powershell -ExecutionPolicy Bypass -File ./scripts/test.ps1",
-    "build": "powershell -ExecutionPolicy Bypass -File ./scripts/build.ps1",
-    "dist:win": "powershell -ExecutionPolicy Bypass -File ./scripts/dist-win.ps1"
+    "dev": "node ./scripts/dev.mjs",
+    "check": "node ./scripts/run-workspaces.mjs check @klava/contracts @klava/runtime @klava/ui @klava/desktop",
+    "test": "node ./scripts/run-workspaces.mjs test @klava/runtime",
+    "build": "node ./scripts/run-workspaces.mjs build @klava/contracts @klava/runtime @klava/ui @klava/desktop",
+    "dist:win": "node ./scripts/release.mjs win",
+    "dist:mac": "node ./scripts/release.mjs mac"
   },
   "devDependencies": {
     "@types/node": "^24.6.1",

@@ -4,13 +4,13 @@ This file contains short public descriptions that can be reused across channels.
 
 ## One-line description
 
-Klava is a Windows desktop agent built on top of OpenClaw and shipped as a single executable.
+Klava is a desktop agent built on top of OpenClaw for local work, with a shipped Windows app and macOS packaging wired into the repo.
 
 ## Short post
 
 Klava is now public.
 
-It is a desktop agent project built around a simple shape: one executable, one task log, one approval model, and one place for local tasks, chat, and guarded shell work.
+It is a desktop agent project built around a simple shape: one desktop app, one task log, one approval model, and one place for local tasks, chat, and guarded shell work.
 
 What is already in the repo:
 
@@ -19,21 +19,22 @@ What is already in the repo:
 - secure onboarding and secret handling
 - guarded terminal execution
 - support bundle export
-- portable Windows release
+- Windows release build today
+- macOS packaging path in repo
 
 The repo is open source, documents its OpenClaw lineage, and is being built toward typed system workflows instead of raw privileged prompt execution.
 
 Repo:
 - https://github.com/junior2wnw/klava-bot
 
-Executable:
+Download:
 - https://github.com/junior2wnw/klava-bot/releases/latest
 
 ## Hacker News style
 
 Title:
 
-`Show HN: Klava, a Windows desktop agent built on OpenClaw`
+`Show HN: Klava, a desktop agent built on OpenClaw for local work`
 
 Post:
 
@@ -41,15 +42,15 @@ I just open-sourced Klava, a desktop agent project for local tasks, guarded shel
 
 Current shape:
 
-- one executable
+- one desktop app
 - local runtime
 - secure onboarding and secret handling
 - guarded shell access with approvals
-- typed system workflows instead of “let the model run anything as admin”
+- typed system workflows instead of "let the model run anything as admin"
 
 The repo is explicit about lineage, safety model, and roadmap.
 
-What exists now is a usable desktop shell with a local runtime and portable Windows release.
+What exists now is a usable desktop shell with a local runtime, a working Windows release, and a macOS packaging path in the repo.
 What I want to add next is a typed privileged helper and a broader library of machine workflows.
 
 Repo:
@@ -64,7 +65,7 @@ Klava is now public.
 
 A desktop agent project built around:
 
-- one executable
+- one desktop app
 - local runtime
 - secure onboarding
 - approvals for risky actions
@@ -75,11 +76,11 @@ Release: https://github.com/junior2wnw/klava-bot/releases/latest
 
 ## Reddit style
 
-I open-sourced Klava, a Windows desktop agent project built on top of OpenClaw.
+I open-sourced Klava, a desktop agent project built on top of OpenClaw.
 
 The point is straightforward:
 
-- one executable
+- one desktop app
 - one task log
 - one approval model
 - local runtime
@@ -87,7 +88,7 @@ The point is straightforward:
 - guarded shell operations
 - future typed workflows for serious machine tasks
 
-The repo is public, the lineage is documented, and there is already a portable Windows build available.
+The repo is public, the lineage is documented, there is already a Windows build available, and the macOS packaging path is now in the repo.
 
 Links:
 - Repo: https://github.com/junior2wnw/klava-bot
@@ -98,7 +99,7 @@ Links:
 
 `Klava` теперь открыт.
 
-Это Windows-агент для локальной работы, построенный поверх OpenClaw и распространяемый как один `.exe`.
+Это desktop-агент для локальной работы, построенный поверх OpenClaw. Сейчас в проекте есть рабочая Windows-сборка, а путь упаковки для macOS уже добавлен в репозиторий.
 
 Что уже есть:
 
@@ -107,7 +108,7 @@ Links:
 - безопасный onboarding и работа с секретами
 - терминал с подтверждениями
 - экспорт пакета диагностики
-- переносимая Windows-сборка
+- Windows-сборка и путь упаковки для macOS
 
 Репозиторий:
 - https://github.com/junior2wnw/klava-bot

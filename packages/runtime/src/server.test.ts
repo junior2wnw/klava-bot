@@ -6,6 +6,7 @@ import test from "node:test";
 import type { ProviderBalance } from "@klava/contracts";
 import { createKlavaRuntime } from "./server";
 import { GonkaService } from "./gonka-service";
+import type { AppPaths } from "./storage";
 
 const TEST_ADDRESS = "gonka1glph4syjlx347ptv2n7qfz67sryrhk983j5f8a";
 const TEST_BALANCE: ProviderBalance = {
@@ -17,15 +18,18 @@ const TEST_BALANCE: ProviderBalance = {
   sourceUrl: "https://node3.gonka.ai",
 };
 
-async function withTempAppData(run: () => Promise<void>) {
+async function withTempAppPaths(run: (paths: AppPaths) => Promise<void>) {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "klava-runtime-test-"));
-  const originalAppData = process.env.APPDATA;
-  process.env.APPDATA = tempRoot;
+  const paths: AppPaths = {
+    rootDir: tempRoot,
+    statePath: path.join(tempRoot, "state.json"),
+    secretsPath: path.join(tempRoot, "secrets.json"),
+    keyPath: path.join(tempRoot, "vault.key"),
+  };
 
   try {
-    await run();
+    await run(paths);
   } finally {
-    process.env.APPDATA = originalAppData;
     await rm(tempRoot, { recursive: true, force: true });
   }
 }
@@ -38,8 +42,8 @@ test("runtime exposes public Gonka balance lookup without onboarding", async () 
   };
 
   try {
-    await withTempAppData(async () => {
-      const runtime = await createKlavaRuntime();
+    await withTempAppPaths(async (paths) => {
+      const runtime = await createKlavaRuntime({ paths });
 
       try {
         const response = await runtime.server.inject({
@@ -82,8 +86,8 @@ test("successful onboarding stores requester address and fetched balance in prov
   };
 
   try {
-    await withTempAppData(async () => {
-      const runtime = await createKlavaRuntime();
+    await withTempAppPaths(async (paths) => {
+      const runtime = await createKlavaRuntime({ paths });
 
       try {
         const response = await runtime.server.inject({
@@ -119,8 +123,8 @@ test("successful onboarding stores requester address and fetched balance in prov
 });
 
 test("guarded terminal commands create approvals and rejection returns the task to idle", async () => {
-  await withTempAppData(async () => {
-    const runtime = await createKlavaRuntime();
+  await withTempAppPaths(async (paths) => {
+    const runtime = await createKlavaRuntime({ paths });
 
     try {
       const createTaskResponse = await runtime.server.inject({

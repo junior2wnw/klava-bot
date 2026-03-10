@@ -10,7 +10,7 @@ This repository now contains a working MVP foundation:
 - npm workspace monorepo;
 - Electron + React desktop shell;
 - local runtime package with tasks, persistence, approvals, secrets, and diagnostics;
-- portable Windows packaging.
+- desktop packaging for Windows and macOS.
 
 The next work should extend and harden this baseline rather than reset it.
 
@@ -49,7 +49,8 @@ The project must converge on one command per core workflow:
 - `npm run dev` for normal development;
 - `npm run check` for fast validation;
 - `npm run build` for production build;
-- `npm run dist:win` for Windows `.exe` output.
+- `npm run dist:win` for Windows `.exe` output;
+- `npm run dist:mac` for macOS app bundles and `.dmg` output.
 
 Rule:
 - do not introduce alternative primary commands unless one of these is clearly insufficient.
@@ -110,8 +111,9 @@ klava-bot/
   forks/
     openclaw/
   scripts/
-    sync-openclaw.ps1
-    check-release.ps1
+    dev.mjs
+    release.mjs
+    run-workspaces.mjs
 ```
 
 Rule:
@@ -193,7 +195,7 @@ Definition of done:
 Create or extend:
 - `apps/desktop/electron/main.ts`
 - `apps/desktop/src/features/diagnostics/`
-- `scripts/check-release.ps1`
+- `scripts/release.mjs`
 
 Definition of done:
 - packaged app launches reliably;

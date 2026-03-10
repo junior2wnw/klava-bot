@@ -23,17 +23,25 @@ async function createMainWindow() {
   await appendDesktopLog(`Creating main window from ${appRoot}.`);
 
   const win = new BrowserWindow({
+    show: false,
     width: 1480,
     height: 940,
     minWidth: 1180,
     minHeight: 760,
-    backgroundColor: "#0a0a0f",
+    autoHideMenuBar: true,
+    backgroundColor: "#171311",
+    titleBarStyle: process.platform === "darwin" ? "hiddenInset" : undefined,
     webPreferences: {
       preload: path.join(appRoot, "dist-electron", "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
     },
   });
+
+  if (process.platform !== "darwin") {
+    win.removeMenu();
+    win.setMenuBarVisibility(false);
+  }
 
   win.webContents.on("did-fail-load", (_event, errorCode, errorDescription, validatedUrl) => {
     void appendDesktopLog(
@@ -43,6 +51,9 @@ async function createMainWindow() {
 
   win.webContents.on("did-finish-load", () => {
     void appendDesktopLog(`renderer did-finish-load: ${win.webContents.getURL()}`);
+    if (!win.isVisible()) {
+      win.show();
+    }
   });
 
   win.webContents.on("console-message", (_event, level, message, line, sourceId) => {

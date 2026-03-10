@@ -10,7 +10,7 @@ The repository now contains a working foundation for `Klava Bot`:
 - task-local terminal subsystem with guard modes and approval flow;
 - support bundle export with sanitized metadata only;
 - desktop startup logging for packaged-app failures;
-- portable Windows packaging through `electron-builder`.
+- desktop packaging through `electron-builder`.
 
 ## Implemented Modules
 
@@ -49,7 +49,7 @@ Shared packages:
 - Runtime logic is split into provider, secrets, storage, and terminal services.
 - Terminal results are fed back into the same task transcript and inspector context.
 - A future `Pro` surface can be added without disturbing the shell frame.
-- Desktop packaging is real: the repo produces a portable Windows `.exe`.
+- Desktop packaging is real: the repo produces a Windows `.exe` today and now includes macOS packaging paths.
 - shared workspace packages now ship production `dist/*.cjs` entrypoints, which fixes the packaged Node 24 type-stripping crash path.
 
 ## Risks Found and Addressed
@@ -110,7 +110,7 @@ Problem:
 Fix:
 - added an Electron launcher around the shell;
 - made the runtime importable from the desktop process;
-- added portable Windows packaging through `electron-builder`;
+- added desktop packaging through `electron-builder`;
 - added release checks for artifact existence.
 
 ## Current Known Limitations
@@ -136,6 +136,7 @@ Fix:
 - `npm run check`: passed.
 - `npm run build`: passed.
 - `npm run dist:win`: passed.
+- `npm run dist:mac`: command added and documented, but not executed in this audit because the validation host was Windows.
 - runtime smoke: rejected approval cleared the pending queue and preserved approval history.
 - runtime smoke: task creation and guarded command generated a `pending` approval.
 - runtime smoke: support bundle export contains no secret values.

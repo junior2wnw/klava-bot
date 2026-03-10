@@ -28,11 +28,30 @@ export type AppPaths = {
   keyPath: string;
 };
 
-export function getAppPaths(): AppPaths {
-  const rootDir =
-    process.platform === "win32"
-      ? path.join(process.env.APPDATA ?? path.join(os.homedir(), "AppData", "Roaming"), "Klava Bot")
-      : path.join(os.homedir(), ".klava-bot");
+export type AppPathOptions = {
+  platform?: NodeJS.Platform | string;
+  homeDir?: string;
+  appDataDir?: string;
+  xdgDataHome?: string;
+};
+
+export function resolveAppRootDir(options: AppPathOptions = {}) {
+  const platform = options.platform ?? process.platform;
+  const homeDir = options.homeDir ?? os.homedir();
+
+  if (platform === "win32") {
+    return path.join(options.appDataDir ?? process.env.APPDATA ?? path.join(homeDir, "AppData", "Roaming"), "Klava Bot");
+  }
+
+  if (platform === "darwin") {
+    return path.join(homeDir, "Library", "Application Support", "Klava Bot");
+  }
+
+  return path.join(options.xdgDataHome ?? process.env.XDG_DATA_HOME ?? path.join(homeDir, ".local", "share"), "Klava Bot");
+}
+
+export function getAppPaths(options: AppPathOptions = {}): AppPaths {
+  const rootDir = resolveAppRootDir(options);
 
   return {
     rootDir,
@@ -211,10 +230,6 @@ export class RuntimeStore {
   private async flush() {
     this.recalculateDerivedFields();
     await writeFile(this.paths.statePath, JSON.stringify(this.state, null, 2), "utf8");
-  }
-
-  private findTaskIndex(taskId: string) {
-    return this.state.tasks.findIndex((task) => task.id === taskId);
   }
 
   private touchTask(task: TaskDetail, status?: TaskStatus) {

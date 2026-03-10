@@ -19,7 +19,7 @@
   <text x="956" y="430" fill="#F8B198" font-family="'IBM Plex Mono', monospace" font-size="18" letter-spacing="1.8">SHIPPED NOW</text>
   <text x="956" y="468" fill="white" font-family="'Space Grotesk', sans-serif" font-size="26" font-weight="700">Desktop shell</text>
   <text x="956" y="500" fill="white" font-family="'Space Grotesk', sans-serif" font-size="26" font-weight="700">Guarded terminal</text>
-  <text x="956" y="532" fill="white" font-family="'Space Grotesk', sans-serif" font-size="26" font-weight="700">Portable .exe</text>
+  <text x="956" y="532" fill="white" font-family="'Space Grotesk', sans-serif" font-size="26" font-weight="700">Win + macOS</text>
   <defs>
     <linearGradient id="paint0_linear_1_2" x1="96" y1="96" x2="184" y2="184" gradientUnits="userSpaceOnUse">
       <stop stop-color="#DE5B2F"/>

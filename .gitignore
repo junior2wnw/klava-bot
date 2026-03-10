@@ -8,6 +8,7 @@ coverage/
 
 apps/**/release/
 apps/**/dist/
+apps/**/dist-electron/
 
 *.log
 *.tmp

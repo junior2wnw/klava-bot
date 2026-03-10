@@ -1,6 +1,6 @@
 import { startTransition, useEffect, useMemo, useState } from "react";
 import type { SurfaceMode, SupportBundle, WorkspaceSnapshot } from "@klava/contracts";
-import { Button, PanelCard, tokens } from "@klava/ui";
+import { Button } from "@klava/ui";
 import { OnboardingSheet } from "../features/onboarding/OnboardingSheet";
 import { DiagnosticsPanel } from "../features/diagnostics/DiagnosticsPanel";
 import { ContextPane } from "../shell/ContextPane";
@@ -14,6 +14,7 @@ export function App() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const platform = window.klava?.platform ?? "browser";
 
   const selectedTask = snapshot?.selectedTask ?? null;
   const providerConfigured = snapshot?.provider.secretConfigured ?? false;
@@ -42,6 +43,15 @@ export function App() {
     const count = snapshot?.tasks.length ?? 0;
     return `${count} ${count === 1 ? "task" : "tasks"}`;
   }, [snapshot?.tasks.length]);
+
+  const platformLabel =
+    platform === "win32"
+      ? "Windows"
+      : platform === "darwin"
+        ? "macOS"
+        : platform === "linux"
+          ? "Linux"
+          : "Browser";
 
   async function mutate(path: string, body?: unknown, method = "POST") {
     setBusy(true);
@@ -114,27 +124,45 @@ export function App() {
   }
 
   return (
-    <div className="app-shell">
+    <div className={["app-shell", `app-shell--${platform}`].join(" ")}>
       <div className="app-shell__glow" />
       <header className="app-header">
-        <div>
-          <span className="eyebrow">Klava</span>
-          <h1>Desktop Operator</h1>
+        <div className="app-header__brand">
+          <div className="app-header__mark" aria-hidden="true">
+            <span>K</span>
+          </div>
+          <div className="app-header__copy">
+            <span className="eyebrow">Local Desktop Operator</span>
+            <h1>Klava Bot</h1>
+            <p className="app-header__subtitle">
+              Tasks, approvals, terminal control, and runtime health in one local surface.
+            </p>
+          </div>
         </div>
-        <div className="app-header__actions">
-          <PanelCard
-            style={{
-              padding: 12,
-              minWidth: 180,
-            }}
-            title={taskCountLabel}
-            subtitle={snapshot?.health.ok ? "Runtime healthy" : "Runtime unavailable"}
-            actions={
-              <Button variant="secondary" onClick={() => void refresh(snapshot?.selectedTaskId)} style={{ height: 30 }}>
-                Refresh
-              </Button>
-            }
-          />
+        <div className="app-header__side">
+          <div className="app-header__focus">
+            <span className="app-header__label">Focused task</span>
+            <strong>{selectedTask?.title ?? "No active task selected"}</strong>
+            <p>{selectedTask?.lastMessagePreview ?? "Create a task or pick one from the rail to start working."}</p>
+          </div>
+          <div className="app-header__actions no-drag">
+            <span className="app-badge">{taskCountLabel}</span>
+            <span className={snapshot?.health.ok ? "app-badge app-badge--success" : "app-badge app-badge--danger"}>
+              {snapshot?.health.ok ? "Runtime healthy" : "Runtime unavailable"}
+            </span>
+            <span className={providerConfigured ? "app-badge app-badge--accent" : "app-badge"}>
+              {providerConfigured ? "GONKA connected" : "Needs onboarding"}
+            </span>
+            <span className="app-badge">{platformLabel}</span>
+            <Button
+              variant="secondary"
+              onClick={() => void refresh(snapshot?.selectedTaskId)}
+              disabled={busy || loading}
+              style={{ height: 32 }}
+            >
+              Refresh
+            </Button>
+          </div>
         </div>
       </header>
 

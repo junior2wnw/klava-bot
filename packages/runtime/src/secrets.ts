@@ -105,7 +105,7 @@ export class SecretVault {
       }
 
       throw new Error(
-        "Unable to unlock the local secret vault for this Windows user profile. Reconnect GONKA to create a new vault.",
+        "Unable to unlock the local secret vault for the current user profile. Reconnect GONKA to create a new vault.",
       );
     }
   }

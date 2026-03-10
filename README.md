@@ -1,6 +1,6 @@
 # Klava
 
-`Klava` is a Windows desktop agent built on top of OpenClaw and distributed as a single executable.
+`Klava` is a desktop agent built on top of OpenClaw for local work on Windows and macOS.
 
 [![Release](https://img.shields.io/github/v/release/junior2wnw/klava-bot?display_name=tag&sort=semver)](https://github.com/junior2wnw/klava-bot/releases/latest)
 [![License](https://img.shields.io/github/license/junior2wnw/klava-bot)](./LICENSE)
@@ -13,7 +13,7 @@ It combines a local runtime, secret storage, approvals, and task history so chat
 
 Core idea:
 
-> one executable, one task log, one approval model, one tool that can inspect the machine, make approved changes, and record what happened.
+> one desktop app, one task log, one approval model, one tool that can inspect the machine, make approved changes, and record what happened.
 
 This repository is published as a standalone product repository, with its upstream lineage documented explicitly:
 
@@ -45,11 +45,11 @@ Available in this repo:
 
 - Electron + React desktop shell;
 - local runtime manager with typed HTTP API;
-- secure local secret storage with Windows DPAPI-backed wrapping;
+- secure local secret storage with Windows DPAPI protection and local encrypted vault files on macOS/Linux;
 - GONKA mainnet onboarding, validation, balance checks, and strongest-model selection;
 - task system with transcript history and support bundle export;
 - guarded task-local terminal with approval modes;
-- portable Windows `.exe` packaging through Electron Builder.
+- desktop packaging through Electron Builder for Windows and macOS.
 
 Commands available now:
 
@@ -81,13 +81,13 @@ The same runtime should eventually cover workflows such as:
 - inspect a broken workstation, prepare a restore point, reinstall a GPU, audio, or network driver, validate the device state, and explain what changed;
 - replace a BaaS dependency in a local project, rewrite env/config files, update adapters, run smoke checks, and leave a diff summary;
 - switch a project from one inference provider to another, update local runtime settings, test the new path, and roll back if health checks fail;
-- bootstrap a new developer machine from a single executable: install toolchains, clone repos, set environment, verify services, and leave the machine ready to work;
+- bootstrap a new developer machine from a single desktop app: install toolchains, clone repos, set environment, verify services, and leave the machine ready to work;
 - repair a damaged local development environment by checking `PATH`, shell profiles, startup tasks, Docker/WSL state, and service health;
 - rotate local secrets out of `.env` files into a vault-backed setup without leaking values into transcripts or logs;
 - reset network adapters, reconfigure firewall rules through approved typed flows, and validate the resulting connectivity;
 - collect logs, crash state, config snapshots, and system metadata into a support bundle that another engineer can actually use;
 - audit what changed on the machine, who approved it, which helper or runtime version executed it, and what rollback path exists;
-- give a non-expert user one executable that can move from "my machine is broken" to "the machine is repaired and documented" without making them stitch together five separate tools.
+- give a non-expert user one desktop app that can move from "my machine is broken" to "the machine is repaired and documented" without making them stitch together five separate tools.
 
 These examples describe direction, not a claim that every workflow is available today.
 
@@ -175,19 +175,22 @@ Build:
 npm run build
 ```
 
-Portable Windows executable:
+Desktop release builds:
 
 ```bash
 npm run dist:win
+npm run dist:mac # run this on macOS
 ```
 
 ### For users
 
 Most people should never need the dev stack.
 
-Klava is designed to be consumed as one portable executable:
+Klava is designed to ship as a desktop app bundle with local runtime included:
 
 - `apps/desktop/release/Klava 0.1.0.exe`
+- `apps/desktop/release/*.dmg` when built on macOS
+- `apps/desktop/release/mac*/Klava.app` when built on macOS
 
 First use:
 
@@ -201,6 +204,7 @@ First use:
 - `npm run check`
 - `npm run build`
 - `npm run dist:win`
+- `npm run dist:mac` path added and documented, but not yet validated on a macOS host in this repo state
 - runtime smoke test for `guarded -> approval -> reject`
 - runtime smoke test for task creation and guarded terminal approval generation
 - runtime smoke test for support bundle export without secret leakage
