@@ -7,6 +7,8 @@
 [![Issues](https://img.shields.io/github/issues/junior2wnw/klava-bot)](https://github.com/junior2wnw/klava-bot/issues)
 [![Discussions](https://img.shields.io/github/discussions/junior2wnw/klava-bot)](https://github.com/junior2wnw/klava-bot/discussions)
 
+Languages: **English** | [Русский](./README.ru.md)
+
 It combines a local-first runtime, secure secret handling, typed approvals, and a modern desktop shell so one person can move from "help me with this task" to "inspect, change, repair, or reconfigure this machine" in one place.
 
 The ambition is simple:
@@ -19,6 +21,7 @@ This repository is published as a standalone product repo, but its upstream line
 - Upstream boundary in-tree: [forks/openclaw/README.md](./forks/openclaw/README.md)
 - Fork and publication notes: [UPSTREAM.md](./UPSTREAM.md)
 - Public landing page: [junior2wnw.github.io/klava-bot](https://junior2wnw.github.io/klava-bot/)
+- Public landing page (RU): [junior2wnw.github.io/klava-bot/ru/](https://junior2wnw.github.io/klava-bot/ru/)
 - Open-source launch and lineage doc: [docs/16_OPEN_SOURCE_AND_FORK_LINEAGE.md](./docs/16_OPEN_SOURCE_AND_FORK_LINEAGE.md)
 
 ## Why Klava exists
@@ -62,6 +65,12 @@ Current natural-language behavior:
 - normal chat uses GONKA mainnet completion after onboarding;
 - guarded commands still respect the approval model;
 - terminal results are written back into the same task transcript and terminal history.
+
+Current provider note:
+
+- onboarding, validation, balance checks, and model discovery on GONKA work in this repo state;
+- the public GONKA-backed chat path is currently blocked by a provider-side transfer-agent panic tracked in [`gonka-ai/gonka#876`](https://github.com/gonka-ai/gonka/issues/876);
+- once that provider-side issue is fixed on the Gonka side, Klava's documented signed `chat/completions` path should be usable again without changing the client architecture.
 
 ## What the architecture is meant to support
 
@@ -209,5 +218,7 @@ Klava is intended to be a serious public project, not just a code dump.
 - Roadmap: [ROADMAP.md](./ROADMAP.md)
 - Governance: [GOVERNANCE.md](./GOVERNANCE.md)
 - Support: [SUPPORT.md](./SUPPORT.md)
+- Manifesto: [MANIFESTO.md](./MANIFESTO.md)
+- Launch post kit: [LAUNCH_POST.md](./LAUNCH_POST.md)
 
 If you want to help, the highest-value contributions are the ones that make the system more legible, safer, and more composable.
