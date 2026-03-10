@@ -18,7 +18,8 @@ Recommended reading order:
 13. [Top 1 Strategy](./13_TOP1_STRATEGY.md)
 14. [Implementation Audit](./14_IMPLEMENTATION_AUDIT.md)
 15. [Execution Playbook](./15_EXECUTION_PLAYBOOK.md)
-16. [Tasklist](../TASKLIST.md)
+16. [Open Source and Fork Lineage](./16_OPEN_SOURCE_AND_FORK_LINEAGE.md)
+17. [Tasklist](../TASKLIST.md)
 
 Document purpose:
 - `01`: product identity, target users, strategic principles, success metrics.
@@ -36,7 +37,8 @@ Document purpose:
 - `13`: product differentiators and strategic additions for category leadership.
 - `14`: implemented state, current risks, audit notes, and next hardening steps.
 - `15`: concrete repository backlog, file-level build order, and AI-friendly execution rules.
-- `16`: hard checkbox plan with file creation order, command contract, and definition of done.
+- `16`: public-project positioning, upstream lineage, contribution stance, and launch notes.
+- `17`: hard checkbox plan with file creation order, command contract, and definition of done.
 
 Top-level decision:
 - `OpenClaw` is the product core and default capability engine.

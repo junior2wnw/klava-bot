@@ -10,6 +10,7 @@ export function ShellRegion({
     <section
       style={{
         minHeight: 0,
+        overflow: "hidden",
         background: tokens.color.surface,
         border: `1px solid ${tokens.color.borderSubtle}`,
         borderRadius: tokens.radius.lg,
@@ -17,8 +18,6 @@ export function ShellRegion({
         display: "flex",
         flexDirection: "column",
         gap: tokens.spacing.sm,
-        backdropFilter: "blur(24px)",
-        WebkitBackdropFilter: "blur(24px)",
       }}
     >
       {(title || actions) && (
@@ -34,9 +33,9 @@ export function ShellRegion({
           <span
             style={{
               fontSize: 11,
-              fontWeight: 600,
+              fontWeight: 500,
               textTransform: "uppercase",
-              letterSpacing: "0.06em",
+              letterSpacing: "0.05em",
               color: tokens.color.textMuted,
             }}
           >
@@ -45,7 +44,7 @@ export function ShellRegion({
           {actions}
         </header>
       )}
-      <div style={{ minHeight: 0, flex: 1 }}>{children}</div>
+      <div style={{ minHeight: 0, flex: 1, overflow: "auto" }}>{children}</div>
     </section>
   );
 }

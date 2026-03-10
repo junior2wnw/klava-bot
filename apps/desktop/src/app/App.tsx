@@ -130,7 +130,7 @@ export function App() {
             title={taskCountLabel}
             subtitle={snapshot?.health.ok ? "Runtime healthy" : "Runtime unavailable"}
             actions={
-              <Button variant="secondary" onClick={() => void refresh(snapshot?.selectedTaskId)} style={{ height: 34 }}>
+              <Button variant="secondary" onClick={() => void refresh(snapshot?.selectedTaskId)} style={{ height: 30 }}>
                 Refresh
               </Button>
             }

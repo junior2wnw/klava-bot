@@ -29,9 +29,8 @@ export function TaskSummaryCard({
       subtitle={task.lastMessagePreview ?? "No conversation yet"}
       actions={<StatusPill tone={taskTone(task.status)} value={task.status.replace("_", " ")} />}
       style={{
-        background: selected ? "rgba(99, 102, 241, 0.08)" : tokens.color.surface,
-        borderColor: selected ? "rgba(99, 102, 241, 0.25)" : tokens.color.border,
-        boxShadow: selected ? "0 4px 20px rgba(99, 102, 241, 0.15)" : tokens.shadow.panel,
+        background: selected ? tokens.color.accentSoft : tokens.color.surface,
+        borderColor: selected ? "rgba(196, 112, 74, 0.20)" : tokens.color.border,
       }}
     >
       <div className="task-card__meta">

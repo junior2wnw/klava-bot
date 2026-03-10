@@ -567,6 +567,11 @@ function isModelUnavailableError(error: unknown) {
   );
 }
 
+function isProviderPanicError(error: unknown) {
+  const message = getErrorMessageLower(error);
+  return message.includes("nil pointer dereference") || (message.includes("runtime error") && message.includes("panic"));
+}
+
 function isTransientRequestError(error: unknown) {
   const status = getErrorStatus(error);
   const message = getErrorMessageLower(error);
@@ -636,6 +641,12 @@ function toUserFacingError(error: unknown, prepared: Pick<PreparedGonkaSecret, "
 
   if (isModelUnavailableError(error)) {
     return new Error("The selected Gonka model is unavailable on the active transfer agents right now.");
+  }
+
+  if (isProviderPanicError(error)) {
+    return new Error(
+      "GONKA mainnet accepted the signed request but the transfer agent crashed internally. This is a provider-side failure; try again later.",
+    );
   }
 
   const status = getErrorStatus(error);
@@ -963,7 +974,7 @@ export class GonkaService {
         continue;
       }
 
-      throw lastError instanceof Error ? lastError : toUserFacingError(lastError, prepared);
+      throw toUserFacingError(lastError, prepared);
     }
 
     throw toMnemonicExhaustedError(preparedCandidates);
@@ -992,7 +1003,7 @@ export class GonkaService {
         continue;
       }
 
-      throw lastError instanceof Error ? lastError : toUserFacingError(lastError, prepared);
+      throw toUserFacingError(lastError, prepared);
     }
 
     throw toMnemonicExhaustedError(preparedCandidates);

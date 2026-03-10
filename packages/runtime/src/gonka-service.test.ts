@@ -116,3 +116,28 @@ test("getBalance formats native Gonka balances and caches repeated lookups", asy
     globalThis.fetch = originalFetch;
   }
 });
+
+test("validate surfaces a provider panic as a provider-side Gonka failure", async () => {
+  const service = new GonkaService();
+  const serviceInternals = service as unknown as ServiceInternals;
+
+  serviceInternals.resolveBestModel = async () => ({
+    model: "mock/model",
+    candidates: ["mock/model"],
+  });
+  serviceInternals.probeConnection = async () => {
+    const error = Object.assign(
+      new Error(
+        'Request failed for http://node2.gonka.ai:8000/v1/chat/completions: 500 {"error":"rpc error: code = Unknown desc = runtime error: invalid memory address or nil pointer dereference: panic"}',
+      ),
+      { status: 500 },
+    );
+
+    throw error;
+  };
+
+  await assert.rejects(
+    service.validate(TEST_MNEMONIC),
+    /accepted the signed request but the transfer agent crashed internally/i,
+  );
+});

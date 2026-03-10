@@ -97,10 +97,10 @@ export function OnboardingSheet({
         title="Connect GONKA"
         subtitle="Secrets stay outside the transcript. Recommended input is the raw Gonka private key. Recovery phrases can also be matched against the wallet address shown in your Gonka wallet."
         style={{
-          width: "min(560px, calc(100vw - 40px))",
-          borderRadius: 16,
-          background: "rgba(255, 255, 255, 0.04)",
-          border: "1px solid rgba(255, 255, 255, 0.08)",
+          width: "min(520px, calc(100vw - 40px))",
+          borderRadius: 14,
+          background: "rgba(255, 245, 235, 0.03)",
+          border: "1px solid rgba(255, 245, 235, 0.06)",
         }}
       >
         <Stack gap={14}>
@@ -173,11 +173,6 @@ export function OnboardingSheet({
           <div className="onboarding-note">
             <strong>Before Klava saves anything</strong>
             <p>It derives candidate requester addresses locally and performs one tiny live inference probe against Gonka mainnet. If you know the wallet address your Gonka app shows, enter it above so Klava can match the right derivation path first.</p>
-          </div>
-
-          <div className="example-block">
-            <span>Good first prompt</span>
-            <code>Summarize this folder and propose the next implementation step.</code>
           </div>
 
           {error ? <div className="app-banner">{error}</div> : null}

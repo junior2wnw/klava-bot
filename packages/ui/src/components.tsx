@@ -15,13 +15,10 @@ export function PanelCard({ title, subtitle, actions, style, children }: CardPro
         background: tokens.color.surfaceElevated,
         border: `1px solid ${tokens.color.border}`,
         borderRadius: tokens.radius.md,
-        boxShadow: tokens.shadow.panel,
         padding: tokens.spacing.md,
         display: "flex",
         flexDirection: "column",
         gap: tokens.spacing.sm,
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
         ...style,
       }}
     >
@@ -34,9 +31,9 @@ export function PanelCard({ title, subtitle, actions, style, children }: CardPro
             gap: tokens.spacing.sm,
           }}
         >
-          <div style={{ display: "grid", gap: 2, minWidth: 0 }}>
+          <div style={{ display: "grid", gap: 2, minWidth: 0, overflow: "hidden" }}>
             {title ? (
-              <strong style={{ fontSize: 13, fontWeight: 600, color: tokens.color.text, letterSpacing: "-0.01em" }}>
+              <strong style={{ fontSize: 13, fontWeight: 500, color: tokens.color.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {title}
               </strong>
             ) : null}
@@ -73,17 +70,17 @@ export function Button({
       ? {
           background: tokens.color.accent,
           borderColor: "transparent",
-          color: "#ffffff",
+          color: "#fff",
         }
       : variant === "danger"
         ? {
-            background: "rgba(248, 113, 113, 0.15)",
-            borderColor: "rgba(248, 113, 113, 0.25)",
+            background: "rgba(199, 95, 95, 0.12)",
+            borderColor: "rgba(199, 95, 95, 0.20)",
             color: tokens.color.danger,
           }
         : variant === "secondary"
           ? {
-              background: "rgba(255, 255, 255, 0.06)",
+              background: "rgba(255, 245, 235, 0.04)",
               borderColor: tokens.color.border,
               color: tokens.color.textSecondary,
             }
@@ -99,18 +96,17 @@ export function Button({
       onClick={onClick}
       type={type}
       style={{
-        height: 32,
+        height: 30,
         borderRadius: tokens.radius.sm,
         border: `1px solid ${palette.borderColor}`,
         background: palette.background,
         color: palette.color,
         fontWeight: 500,
         fontSize: 12,
-        padding: "0 14px",
+        padding: "0 12px",
         cursor: disabled ? "not-allowed" : "pointer",
-        opacity: disabled ? 0.4 : 1,
-        transition: `all ${tokens.motion.fast} ease`,
-        letterSpacing: "0.01em",
+        opacity: disabled ? 0.35 : 1,
+        transition: `opacity ${tokens.motion.fast} ease`,
         ...style,
       }}
     >
@@ -146,7 +142,7 @@ export function TextField({
     width: "100%",
     borderRadius: tokens.radius.sm,
     border: `1px solid ${tokens.color.border}`,
-    background: "rgba(255, 255, 255, 0.03)",
+    background: "rgba(255, 245, 235, 0.02)",
     color: tokens.color.text,
     padding: "8px 12px",
     font: `400 13px ${tokens.typography.body}`,
@@ -193,26 +189,25 @@ export function StatusPill({
 }) {
   const toneStyles =
     tone === "success"
-      ? { background: "rgba(52, 211, 153, 0.12)", color: tokens.color.success }
+      ? { background: "rgba(125, 186, 106, 0.10)", color: tokens.color.success }
       : tone === "warning"
-        ? { background: "rgba(251, 191, 36, 0.12)", color: tokens.color.warning }
+        ? { background: "rgba(212, 160, 74, 0.10)", color: tokens.color.warning }
         : tone === "danger"
-          ? { background: "rgba(248, 113, 113, 0.12)", color: tokens.color.danger }
+          ? { background: "rgba(199, 95, 95, 0.10)", color: tokens.color.danger }
           : tone === "accent"
             ? { background: tokens.color.accentSoft, color: tokens.color.accent }
-            : { background: "rgba(255, 255, 255, 0.06)", color: tokens.color.textMuted };
+            : { background: "rgba(255, 245, 235, 0.04)", color: tokens.color.textMuted };
 
   return (
     <span
       style={{
         display: "inline-flex",
         alignItems: "center",
-        height: 22,
-        borderRadius: 6,
-        padding: "0 8px",
+        height: 20,
+        borderRadius: 5,
+        padding: "0 7px",
         fontSize: 11,
-        fontWeight: 600,
-        letterSpacing: "0.02em",
+        fontWeight: 500,
         ...toneStyles,
       }}
     >
