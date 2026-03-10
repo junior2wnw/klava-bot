@@ -21,6 +21,13 @@ Recommended reading order:
 16. [Open Source and Fork Lineage](./16_OPEN_SOURCE_AND_FORK_LINEAGE.md)
 17. [Tasklist](../TASKLIST.md)
 
+Related root-level public project docs:
+- [README](../README.md)
+- [Roadmap](../ROADMAP.md)
+- [Governance](../GOVERNANCE.md)
+- [Support](../SUPPORT.md)
+- [Security Policy](../SECURITY.md)
+
 Document purpose:
 - `01`: product identity, target users, strategic principles, success metrics.
 - `02`: formal requirements, scope, release tiers, acceptance criteria.

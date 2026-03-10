@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Klava</title>
+    <meta
+      name="description"
+      content="Klava is an OpenClaw-derived desktop agent shipped as a single executable for local tasks, approvals, and typed computer operations."
+    />
+    <meta property="og:title" content="Klava" />
+    <meta
+      property="og:description"
+      content="One executable. One task log. One approval model. A serious local desktop agent."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="./assets/klava-social-preview.svg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Klava" />
+    <meta
+      name="twitter:description"
+      content="An OpenClaw-derived desktop agent built for serious local tasks, approvals, and typed computer operations."
+    />
+    <meta name="theme-color" content="#f4efe6" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./site.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="site-header">
+        <div class="brand">
+          <div class="brand-mark">K</div>
+          <div>
+            <div class="brand-name">Klava</div>
+            <div class="brand-subtitle">OpenClaw-derived desktop agent</div>
+          </div>
+        </div>
+        <nav class="site-nav">
+          <a href="https://github.com/junior2wnw/klava-bot">GitHub</a>
+          <a href="https://github.com/junior2wnw/klava-bot/releases/latest">Download</a>
+          <a href="../README.md">README</a>
+        </nav>
+      </header>
+
+      <main>
+        <section class="hero">
+          <div class="hero-copy">
+            <p class="eyebrow">One executable. One task log. One approval model.</p>
+            <h1>The desktop agent that is meant to operate the whole machine, not just talk about it.</h1>
+            <p class="lede">
+              Klava is a local-first Windows desktop agent built for serious work: task execution, system inspection,
+              guarded shell operations, secure onboarding, and typed computer workflows that can grow into repair,
+              migration, and support operations.
+            </p>
+            <div class="hero-actions">
+              <a class="button button-primary" href="https://github.com/junior2wnw/klava-bot/releases/latest">
+                Download the executable
+              </a>
+              <a class="button button-secondary" href="https://github.com/junior2wnw/klava-bot">
+                Read the source
+              </a>
+            </div>
+            <ul class="signal-list">
+              <li>Portable Windows executable</li>
+              <li>Local runtime with typed HTTP surfaces</li>
+              <li>Guarded terminal execution with approvals</li>
+              <li>Explicit OpenClaw lineage</li>
+            </ul>
+          </div>
+          <div class="hero-panel">
+            <div class="hero-card hero-card-dark">
+              <span class="card-kicker">Current</span>
+              <h2>Shipped now</h2>
+              <ul>
+                <li>Electron desktop shell</li>
+                <li>Vault-backed secret flow</li>
+                <li>GONKA onboarding and chat</li>
+                <li>Task transcript + support bundles</li>
+              </ul>
+            </div>
+            <div class="hero-card hero-card-light">
+              <span class="card-kicker">Direction</span>
+              <h2>Architected for</h2>
+              <ul>
+                <li>Driver inspection and reinstall workflows</li>
+                <li>BaaS and provider replacement inside real projects</li>
+                <li>Workstation bootstrap and recovery</li>
+                <li>Typed privileged helper operations</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section class="section-grid">
+          <article class="section-card section-card-accent">
+            <p class="section-label">What makes it different</p>
+            <h2>Klava is not trying to be another terminal toy.</h2>
+            <p>
+              The design target is a coherent local operator: the system that can inspect the machine, ask for
+              approval, execute typed workflows, capture what changed, and leave behind something another engineer can
+              audit.
+            </p>
+          </article>
+          <article class="section-card">
+            <p class="section-label">Upstream lineage</p>
+            <h2>Fork relationship, made explicit.</h2>
+            <p>
+              Klava is OpenClaw-derived. The repo documents that lineage directly instead of hiding it behind vague
+              wording or a missing fork badge.
+            </p>
+            <a class="inline-link" href="../UPSTREAM.md">Read upstream notes</a>
+          </article>
+        </section>
+
+        <section class="capabilities">
+          <div class="section-heading">
+            <p class="section-label">Workflow surface</p>
+            <h2>Examples of the operating model</h2>
+          </div>
+          <div class="capability-grid">
+            <article>
+              <h3>System repair</h3>
+              <p>Inspect devices, prepare rollback context, reinstall a broken GPU, audio, or network driver, and validate the result.</p>
+            </article>
+            <article>
+              <h3>Project migration</h3>
+              <p>Replace a BaaS or provider in a real codebase, rewrite config, run smoke checks, and summarize the diff.</p>
+            </article>
+            <article>
+              <h3>Machine bootstrap</h3>
+              <p>Take a new machine from blank state to working developer environment through one executable and one task log.</p>
+            </article>
+            <article>
+              <h3>Support operations</h3>
+              <p>Collect logs, config snapshots, and runtime state into support bundles that are usable by another human.</p>
+            </article>
+            <article>
+              <h3>Local safety</h3>
+              <p>Keep secrets outside the transcript, route risky actions through approvals, and avoid raw privileged prompt execution.</p>
+            </article>
+            <article>
+              <h3>Operator clarity</h3>
+              <p>Make it obvious what changed, what was approved, what version executed it, and how to roll back when possible.</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="timeline">
+          <div class="section-heading">
+            <p class="section-label">Project maturity</p>
+            <h2>Built to be honest about what is shipped and what is next</h2>
+          </div>
+          <div class="timeline-grid">
+            <article>
+              <span class="timeline-tag">Now</span>
+              <ul>
+                <li>Desktop shell</li>
+                <li>Local runtime</li>
+                <li>Secure onboarding</li>
+                <li>Guarded terminal</li>
+              </ul>
+            </article>
+            <article>
+              <span class="timeline-tag">Next</span>
+              <ul>
+                <li>Typed privileged helper</li>
+                <li>Richer support workflows</li>
+                <li>Stronger release ergonomics</li>
+                <li>More explicit audit records</li>
+              </ul>
+            </article>
+            <article>
+              <span class="timeline-tag">Later</span>
+              <ul>
+                <li>Cloud gateway</li>
+                <li>Voice and multimodal packs</li>
+                <li>Workflow packs</li>
+                <li>Broader system-repair library</li>
+              </ul>
+            </article>
+          </div>
+        </section>
+
+        <section class="docs-strip">
+          <div>
+            <p class="section-label">Read the project</p>
+            <h2>Everything important is documented in the open.</h2>
+          </div>
+          <div class="docs-links">
+            <a href="../README.md">README</a>
+            <a href="../ROADMAP.md">Roadmap</a>
+            <a href="../GOVERNANCE.md">Governance</a>
+            <a href="../SECURITY.md">Security</a>
+            <a href="../docs/04_SECURITY_AND_PRIVILEGED_EXECUTION.md">Privileged execution</a>
+            <a href="../docs/16_OPEN_SOURCE_AND_FORK_LINEAGE.md">Fork lineage</a>
+          </div>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <p>Klava is an OpenClaw-derived desktop agent project built to feel formidable because it is coherent, not because it shouts.</p>
+        <div class="footer-links">
+          <a href="https://github.com/junior2wnw/klava-bot/releases/latest">Latest release</a>
+          <a href="https://github.com/junior2wnw/klava-bot/issues">Issues</a>
+          <a href="https://github.com/junior2wnw/klava-bot/discussions">Discussions</a>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>

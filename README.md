@@ -2,6 +2,11 @@
 
 `Klava` is an OpenClaw-derived desktop agent shipped as a single Windows executable.
 
+[![Release](https://img.shields.io/github/v/release/junior2wnw/klava-bot?display_name=tag&sort=semver)](https://github.com/junior2wnw/klava-bot/releases/latest)
+[![License](https://img.shields.io/github/license/junior2wnw/klava-bot)](./LICENSE)
+[![Issues](https://img.shields.io/github/issues/junior2wnw/klava-bot)](https://github.com/junior2wnw/klava-bot/issues)
+[![Discussions](https://img.shields.io/github/discussions/junior2wnw/klava-bot)](https://github.com/junior2wnw/klava-bot/discussions)
+
 It combines a local-first runtime, secure secret handling, typed approvals, and a modern desktop shell so one person can move from "help me with this task" to "inspect, change, repair, or reconfigure this machine" in one place.
 
 The ambition is simple:
@@ -13,6 +18,7 @@ This repository is published as a standalone product repo, but its upstream line
 - Upstream project: [`OpenClaw`](https://github.com/openclaw/openclaw)
 - Upstream boundary in-tree: [forks/openclaw/README.md](./forks/openclaw/README.md)
 - Fork and publication notes: [UPSTREAM.md](./UPSTREAM.md)
+- Public landing page: [junior2wnw.github.io/klava-bot](https://junior2wnw.github.io/klava-bot/)
 - Open-source launch and lineage doc: [docs/16_OPEN_SOURCE_AND_FORK_LINEAGE.md](./docs/16_OPEN_SOURCE_AND_FORK_LINEAGE.md)
 
 ## Why Klava exists
@@ -129,6 +135,9 @@ Recommended reading order:
 4. [Implementation Audit](./docs/14_IMPLEMENTATION_AUDIT.md)
 5. [Execution Playbook](./docs/15_EXECUTION_PLAYBOOK.md)
 6. [Open Source and Fork Lineage](./docs/16_OPEN_SOURCE_AND_FORK_LINEAGE.md)
+7. [Roadmap](./ROADMAP.md)
+8. [Governance](./GOVERNANCE.md)
+9. [Support](./SUPPORT.md)
 
 ## Quick start
 
@@ -197,5 +206,8 @@ Klava is intended to be a serious public project, not just a code dump.
 - Contributing guide: [CONTRIBUTING.md](./CONTRIBUTING.md)
 - Code of conduct: [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md)
 - Security policy: [SECURITY.md](./SECURITY.md)
+- Roadmap: [ROADMAP.md](./ROADMAP.md)
+- Governance: [GOVERNANCE.md](./GOVERNANCE.md)
+- Support: [SUPPORT.md](./SUPPORT.md)
 
 If you want to help, the highest-value contributions are the ones that make the system more legible, safer, and more composable.
