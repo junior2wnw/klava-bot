@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "powershell -ExecutionPolicy Bypass -File ./scripts/dev.ps1",
     "check": "powershell -ExecutionPolicy Bypass -File ./scripts/check.ps1",
+    "test": "powershell -ExecutionPolicy Bypass -File ./scripts/test.ps1",
     "build": "powershell -ExecutionPolicy Bypass -File ./scripts/build.ps1",
     "dist:win": "powershell -ExecutionPolicy Bypass -File ./scripts/dist-win.ps1"
   },

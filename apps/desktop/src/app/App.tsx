@@ -6,33 +6,7 @@ import { DiagnosticsPanel } from "../features/diagnostics/DiagnosticsPanel";
 import { ContextPane } from "../shell/ContextPane";
 import { MainSurface } from "../shell/MainSurface";
 import { TaskRail } from "../shell/TaskRail";
-
-type RuntimeError = {
-  message: string;
-};
-
-function getRuntimeBaseUrl() {
-  return window.klava?.runtimeUrl ?? import.meta.env.VITE_RUNTIME_URL ?? "/api";
-}
-
-async function requestJson<T>(path: string, init?: RequestInit) {
-  const response = await fetch(`${getRuntimeBaseUrl()}${path}`, {
-    headers: {
-      "content-type": "application/json",
-    },
-    ...init,
-  });
-
-  const payload = (await response.json()) as T | RuntimeError;
-  if (!response.ok) {
-    const errorMessage =
-      typeof payload === "object" && payload !== null && "message" in payload && typeof payload.message === "string"
-        ? payload.message
-        : "Request failed";
-    throw new Error(errorMessage);
-  }
-  return payload as T;
-}
+import { requestJson } from "./requestJson";
 
 export function App() {
   const [snapshot, setSnapshot] = useState<WorkspaceSnapshot | null>(null);
@@ -42,7 +16,8 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
 
   const selectedTask = snapshot?.selectedTask ?? null;
-  const providerConfigured = snapshot?.provider.apiKeyConfigured ?? false;
+  const providerConfigured = snapshot?.provider.secretConfigured ?? false;
+  const showGlobalError = Boolean(error) && providerConfigured;
 
   async function refresh(taskId?: string | null) {
     setLoading(true);
@@ -94,15 +69,21 @@ export function App() {
     await mutate(`/tasks/${taskId}`, undefined, "GET");
   }
 
-  async function handleOnboardingSubmit(payload: { apiKey: string }) {
+  async function handleOnboardingSubmit(payload: {
+    secret: string;
+    walletAddress?: string;
+    mnemonicPassphrase?: string;
+  }) {
     setBusy(true);
     setError(null);
     try {
       await requestJson("/onboarding/validate", {
         method: "POST",
         body: JSON.stringify({
-          provider: "openai",
-          apiKey: payload.apiKey,
+          provider: "gonka",
+          secret: payload.secret,
+          walletAddress: payload.walletAddress,
+          mnemonicPassphrase: payload.mnemonicPassphrase,
         }),
       });
       await refresh(snapshot?.selectedTaskId ?? undefined);
@@ -157,7 +138,7 @@ export function App() {
         </div>
       </header>
 
-      {error ? (
+      {showGlobalError ? (
         <div className="app-banner">
           <strong>Problem:</strong> {error}
         </div>

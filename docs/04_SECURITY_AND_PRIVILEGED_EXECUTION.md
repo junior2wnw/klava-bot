@@ -67,7 +67,7 @@ Secret states:
 User-visible chat behavior:
 - the user may write "here is my key";
 - the app should open a secure sheet;
-- the chat transcript should later show "OpenAI connected" rather than the raw key.
+- the chat transcript should later show "GONKA connected" rather than the raw secret.
 
 ## Hosted Key Brokerage
 

@@ -30,7 +30,7 @@ Klava is a desktop application that packages `OpenClaw` into a consumer-friendly
 ## Primary User Stories
 
 - As a new user, I install Klava and start using it without reading technical docs.
-- As a user, I paste an API key once and immediately get a usable assistant.
+- As a user, I paste a `GONKA` private phrase or raw private key once and immediately get a usable assistant.
 - As a user, I manage all tasks and integrations from one dialogue window.
 - As a user, I create multiple tasks in parallel with one click.
 - As a user, I ask Klava to connect Telegram, Discord, WhatsApp, files, or a local tool, and Klava walks me through the right flow.
@@ -51,7 +51,7 @@ Klava is a desktop application that packages `OpenClaw` into a consumer-friendly
 ### FR-02 First-Run Onboarding
 
 - The first-run experience must ask the user to connect a model provider.
-- The user must be able to provide an API key through a secure input surface.
+- The user must be able to provide a `GONKA` private phrase or raw private key through a secure input surface.
 - The onboarding flow must validate the provider connection before entering the main workspace.
 - The onboarding flow must offer a short example prompt so the user gets a successful first action immediately.
 
@@ -80,7 +80,7 @@ Klava is a desktop application that packages `OpenClaw` into a consumer-friendly
 
 ### FR-06 Integrations and Channels
 
-- The product must support provider integrations such as OpenAI, Anthropic, Google, and local models.
+- The product must support a default `GONKA` mainnet provider path, with future integrations such as OpenAI, Anthropic, Google, and local models.
 - The product must support common communication channels such as Telegram, Discord, WhatsApp, Slack, and WebChat where legally and technically feasible.
 - The product must support future plugin-style connectors for third-party services.
 - Integration setup must be chat-triggerable but executed via structured setup flows.
@@ -150,7 +150,7 @@ Klava is a desktop application that packages `OpenClaw` into a consumer-friendly
 
 ### FR-16 Klava Cloud Access Key
 
-- The product must support a `Klava Cloud` mode where the user starts with one Klava-issued API key.
+- The product must support a `Klava Cloud` mode where the user starts with one Klava-issued credential.
 - In Klava Cloud mode, provider requests must be proxied through a Klava-managed server layer without exposing upstream provider keys to clients.
 - The product must still support `bring your own provider key` mode.
 - The shell must present both modes clearly without forcing users to understand backend complexity.
@@ -246,7 +246,7 @@ Klava is a desktop application that packages `OpenClaw` into a consumer-friendly
 ## Acceptance Criteria for MVP
 
 - A user on a clean Windows machine can install Klava and reach the first successful prompt without manual dependency setup.
-- API key entry uses a secure input path and does not remain visible in the transcript.
+- `GONKA` secret entry uses a secure input path and does not remain visible in the transcript.
 - The user can create at least 3 independent tasks and observe separate progress.
 - The shell can restart and reconnect to the runtime without losing task metadata.
 - The product can ship an updated shell without forcing a full runtime reinstall.

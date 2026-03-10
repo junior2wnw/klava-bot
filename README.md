@@ -2,7 +2,7 @@
 
 `Klava Bot` is a thin desktop product built around `OpenClaw`, which remains the core runtime and primary capability engine.
 
-Product goal: let a person install one application, enter an API key, and immediately start managing tasks, integrations, and local system actions through one modern dialogue interface.
+Product goal: let a person install one application, enter a GONKA private phrase or private key once, pass a live mainnet check, and immediately start managing tasks, integrations, and local system actions through one modern dialogue interface.
 
 Core promise:
 - `OpenClaw` stays the core;
@@ -61,14 +61,14 @@ Current status:
 - local runtime manager with typed HTTP API;
 - secure local secret storage abstraction with Windows DPAPI path;
 - persistent task/session store;
-- OpenAI direct onboarding with secure key validation and automatic frontier-model selection;
+- GONKA mainnet onboarding with secure secret storage and automatic strongest-model selection;
 - compact multi-surface UI shell built from reusable components;
 - task-local terminal subsystem with command history and guard modes;
 - approval flow for guarded terminal commands;
 - surface registry foundation for future modes like `Pro`;
 - `/terminal` and `$ ` chat routing into the terminal surface;
 - `guard strict|balanced|off` command routing into terminal settings;
-- OpenAI direct chat completion path after secure onboarding with automatic model refresh;
+- GONKA mainnet chat completion path after secure onboarding with automatic model refresh;
 - support bundle export with sanitized task metadata;
 - desktop startup logging for packaged main-process failures;
 - independent build pipeline for shell and runtime;
@@ -88,7 +88,7 @@ Chat and shell shortcuts supported:
 - `enable voice` and `disable voice` are currently explicit placeholders
 
 Current natural-language behavior:
-- normal chat uses direct OpenAI completion after onboarding;
+- normal chat uses GONKA mainnet completion after onboarding;
 - guarded commands still do not bypass safety: they create approvals in `balanced` mode and stay blocked in `strict`;
 - terminal results are written back into the same task transcript and terminal history.
 
@@ -116,8 +116,8 @@ What this starts:
 
 First use:
 1. Open the shell.
-2. Paste your `OpenAI API key`.
-3. `Klava` auto-selects the strongest GPT model currently available to that key and refreshes it automatically later.
+2. Paste your `GONKA private phrase` or raw private key.
+3. `Klava` performs a tiny live GONKA mainnet validation, only saves the secret on success, then auto-selects the strongest current model and keeps it refreshed.
 4. Start chatting with `Klava`.
 
 Build:
@@ -143,10 +143,10 @@ Verification already completed in this repo state:
 - runtime smoke test for `guarded -> approval -> reject`
 - runtime smoke test for task creation and guarded terminal approval generation
 - runtime smoke test for support bundle export without secret leakage
+- runtime smoke test for GONKA onboarding rejection on an account-not-found phrase with provider state staying disconnected
+- packaged `Klava 0.1.0.exe` startup smoke test without main-process crash
 - portable Windows artifact created at `apps/desktop/release/Klava 0.1.0.exe`
 
 Known current gaps:
 - the actual `OpenClaw` upstream fork is still only a reserved boundary in `forks/openclaw/`;
-- voice is intentionally not implemented beyond explicit placeholder responses;
-- the packaged app artifact is built successfully, but a full GUI startup smoke is still pending in a less restricted automation environment;
-- branded icon assets are not added yet, so Electron fallback icons are used in the packaged app.
+- voice is intentionally not implemented beyond explicit placeholder responses.

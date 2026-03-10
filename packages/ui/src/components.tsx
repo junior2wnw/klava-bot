@@ -111,13 +111,19 @@ type TextFieldProps = {
   type?: string;
   multiline?: boolean;
   rows?: number;
+  autoComplete?: string;
+  spellCheck?: boolean;
+  style?: CSSProperties;
 };
 
 export function TextField({
+  autoComplete,
   multiline,
   onChange,
   placeholder,
   rows = 4,
+  spellCheck,
+  style,
   type = "text",
   value,
 }: TextFieldProps) {
@@ -132,13 +138,16 @@ export function TextField({
     outlineColor: tokens.color.focus,
     resize: "vertical",
     boxSizing: "border-box",
+    ...style,
   };
 
   if (multiline) {
     return (
       <textarea
+        autoComplete={autoComplete}
         placeholder={placeholder}
         rows={rows}
+        spellCheck={spellCheck}
         style={sharedStyle}
         value={value}
         onChange={(event) => onChange(event.target.value)}
@@ -148,7 +157,9 @@ export function TextField({
 
   return (
     <input
+      autoComplete={autoComplete}
       placeholder={placeholder}
+      spellCheck={spellCheck}
       style={sharedStyle}
       type={type}
       value={value}

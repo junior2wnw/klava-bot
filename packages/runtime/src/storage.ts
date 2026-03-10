@@ -4,6 +4,7 @@ import path from "node:path";
 import type {
   ApprovalRequest,
   GuardMode,
+  ProviderBalance,
   ProviderSettings,
   TaskDetail,
   TaskMessage,
@@ -45,14 +46,42 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+function normalizeProviderBalance(balance?: Partial<ProviderBalance> | null): ProviderBalance | null {
+  if (!balance || typeof balance !== "object") {
+    return null;
+  }
+
+  if (
+    typeof balance.denom !== "string" ||
+    typeof balance.amount !== "string" ||
+    typeof balance.displayAmount !== "string" ||
+    typeof balance.displayDenom !== "string" ||
+    typeof balance.asOf !== "string" ||
+    typeof balance.sourceUrl !== "string"
+  ) {
+    return null;
+  }
+
+  return {
+    denom: balance.denom,
+    amount: balance.amount,
+    displayAmount: balance.displayAmount,
+    displayDenom: balance.displayDenom,
+    asOf: balance.asOf,
+    sourceUrl: balance.sourceUrl,
+  };
+}
+
 function normalizeProvider(provider?: Partial<ProviderSettings> | null): ProviderSettings {
   const validatedAt = typeof provider?.validatedAt === "string" ? provider.validatedAt : null;
 
   return {
-    provider: "openai",
+    provider: "gonka",
     selectionMode: "auto",
     model: typeof provider?.model === "string" && provider.model.trim().length > 0 ? provider.model.trim() : DEFAULT_MODEL,
-    apiKeyConfigured: provider?.apiKeyConfigured ?? false,
+    secretConfigured: provider?.secretConfigured ?? false,
+    requesterAddress: typeof provider?.requesterAddress === "string" ? provider.requesterAddress : null,
+    balance: normalizeProviderBalance(provider?.balance),
     validatedAt,
     modelRefreshedAt: typeof provider?.modelRefreshedAt === "string" ? provider.modelRefreshedAt : validatedAt,
   };
@@ -90,7 +119,9 @@ export function createTaskTemplate(title?: string): TaskDetail {
 function defaultState(): RuntimeState {
   return {
     provider: normalizeProvider({
-      apiKeyConfigured: false,
+      secretConfigured: false,
+      requesterAddress: null,
+      balance: null,
       validatedAt: null,
       modelRefreshedAt: null,
     }),

@@ -16,11 +16,17 @@ async function loadJsonMap(filePath: string): Promise<StoredSecrets> {
 
 function runPowerShell(script: string, inputValue: string): Promise<string> {
   return new Promise((resolve, reject) => {
+    const encodedCommand = Buffer.from(script, "utf16le").toString("base64");
     const child = spawn(
       "powershell",
-      ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", script, "-InputBase64", inputValue],
+      ["-NoLogo", "-NoProfile", "-NonInteractive", "-EncodedCommand", encodedCommand],
       {
+        env: {
+          ...process.env,
+          KLAVA_INPUT_BASE64: inputValue,
+        },
         stdio: ["ignore", "pipe", "pipe"],
+        windowsHide: true,
       },
     );
 
@@ -49,7 +55,9 @@ function runPowerShell(script: string, inputValue: string): Promise<string> {
 
 async function protectForCurrentUser(inputBase64: string) {
   const script =
-    "param([string]$InputBase64) " +
+    "Add-Type -AssemblyName System.Security; " +
+    "$ErrorActionPreference = 'Stop'; " +
+    "$InputBase64 = $env:KLAVA_INPUT_BASE64; " +
     "$bytes = [Convert]::FromBase64String($InputBase64); " +
     "$protected = [System.Security.Cryptography.ProtectedData]::Protect($bytes, $null, [System.Security.Cryptography.DataProtectionScope]::CurrentUser); " +
     "[Convert]::ToBase64String($protected)";
@@ -59,7 +67,9 @@ async function protectForCurrentUser(inputBase64: string) {
 
 async function unprotectForCurrentUser(inputBase64: string) {
   const script =
-    "param([string]$InputBase64) " +
+    "Add-Type -AssemblyName System.Security; " +
+    "$ErrorActionPreference = 'Stop'; " +
+    "$InputBase64 = $env:KLAVA_INPUT_BASE64; " +
     "$bytes = [Convert]::FromBase64String($InputBase64); " +
     "$plain = [System.Security.Cryptography.ProtectedData]::Unprotect($bytes, $null, [System.Security.Cryptography.DataProtectionScope]::CurrentUser); " +
     "[Convert]::ToBase64String($plain)";
@@ -70,18 +80,33 @@ async function unprotectForCurrentUser(inputBase64: string) {
 export class SecretVault {
   constructor(private readonly paths: AppPaths) {}
 
+  private async createMasterKey() {
+    const key = randomBytes(32);
+    const base64 = key.toString("base64");
+    const wrapped = process.platform === "win32" ? await protectForCurrentUser(base64) : base64;
+    await writeFile(this.paths.keyPath, wrapped, "utf8");
+    return key;
+  }
+
   private async loadMasterKey() {
     try {
       const wrapped = await readFile(this.paths.keyPath, "utf8");
       const unwrappedBase64 =
         process.platform === "win32" ? await unprotectForCurrentUser(wrapped.trim()) : wrapped.trim();
       return Buffer.from(unwrappedBase64, "base64");
-    } catch {
-      const key = randomBytes(32);
-      const base64 = key.toString("base64");
-      const wrapped = process.platform === "win32" ? await protectForCurrentUser(base64) : base64;
-      await writeFile(this.paths.keyPath, wrapped, "utf8");
-      return key;
+    } catch (error) {
+      const code =
+        typeof error === "object" && error !== null && "code" in error && typeof error.code === "string"
+          ? error.code
+          : null;
+
+      if (code === "ENOENT") {
+        return this.createMasterKey();
+      }
+
+      throw new Error(
+        "Unable to unlock the local secret vault for this Windows user profile. Reconnect GONKA to create a new vault.",
+      );
     }
   }
 

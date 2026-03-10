@@ -6,7 +6,7 @@ The repository now contains a working foundation for `Klava Bot`:
 - modular npm workspace monorepo;
 - local runtime package with Fastify API, persistent task model, secret vault, and guarded terminal orchestration;
 - Electron + React desktop shell with a three-region layout;
-- OpenAI direct onboarding and normal chat completion path;
+- GONKA mainnet onboarding and normal chat completion path;
 - task-local terminal subsystem with guard modes and approval flow;
 - support bundle export with sanitized metadata only;
 - desktop startup logging for packaged-app failures;
@@ -120,8 +120,8 @@ Fix:
 - Normal chat does not yet use typed tool-calling; it uses direct provider completion and explicit terminal shortcuts.
 - `Klava Cloud`, updater server, installer polish, and real `OpenClaw` embedding are still future layers.
 - current Windows output is a portable `.exe`, not yet a shortcut-creating installer.
-- the packaged app still uses the default Electron icon because branded icon assets are not added yet.
-- support bundle export and richer diagnostics logs are not built yet.
+- GONKA onboarding now performs a real live inference probe, which means an unfunded or non-existent Gonka account is rejected immediately instead of being saved for later failure.
+- richer diagnostics logs can still be improved beyond the current support bundle and provider diagnostics panel.
 
 ## Immediate Next Steps
 

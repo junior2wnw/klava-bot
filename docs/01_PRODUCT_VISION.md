@@ -6,7 +6,7 @@
 
 The user journey should be this simple:
 1. Install the app.
-2. Enter an API key or complete a provider login.
+2. Enter a `GONKA` private phrase or raw private key once.
 3. Write a task in normal language.
 4. Watch Klava execute, ask for approvals when needed, and keep work organized in parallel task lanes.
 

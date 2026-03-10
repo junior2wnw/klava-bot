@@ -2,6 +2,7 @@ import Fastify from "fastify";
 import type {
   ApprovalRequest,
   ExecuteTerminalRequest,
+  GonkaWalletBalanceQuery,
   OnboardingValidateRequest,
   ProviderSettings,
   SendMessageRequest,
@@ -10,9 +11,10 @@ import type {
   TerminalEntry,
 } from "@klava/contracts";
 import {
-  onboardingValidateRequestSchema,
   createTaskRequestSchema,
   executeTerminalRequestSchema,
+  gonkaWalletBalanceQuerySchema,
+  onboardingValidateRequestSchema,
   sendMessageRequestSchema,
   setGuardModeRequestSchema,
 } from "@klava/contracts";
@@ -20,10 +22,11 @@ import {
   DEFAULT_MODEL,
   DEFAULT_RUNTIME_HOST,
   DEFAULT_RUNTIME_PORT,
+  GONKA_BALANCE_REFRESH_INTERVAL_MS,
   KLAVA_VERSION,
   MODEL_REFRESH_INTERVAL_MS,
 } from "./constants";
-import { OpenAiService } from "./openai-service";
+import { GonkaService } from "./gonka-service";
 import { SecretVault } from "./secrets";
 import { RuntimeStore, getAppPaths } from "./storage";
 import { assessCommand, runCommand } from "./terminal";
@@ -107,8 +110,40 @@ function createApproval(taskId: string, command: string, impact: string): Approv
 export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
   const store = new RuntimeStore(getAppPaths());
   const vault = new SecretVault(getAppPaths());
-  const openAi = new OpenAiService();
+  const gonka = new GonkaService();
   await store.init();
+
+  async function clearProviderConfiguration() {
+    const current = store.getProvider();
+    const provider: ProviderSettings = {
+      provider: "gonka",
+      selectionMode: "auto",
+      model: current.model || DEFAULT_MODEL,
+      secretConfigured: false,
+      requesterAddress: null,
+      balance: null,
+      validatedAt: null,
+      modelRefreshedAt: null,
+    };
+
+    await store.setProvider(provider);
+    return provider;
+  }
+
+  async function readConfiguredSecret() {
+    try {
+      const secret = await vault.getSecret("gonka_secret");
+      if (!secret?.trim()) {
+        await clearProviderConfiguration();
+        return null;
+      }
+
+      return secret.trim();
+    } catch {
+      await clearProviderConfiguration();
+      return null;
+    }
+  }
 
   async function health() {
     return {
@@ -118,23 +153,46 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
       startedAt: store.startedAtIso,
       uptimeMs: store.uptimeMs,
       storagePath: store.storagePath,
-      providerConfigured: store.getProvider().apiKeyConfigured,
+      providerConfigured: store.getProvider().secretConfigured,
     };
   }
 
   async function refreshProviderSelectionIfNeeded() {
     const provider = store.getProvider();
-    if (!provider.apiKeyConfigured) {
+    if (!provider.secretConfigured) {
       return provider;
     }
 
-    const apiKey = await vault.getSecret("openai_api_key");
-    if (!apiKey) {
-      return provider;
+    const secret = await readConfiguredSecret();
+    if (!secret) {
+      return store.getProvider();
     }
 
-    const selection = await ensureFreshProviderSelection(apiKey);
+    const selection = await ensureFreshProviderSelection(secret);
     return selection.provider;
+  }
+
+  async function refreshProviderBalanceIfNeeded(force = false) {
+    const provider = store.getProvider();
+    if (!provider.requesterAddress) {
+      return provider;
+    }
+
+    if (!force && provider.balance && !isTimestampStale(provider.balance.asOf, GONKA_BALANCE_REFRESH_INTERVAL_MS)) {
+      return provider;
+    }
+
+    try {
+      const balance = await gonka.getBalance(provider.requesterAddress);
+      const updatedProvider: ProviderSettings = {
+        ...provider,
+        balance,
+      };
+      await store.setProvider(updatedProvider);
+      return updatedProvider;
+    } catch {
+      return provider;
+    }
   }
 
   async function buildSnapshot(taskId?: string | null) {
@@ -142,10 +200,12 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
       await store.selectTask(taskId);
     }
     await refreshProviderSelectionIfNeeded();
+    await refreshProviderBalanceIfNeeded();
     return store.getSnapshot(await health());
   }
 
   async function buildSupportBundle() {
+    await refreshProviderBalanceIfNeeded();
     const runtimeHealth = await health();
     return {
       generatedAt: nowIso(),
@@ -171,10 +231,12 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
 
   async function setResolvedProviderModel(current: ProviderSettings, model: string) {
     const provider: ProviderSettings = {
-      provider: "openai",
+      provider: "gonka",
       selectionMode: "auto",
       model,
-      apiKeyConfigured: true,
+      secretConfigured: true,
+      requesterAddress: current.requesterAddress,
+      balance: current.balance,
       validatedAt: current.validatedAt,
       modelRefreshedAt: nowIso(),
     };
@@ -184,17 +246,23 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
   }
 
   async function resolveProviderSelection(
-    apiKey: string,
+    secret: string,
     current?: ProviderSettings | null,
     validateConnection = false,
   ) {
-    const selection = validateConnection ? await openAi.validate(apiKey) : await openAi.resolveBestModel(apiKey);
+    const selection = validateConnection ? await gonka.validate(secret) : await gonka.resolveBestModel();
     const refreshedAt = nowIso();
+    const requesterAddress =
+      validateConnection && "requesterAddress" in selection && typeof selection.requesterAddress === "string"
+        ? selection.requesterAddress
+        : current?.requesterAddress ?? null;
     const provider: ProviderSettings = {
-      provider: "openai",
+      provider: "gonka",
       selectionMode: "auto",
       model: selection.model,
-      apiKeyConfigured: true,
+      secretConfigured: true,
+      requesterAddress,
+      balance: current?.balance ?? null,
       validatedAt: current?.validatedAt ?? refreshedAt,
       modelRefreshedAt: refreshedAt,
     };
@@ -206,11 +274,11 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
     };
   }
 
-  async function ensureFreshProviderSelection(apiKey: string, force = false) {
+  async function ensureFreshProviderSelection(secret: string, force = false) {
     const current = store.getProvider();
     const fallbackCandidates = uniqueModels([current.model || DEFAULT_MODEL]);
 
-    if (!current.apiKeyConfigured) {
+    if (!current.secretConfigured) {
       return {
         provider: current,
         candidates: fallbackCandidates,
@@ -225,7 +293,7 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
     }
 
     try {
-      return await resolveProviderSelection(apiKey, current);
+      return await resolveProviderSelection(secret, current);
     } catch {
       return {
         provider: current,
@@ -379,30 +447,34 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
     }
 
     const provider = store.getProvider();
-    if (!provider.apiKeyConfigured) {
+    if (!provider.secretConfigured) {
       await store.addMessage(
         task.id,
         createMessage(
           task.id,
           "assistant",
-          "OpenAI is not configured yet. Use the onboarding panel to add an API key before normal chat responses.",
+          "GONKA is not configured yet. Use the onboarding panel to add your private phrase or private key before normal chat responses.",
         ),
         "failed",
       );
       return buildSnapshot(task.id);
     }
 
-    const apiKey = await vault.getSecret("openai_api_key");
-    if (!apiKey) {
+    const secret = await readConfiguredSecret();
+    if (!secret) {
       await store.addMessage(
         task.id,
-        createMessage(task.id, "assistant", "The saved API key is unavailable. Please reconnect OpenAI."),
+        createMessage(
+          task.id,
+          "assistant",
+          "The saved Gonka secret is unavailable on this Windows profile. Please reconnect GONKA.",
+        ),
         "failed",
       );
       return buildSnapshot(task.id);
     }
 
-    let providerSelection = await ensureFreshProviderSelection(apiKey);
+    let providerSelection = await ensureFreshProviderSelection(secret);
     let activeProvider = providerSelection.provider;
 
     const updatedTask = store.getTask(task.id);
@@ -413,8 +485,8 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
     const attemptedModel = activeProvider.model || DEFAULT_MODEL;
 
     try {
-      const completion = await openAi.complete({
-        apiKey,
+      const completion = await gonka.complete({
+        secret,
         model: attemptedModel,
         messages: updatedTask.messages,
       });
@@ -422,8 +494,8 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
     } catch (error) {
       let finalError = error;
 
-      if (openAi.shouldRetryModelSelection(error)) {
-        const forcedSelection = await ensureFreshProviderSelection(apiKey, true);
+      if (gonka.shouldRetryModelSelection(error)) {
+        const forcedSelection = await ensureFreshProviderSelection(secret, true);
         activeProvider = forcedSelection.provider;
         providerSelection = forcedSelection;
 
@@ -435,8 +507,8 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
 
         for (const candidate of retryModels) {
           try {
-            const completion = await openAi.complete({
-              apiKey,
+            const completion = await gonka.complete({
+              secret,
               model: candidate,
               messages: updatedTask.messages,
             });
@@ -449,7 +521,7 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
             return buildSnapshot(task.id);
           } catch (retryError) {
             finalError = retryError;
-            if (!openAi.shouldRetryModelSelection(retryError)) {
+            if (!gonka.shouldRetryModelSelection(retryError)) {
               break;
             }
           }
@@ -485,19 +557,42 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
     return buildSnapshot(taskId);
   });
 
+  server.get("/api/gonka/balance", async (request, reply) => {
+    try {
+      const query = gonkaWalletBalanceQuerySchema.parse(request.query ?? {}) as GonkaWalletBalanceQuery;
+      const balance = await gonka.getBalance(query.address);
+      return {
+        ok: true as const,
+        address: query.address,
+        balance,
+      };
+    } catch (error) {
+      reply.code(400);
+      return {
+        message: error instanceof Error ? error.message : "Unable to read Gonka balance",
+      };
+    }
+  });
+
   server.post("/api/onboarding/validate", async (request, reply) => {
     const body = onboardingValidateRequestSchema.parse(request.body) as OnboardingValidateRequest;
 
     try {
-      const selection = await openAi.validate(body.apiKey);
-      await vault.setSecret("openai_api_key", body.apiKey);
+      const selection = await gonka.validate(body.secret, {
+        expectedAddress: body.walletAddress ?? null,
+        mnemonicPassphrase: body.mnemonicPassphrase ?? null,
+      });
+      await vault.setSecret("gonka_secret", selection.resolvedSecret);
 
       const validatedAt = nowIso();
+      const balance = await gonka.getBalance(selection.requesterAddress).catch(() => null);
       const provider: ProviderSettings = {
-        provider: "openai",
+        provider: "gonka",
         selectionMode: "auto",
         model: selection.model,
-        apiKeyConfigured: true,
+        secretConfigured: true,
+        requesterAddress: selection.requesterAddress,
+        balance,
         validatedAt,
         modelRefreshedAt: validatedAt,
       };
@@ -506,16 +601,16 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
 
       return {
         ok: true,
-        provider: "openai" as const,
+        provider: "gonka" as const,
         selectionMode: "auto" as const,
         model: provider.model,
-        message: `OpenAI connected. Auto-selected ${provider.model}.`,
+        message: `GONKA connected. Live mainnet validation passed and auto-selected ${provider.model}.`,
       };
     } catch (error) {
       reply.code(400);
       return {
         ok: false,
-        provider: "openai" as const,
+        provider: "gonka" as const,
         selectionMode: "auto" as const,
         model: store.getProvider().model || DEFAULT_MODEL,
         message: error instanceof Error ? error.message : "Provider validation failed",
