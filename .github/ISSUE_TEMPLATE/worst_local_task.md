@@ -1,14 +1,14 @@
 ---
-name: Worst local task challenge
-about: Bring the ugliest local workflow you repeat and let Klava try to own it.
-title: "[Worst Task] "
+name: Task intake
+about: Outline a difficult local-machine workflow, its approval boundaries, and desired end state.
+title: "[Intake] "
 ---
 
-Bring the workflow that currently makes you open too many windows, paste shell snippets, or babysit a machine for too long.
+Use this template for machine work that still requires too much memory, too many windows, or too much operator caution.
 
 This issue is public. Do not post secrets, customer data, credentials, or private infrastructure details.
 
-## The ugly task
+## The task
 
 What is the actual local task?
 
@@ -16,9 +16,9 @@ What is the actual local task?
 - what the operator has to inspect or change;
 - what tools or machine surfaces are involved.
 
-## Why this is painful
+## Why this is difficult
 
-What makes this workflow annoying enough to deserve an agent?
+What makes this workflow non-trivial enough to deserve a stronger operator surface?
 
 - too many repeated steps;
 - risky shell commands;

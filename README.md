@@ -22,23 +22,23 @@ Quick links:
 - [Latest release](https://github.com/junior2wnw/klava-bot/releases/latest)
 - [Design partner program](./DESIGN_PARTNERS.md)
 - [Apply as a design partner](https://github.com/junior2wnw/klava-bot/issues/new?template=design_partner.md)
-- [Worst local task challenge](https://github.com/junior2wnw/klava-bot/issues/new?template=worst_local_task.md)
-- [2FA share landing](https://junior2wnw.github.io/klava-bot/ship-the-receipts.html)
+- [Task intake](https://github.com/junior2wnw/machine-work-index/issues/new?template=case_note.md)
+- [Field note 01](https://junior2wnw.github.io/klava-bot/field-note-01.html)
 - [Launch copy](./LAUNCH_POST.md)
-- [Hype playbook](./HYPE_PLAYBOOK.md)
+- [Field notes](./FIELD_NOTES.md)
 
 Core idea:
 
 > one desktop app, one task log, one approval model, one tool that can inspect the machine, make approved changes, and record what happened.
 
-## New public angles
+## Notes and intake
 
-Two new public surfaces now exist for honest launch traffic:
+Two quieter public surfaces now exist for people who prefer artifacts over slogans:
 
-- `2FA pressure test`: GitHub's 2FA notice becomes a forcing function to stop promising magic and start showing receipts. The packaged copy and share asset live in [HYPE_PLAYBOOK.md](./HYPE_PLAYBOOK.md).
-- `Worst local task challenge`: people can now bring ugly local-machine workflows through a public issue template instead of reacting to abstract marketing claims. Start here: [Worst local task challenge](https://github.com/junior2wnw/klava-bot/issues/new?template=worst_local_task.md).
+- `Field note 01`: GitHub's 2FA notice became a forcing function to make the repository easier to evaluate at a glance. Supporting notes live in [FIELD_NOTES.md](./FIELD_NOTES.md).
+- `Open task intake`: difficult local-machine workflows now have a separate intake surface in [`machine-work-index`](https://github.com/junior2wnw/machine-work-index) instead of being buried inside product copy.
 
-These are hooks, not evidence. The evidence still has to come from the shipped runtime, operations layer, approval flow, and task history in the repo.
+These are not substitutes for evidence. The evidence still has to come from the shipped runtime, operations layer, approval flow, and task history in the repo.
 
 This repository is published as a standalone product repository, with its upstream lineage documented explicitly:
 
@@ -124,20 +124,21 @@ That means the repo can now honestly show:
 - risky steps that stop inside the same approval model instead of escaping it;
 - an operator-facing surface for longer tasks that need structure, not just text generation.
 
-## New: Worst local task challenge
+## Open task intake
 
-Klava now has a public challenge surface for painful local work that is too messy for generic chat demos.
+There is now a separate intake surface for difficult local work that is too stateful or too risky for generic demos.
 
-The point is simple:
+Use it to outline:
 
-- bring a local task that takes too many clicks, shell snippets, or approvals;
-- describe the real machine, risk, and end state;
-- use the public issue as a queue of workflows Klava should eventually own.
+- the machine and stack involved;
+- where the work becomes dangerous or approval-heavy;
+- what the end state should look like.
 
-Challenge link:
+Links:
 
-- [Worst local task challenge](https://github.com/junior2wnw/klava-bot/issues/new?template=worst_local_task.md)
-- [Hype playbook and post copy](./HYPE_PLAYBOOK.md)
+- [Machine Work Index](https://github.com/junior2wnw/machine-work-index)
+- [Open a case note](https://github.com/junior2wnw/machine-work-index/issues/new?template=case_note.md)
+- [Field notes](./FIELD_NOTES.md)
 
 ## Looking for design partners
 
