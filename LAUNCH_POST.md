@@ -30,6 +30,9 @@ Repo:
 Download:
 - https://github.com/junior2wnw/klava-bot/releases/latest
 
+Design partners:
+- https://github.com/junior2wnw/klava-bot/issues/new?template=design_partner.md
+
 ## Hacker News style
 
 Title:
@@ -59,6 +62,9 @@ https://github.com/junior2wnw/klava-bot
 Site:
 https://junior2wnw.github.io/klava-bot/
 
+Design partners:
+https://github.com/junior2wnw/klava-bot/issues/new?template=design_partner.md
+
 ## X / Twitter style
 
 Klava is now public.
@@ -73,6 +79,7 @@ A desktop agent project built around:
 
 Repo: https://github.com/junior2wnw/klava-bot
 Release: https://github.com/junior2wnw/klava-bot/releases/latest
+Design partners: https://github.com/junior2wnw/klava-bot/issues/new?template=design_partner.md
 
 ## Reddit style
 
@@ -94,6 +101,7 @@ Links:
 - Repo: https://github.com/junior2wnw/klava-bot
 - Site: https://junior2wnw.github.io/klava-bot/
 - Release: https://github.com/junior2wnw/klava-bot/releases/latest
+- Design partners: https://github.com/junior2wnw/klava-bot/issues/new?template=design_partner.md
 
 ## Short post (RU)
 

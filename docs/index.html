@@ -6,12 +6,12 @@
     <title>Klava</title>
     <meta
       name="description"
-      content="Klava is a desktop agent built on top of OpenClaw for local work on Windows and macOS."
+      content="Klava is a local-first desktop agent for guarded shell work, task history, and controlled machine changes on Windows and macOS."
     />
     <meta property="og:title" content="Klava" />
     <meta
       property="og:description"
-      content="One desktop app, local runtime, explicit approvals, and task history in one place."
+      content="A local-first desktop agent with explicit approvals, guarded shell work, and task history in one place."
     />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="./assets/klava-social-preview.svg" />
@@ -19,7 +19,7 @@
     <meta name="twitter:title" content="Klava" />
     <meta
       name="twitter:description"
-      content="A desktop agent for local tasks, guarded shell work, and controlled machine changes."
+      content="A local-first desktop agent for guarded shell work, task history, and controlled machine changes."
     />
     <meta name="theme-color" content="#f4efe6" />
     <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml" />
@@ -35,7 +35,7 @@
     <div class="page-shell">
       <header class="site-header">
         <div class="brand">
-            <div class="brand-mark">K</div>
+          <div class="brand-mark">K</div>
           <div>
             <div class="brand-name">Klava</div>
             <div class="brand-subtitle">Desktop agent built on OpenClaw</div>
@@ -44,6 +44,7 @@
         <nav class="site-nav">
           <a href="https://github.com/junior2wnw/klava-bot">GitHub</a>
           <a href="https://github.com/junior2wnw/klava-bot/releases/latest">Download</a>
+          <a href="#design-partners">Design partners</a>
           <a href="./ru/">RU</a>
           <a href="https://github.com/junior2wnw/klava-bot/blob/main/README.md">README</a>
         </nav>
@@ -52,11 +53,12 @@
       <main>
         <section class="hero">
           <div class="hero-copy">
-            <p class="eyebrow">One desktop app. Local runtime. Explicit approvals.</p>
-            <h1>A desktop agent for local tasks, shell work, and controlled machine changes.</h1>
+            <p class="eyebrow">Local-first desktop agent. Explicit approvals. Real machine work.</p>
+            <h1>An AI desktop agent that can work on the actual machine without hiding what it did.</h1>
             <p class="lede">
               Klava brings together task history, guarded shell access, secret handling, and a local runtime so the
-              same tool can inspect the machine, make approved changes, and keep a usable record of what happened.
+              same tool can inspect the machine, make approved changes, and leave behind a usable record of what
+              happened.
             </p>
             <div class="hero-actions">
               <a class="button button-primary" href="https://github.com/junior2wnw/klava-bot/releases/latest">
@@ -65,33 +67,41 @@
               <a class="button button-secondary" href="https://github.com/junior2wnw/klava-bot">
                 Read the source
               </a>
+              <a
+                class="button button-secondary"
+                href="https://github.com/junior2wnw/klava-bot/issues/new?template=design_partner.md"
+              >
+                Apply as a design partner
+              </a>
             </div>
             <ul class="signal-list">
               <li>Windows and macOS release builds</li>
+              <li>Public GitHub Actions CI</li>
               <li>Local runtime API</li>
               <li>Approval-gated terminal actions</li>
+              <li>Task transcript and support bundles</li>
               <li>Explicit OpenClaw lineage</li>
             </ul>
           </div>
           <div class="hero-panel">
             <div class="hero-card hero-card-dark">
-              <span class="card-kicker">Available now</span>
-              <h2>In the repo</h2>
+              <span class="card-kicker">Shipped now</span>
+              <h2>Public proof</h2>
               <ul>
                 <li>Electron desktop shell</li>
+                <li>GitHub Actions CI</li>
                 <li>Vault-backed secret flow</li>
-                <li>GONKA onboarding and chat</li>
-                <li>Task transcript + support bundles</li>
+                <li>Guarded terminal + approvals</li>
               </ul>
             </div>
             <div class="hero-card hero-card-light">
-              <span class="card-kicker">Planned next</span>
-              <h2>Workflow growth</h2>
+              <span class="card-kicker">Strong early buyers</span>
+              <h2>Commercial wedge</h2>
               <ul>
-                <li>Driver inspection and reinstall workflows</li>
-                <li>BaaS and provider replacement inside real projects</li>
-                <li>Workstation bootstrap and recovery</li>
-                <li>Typed privileged helper operations</li>
+                <li>Consultants fixing real developer machines</li>
+                <li>Internal IT and platform teams</li>
+                <li>Migration-heavy engineering workflows</li>
+                <li>Typed privileged helper operations next</li>
               </ul>
             </div>
           </div>
@@ -106,14 +116,48 @@
               action, and leave behind records another engineer can review.
             </p>
           </article>
-          <article class="section-card">
-            <p class="section-label">Upstream lineage</p>
-            <h2>Fork lineage, documented plainly.</h2>
+          <article class="section-card section-card-cta" id="design-partners">
+            <p class="section-label">Looking for 5 design partners</p>
+            <h2>Bring a real workflow, not a demo prompt.</h2>
             <p>
-              Klava grows from OpenClaw. The repo documents that relationship directly instead of relying on a missing
-              fork badge or vague wording.
+              The fastest path to serious traction is a small number of expensive workflows with real stakes. If your
+              team repeatedly repairs machines, migrates local projects, or performs risky workstation changes, Klava
+              wants that use case.
+            </p>
+            <a
+              class="button button-primary button-inline"
+              href="https://github.com/junior2wnw/klava-bot/issues/new?template=design_partner.md"
+            >
+              Apply on GitHub
+            </a>
+          </article>
+        </section>
+
+        <section class="proof-grid">
+          <article class="proof-card">
+            <p class="section-label">Trust signal</p>
+            <h3>Public CI and a shipped desktop shell</h3>
+            <p>
+              The repository is verified in public through GitHub Actions and already ships a desktop product surface
+              instead of a loose source snapshot.
+            </p>
+          </article>
+          <article class="proof-card">
+            <p class="section-label">Upstream lineage</p>
+            <h3>Fork boundary documented in the open</h3>
+            <p>
+              Klava grows from OpenClaw. The relationship is written down directly in the repo instead of being implied
+              by marketing language or a missing native fork badge.
             </p>
             <a class="inline-link" href="https://github.com/junior2wnw/klava-bot/blob/main/UPSTREAM.md">Read upstream notes</a>
+          </article>
+          <article class="proof-card">
+            <p class="section-label">First session</p>
+            <h3>One task, one guarded command, one transcript</h3>
+            <p>
+              Start with a task, run a bounded shell action, inspect the approval flow, and export the support bundle.
+              The product is built around an operator loop, not a blank chat canvas.
+            </p>
           </article>
         </section>
 
@@ -194,8 +238,10 @@
           <div class="docs-links">
             <a href="https://github.com/junior2wnw/klava-bot/blob/main/README.md">README</a>
             <a href="https://github.com/junior2wnw/klava-bot/blob/main/ROADMAP.md">Roadmap</a>
+            <a href="https://github.com/junior2wnw/klava-bot/blob/main/DESIGN_PARTNERS.md">Design partners</a>
             <a href="https://github.com/junior2wnw/klava-bot/blob/main/GOVERNANCE.md">Governance</a>
             <a href="https://github.com/junior2wnw/klava-bot/blob/main/SECURITY.md">Security</a>
+            <a href="https://github.com/junior2wnw/klava-bot/blob/main/LAUNCH_POST.md">Launch copy</a>
             <a href="https://github.com/junior2wnw/klava-bot/blob/main/docs/04_SECURITY_AND_PRIVILEGED_EXECUTION.md">Privileged execution</a>
             <a href="https://github.com/junior2wnw/klava-bot/blob/main/docs/16_OPEN_SOURCE_AND_FORK_LINEAGE.md">Fork lineage</a>
           </div>
@@ -203,9 +249,10 @@
       </main>
 
       <footer class="site-footer">
-        <p>Klava is a desktop agent project with a local runtime, explicit approvals, and documented OpenClaw lineage.</p>
+        <p>Klava is a local-first desktop agent with a local runtime, explicit approvals, public CI, and documented OpenClaw lineage.</p>
         <div class="footer-links">
           <a href="https://github.com/junior2wnw/klava-bot/releases/latest">Latest release</a>
+          <a href="https://github.com/junior2wnw/klava-bot/issues/new?template=design_partner.md">Design partners</a>
           <a href="https://github.com/junior2wnw/klava-bot/issues">Issues</a>
           <a href="https://github.com/junior2wnw/klava-bot/discussions">Discussions</a>
         </div>

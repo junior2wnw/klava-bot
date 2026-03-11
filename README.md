@@ -2,14 +2,27 @@
 
 `Klava` is a desktop agent built on top of OpenClaw for local work on Windows and macOS.
 
+[![CI](https://github.com/junior2wnw/klava-bot/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/junior2wnw/klava-bot/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/junior2wnw/klava-bot?display_name=tag&sort=semver)](https://github.com/junior2wnw/klava-bot/releases/latest)
 [![License](https://img.shields.io/github/license/junior2wnw/klava-bot)](./LICENSE)
 [![Issues](https://img.shields.io/github/issues/junior2wnw/klava-bot)](https://github.com/junior2wnw/klava-bot/issues)
 [![Discussions](https://img.shields.io/github/discussions/junior2wnw/klava-bot)](https://github.com/junior2wnw/klava-bot/discussions)
 
-Languages: **English** | [Русский](./README.ru.md)
+![Klava social preview](./docs/assets/klava-social-preview.svg)
+
+Languages: **English** | [README.ru](./README.ru.md)
+
+Klava is a local-first desktop agent for people who need an AI to work on the actual machine, not just answer inside a chat box.
 
 It combines a local runtime, secret storage, approvals, and task history so chat, shell work, and machine changes can be handled in one place.
+
+Quick links:
+
+- [Public site](https://junior2wnw.github.io/klava-bot/)
+- [Latest release](https://github.com/junior2wnw/klava-bot/releases/latest)
+- [Design partner program](./DESIGN_PARTNERS.md)
+- [Apply as a design partner](https://github.com/junior2wnw/klava-bot/issues/new?template=design_partner.md)
+- [Launch copy](./LAUNCH_POST.md)
 
 Core idea:
 
@@ -23,6 +36,15 @@ This repository is published as a standalone product repository, with its upstre
 - Public landing page: [junior2wnw.github.io/klava-bot](https://junior2wnw.github.io/klava-bot/)
 - Public landing page (RU): [junior2wnw.github.io/klava-bot/ru/](https://junior2wnw.github.io/klava-bot/ru/)
 - Open-source launch and lineage doc: [docs/16_OPEN_SOURCE_AND_FORK_LINEAGE.md](./docs/16_OPEN_SOURCE_AND_FORK_LINEAGE.md)
+
+## Why people pay attention
+
+Klava is trying to occupy a more valuable surface than "AI chat with tools":
+
+- it is local-first instead of assuming a remote control plane;
+- risky actions are approval-gated instead of buried inside free-form tool calls;
+- it already ships a desktop shell, guarded terminal flow, task transcript, and support bundle export;
+- the repo is published like a real product surface, with explicit lineage, docs, releases, and CI.
 
 ## Why Klava exists
 
@@ -71,6 +93,22 @@ Current provider status:
 - onboarding, validation, balance checks, and model discovery on GONKA work in this repo state;
 - the public GONKA-backed chat path is currently blocked by a provider-side transfer-agent panic tracked in [`gonka-ai/gonka#876`](https://github.com/gonka-ai/gonka/issues/876);
 - once that provider-side issue is fixed on the Gonka side, Klava's documented signed `chat/completions` path should be usable again without changing the client architecture.
+
+## Looking for design partners
+
+The fastest path from open-source interest to serious traction is a small number of high-value workflows with real stakes.
+
+Klava is actively looking for design partners in areas such as:
+
+- workstation repair and recovery;
+- local project migrations between providers or backends;
+- internal IT or platform tasks that need approvals and transcripts;
+- consultant workflows where one operator repeatedly performs the same risky local changes.
+
+If you have a painful local-machine workflow with real urgency, start here:
+
+- [Apply as a design partner](https://github.com/junior2wnw/klava-bot/issues/new?template=design_partner.md)
+- [Read the design partner program](./DESIGN_PARTNERS.md)
 
 ## Planned workflow surface
 
@@ -202,9 +240,11 @@ First use:
 ## Verification already completed in this repo state
 
 - `npm run check`
+- `npm test`
 - `npm run build`
 - `npm run dist:win`
 - `npm run dist:mac` path added and documented, but not yet validated on a macOS host in this repo state
+- GitHub Actions CI runs `npm run check`, `npm test`, and `npm run build` on pushes and pull requests, with an additional Windows desktop build job
 - runtime smoke test for `guarded -> approval -> reject`
 - runtime smoke test for task creation and guarded terminal approval generation
 - runtime smoke test for support bundle export without secret leakage
@@ -223,6 +263,7 @@ Klava is published as a working open-source project, not as a source snapshot.
 - Governance: [GOVERNANCE.md](./GOVERNANCE.md)
 - Support: [SUPPORT.md](./SUPPORT.md)
 - Manifesto: [MANIFESTO.md](./MANIFESTO.md)
+- Design partners: [DESIGN_PARTNERS.md](./DESIGN_PARTNERS.md)
 - Launch copy: [LAUNCH_POST.md](./LAUNCH_POST.md)
 
 If you want to help, prefer contributions that make the system clearer, safer, or easier to extend.

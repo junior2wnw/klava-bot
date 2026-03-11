@@ -5,7 +5,7 @@
   <rect x="54" y="54" width="1172" height="532" rx="34" fill="#FFFAF2" stroke="#201B16" stroke-opacity="0.12" />
   <rect x="96" y="96" width="88" height="88" rx="24" fill="url(#paint0_linear_1_2)" />
   <path d="M132.434 158L126.548 158L126.548 122.673L132.434 122.673L132.434 137.874L145.602 122.673L152.65 122.673L138.686 138.485L153.261 158L145.991 158L134.742 142.744L132.434 145.384L132.434 158Z" fill="white"/>
-  <text x="217" y="122" fill="#DE5B2F" font-family="'IBM Plex Mono', monospace" font-size="26" letter-spacing="2.2">OPENCLAW-DERIVED DESKTOP AGENT</text>
+  <text x="217" y="122" fill="#DE5B2F" font-family="'IBM Plex Mono', monospace" font-size="26" letter-spacing="2.2">LOCAL-FIRST DESKTOP AGENT</text>
   <text x="94" y="296" fill="#151515" font-family="'Space Grotesk', sans-serif" font-size="92" font-weight="700">
     <tspan x="94" dy="0">One executable.</tspan>
     <tspan x="94" dy="96">One task log.</tspan>
