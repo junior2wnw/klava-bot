@@ -16,10 +16,10 @@
     <tspan x="100" dy="38">guarded shell work, and reviewable machine actions.</tspan>
   </text>
   <rect x="904" y="300" width="276" height="232" rx="24" fill="#13212A" />
-  <text x="940" y="346" fill="#F8B198" font-family="'IBM Plex Mono', monospace" font-size="18" letter-spacing="1.8">SHIPPED NOW</text>
-  <text x="940" y="394" fill="white" font-family="'Space Grotesk', sans-serif" font-size="27" font-weight="700">Desktop shell</text>
-  <text x="940" y="438" fill="white" font-family="'Space Grotesk', sans-serif" font-size="27" font-weight="700">Operations layer</text>
-  <text x="940" y="482" fill="white" font-family="'Space Grotesk', sans-serif" font-size="27" font-weight="700">Guarded terminal</text>
+  <text x="944" y="336" fill="#F8B198" font-family="'IBM Plex Mono', monospace" font-size="18" letter-spacing="1.8" dominant-baseline="hanging">SHIPPED NOW</text>
+  <text x="944" y="382" fill="white" font-family="'Space Grotesk', sans-serif" font-size="27" font-weight="700" dominant-baseline="hanging">Desktop shell</text>
+  <text x="944" y="424" fill="white" font-family="'Space Grotesk', sans-serif" font-size="27" font-weight="700" dominant-baseline="hanging">Operations layer</text>
+  <text x="944" y="466" fill="white" font-family="'Space Grotesk', sans-serif" font-size="27" font-weight="700" dominant-baseline="hanging">Guarded terminal</text>
   <defs>
     <linearGradient id="paint0_linear_1_2" x1="100" y1="96" x2="188" y2="184" gradientUnits="userSpaceOnUse">
       <stop stop-color="#DE5B2F"/>
