@@ -22,11 +22,23 @@ Quick links:
 - [Latest release](https://github.com/junior2wnw/klava-bot/releases/latest)
 - [Design partner program](./DESIGN_PARTNERS.md)
 - [Apply as a design partner](https://github.com/junior2wnw/klava-bot/issues/new?template=design_partner.md)
+- [Worst local task challenge](https://github.com/junior2wnw/klava-bot/issues/new?template=worst_local_task.md)
+- [2FA share landing](https://junior2wnw.github.io/klava-bot/ship-the-receipts.html)
 - [Launch copy](./LAUNCH_POST.md)
+- [Hype playbook](./HYPE_PLAYBOOK.md)
 
 Core idea:
 
 > one desktop app, one task log, one approval model, one tool that can inspect the machine, make approved changes, and record what happened.
+
+## New public angles
+
+Two new public surfaces now exist for honest launch traffic:
+
+- `2FA pressure test`: GitHub's 2FA notice becomes a forcing function to stop promising magic and start showing receipts. The packaged copy and share asset live in [HYPE_PLAYBOOK.md](./HYPE_PLAYBOOK.md).
+- `Worst local task challenge`: people can now bring ugly local-machine workflows through a public issue template instead of reacting to abstract marketing claims. Start here: [Worst local task challenge](https://github.com/junior2wnw/klava-bot/issues/new?template=worst_local_task.md).
+
+These are hooks, not evidence. The evidence still has to come from the shipped runtime, operations layer, approval flow, and task history in the repo.
 
 This repository is published as a standalone product repository, with its upstream lineage documented explicitly:
 
@@ -111,6 +123,21 @@ That means the repo can now honestly show:
 - custom local runbooks made of notes and terminal commands;
 - risky steps that stop inside the same approval model instead of escaping it;
 - an operator-facing surface for longer tasks that need structure, not just text generation.
+
+## New: Worst local task challenge
+
+Klava now has a public challenge surface for painful local work that is too messy for generic chat demos.
+
+The point is simple:
+
+- bring a local task that takes too many clicks, shell snippets, or approvals;
+- describe the real machine, risk, and end state;
+- use the public issue as a queue of workflows Klava should eventually own.
+
+Challenge link:
+
+- [Worst local task challenge](https://github.com/junior2wnw/klava-bot/issues/new?template=worst_local_task.md)
+- [Hype playbook and post copy](./HYPE_PLAYBOOK.md)
 
 ## Looking for design partners
 

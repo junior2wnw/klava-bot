@@ -1,0 +1,43 @@
+<svg width="1280" height="720" viewBox="0 0 1280 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1280" height="720" fill="#F4EFE6" />
+  <circle cx="1120" cy="76" r="220" fill="#9FD8C9" fill-opacity="0.2" />
+  <circle cx="112" cy="122" r="180" fill="#DE5B2F" fill-opacity="0.18" />
+  <rect x="48" y="48" width="1184" height="624" rx="36" fill="#FFFAF2" stroke="#201B16" stroke-opacity="0.12" />
+  <rect x="88" y="104" width="708" height="512" rx="28" fill="white" stroke="#201B16" stroke-opacity="0.08" />
+  <circle cx="140" cy="156" r="24" fill="#ECE6DC" />
+  <text x="184" y="152" fill="#151515" font-family="'Space Grotesk', sans-serif" font-size="28" font-weight="700">GitHub</text>
+  <text x="286" y="152" fill="#4B463F" font-family="'IBM Plex Mono', monospace" font-size="17">&lt;noreply@github.com&gt;</text>
+  <text x="124" y="218" fill="#151515" font-family="'Space Grotesk', sans-serif" font-size="40" font-weight="700">Hey junior2wnw,</text>
+  <rect x="124" y="258" width="618" height="106" rx="18" fill="#FFF7F5" stroke="#DE5B2F" stroke-width="4" />
+  <text x="148" y="304" fill="#151515" font-family="'Space Grotesk', sans-serif" font-size="24" font-weight="500">
+    <tspan x="148" dy="0">Contributors on GitHub.com now need 2FA.</tspan>
+    <tspan x="148" dy="34">Access gets limited after April 25, 2026.</tspan>
+  </text>
+  <rect x="124" y="392" width="274" height="58" rx="18" fill="#FFF7F5" stroke="#DE5B2F" stroke-width="4" />
+  <text x="150" y="428" fill="#151515" font-family="'Space Grotesk', sans-serif" font-size="20" font-weight="500">You qualify for 2FA.</text>
+  <rect x="416" y="448" width="326" height="58" rx="18" fill="#FFF7F5" stroke="#DE5B2F" stroke-width="4" />
+  <text x="442" y="484" fill="#151515" font-family="'Space Grotesk', sans-serif" font-size="20" font-weight="500">Access stays limited without 2FA.</text>
+  <text x="124" y="552" fill="#4B463F" font-family="'Space Grotesk', sans-serif" font-size="24">
+    <tspan x="124" dy="0">Reasonable email.</tspan>
+    <tspan x="124" dy="34">Unreasonable side effect:</tspan>
+    <tspan x="124" dy="34">the repo now has to show receipts.</tspan>
+  </text>
+  <rect x="840" y="104" width="344" height="512" rx="28" fill="#13212A" />
+  <text x="880" y="152" fill="#F8B198" font-family="'IBM Plex Mono', monospace" font-size="18" letter-spacing="1.8">SHIP SPRINT</text>
+  <text x="880" y="224" fill="white" font-family="'Space Grotesk', sans-serif" font-size="54" font-weight="700">
+    <tspan x="880" dy="0">GitHub gave</tspan>
+    <tspan x="880" dy="58">the deadline.</tspan>
+    <tspan x="880" dy="58">Klava shipped</tspan>
+    <tspan x="880" dy="58">the receipts.</tspan>
+  </text>
+  <text x="880" y="478" fill="#C9D5DA" font-family="'Space Grotesk', sans-serif" font-size="24">
+    <tspan x="880" dy="0">Desktop shell</tspan>
+    <tspan x="880" dy="34">Operations layer</tspan>
+    <tspan x="880" dy="34">Guarded terminal</tspan>
+    <tspan x="880" dy="34">Task transcript</tspan>
+  </text>
+  <text x="880" y="592" fill="#9FD8C9" font-family="'IBM Plex Mono', monospace" font-size="17">
+    <tspan x="880" dy="0">NO "AI CAN DO EVERYTHING" CLAIM.</tspan>
+    <tspan x="880" dy="26">JUST LOCAL WORK + APPROVALS + HISTORY.</tspan>
+  </text>
+</svg>

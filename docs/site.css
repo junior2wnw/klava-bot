@@ -46,6 +46,7 @@ a {
 .site-header,
 .site-footer,
 .hero,
+.story-grid,
 .section-grid,
 .proof-grid,
 .capabilities,
@@ -58,6 +59,7 @@ a {
 .site-header,
 .site-footer,
 .section-card,
+.story-card,
 .hero-card,
 .docs-strip {
   backdrop-filter: blur(16px);
@@ -285,6 +287,124 @@ a {
   margin-bottom: 28px;
 }
 
+.story-grid {
+  display: grid;
+  grid-template-columns: 1.08fr 0.92fr;
+  gap: 18px;
+  margin-bottom: 28px;
+}
+
+.story-card {
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+}
+
+.story-card h2 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+  max-width: 11ch;
+}
+
+.story-card p,
+.story-card li {
+  color: var(--ink-soft);
+  line-height: 1.7;
+}
+
+.story-card-primary {
+  background:
+    linear-gradient(180deg, rgba(255, 248, 239, 0.96) 0%, rgba(255, 255, 255, 0.88) 100%),
+    radial-gradient(circle at right top, rgba(222, 91, 47, 0.18), transparent 36%);
+}
+
+.story-card-media {
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.76) 0%, rgba(255, 250, 242, 0.92) 100%),
+    radial-gradient(circle at left top, rgba(19, 33, 42, 0.07), transparent 36%);
+}
+
+.story-card-cta {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 248, 239, 0.96) 100%),
+    radial-gradient(circle at right top, rgba(159, 216, 201, 0.16), transparent 38%);
+}
+
+.story-card-proof {
+  background: linear-gradient(180deg, var(--dark) 0%, var(--dark-soft) 100%);
+  color: white;
+}
+
+.story-card-proof p,
+.story-card-proof li {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.story-card-proof .section-label,
+.story-card-proof .inline-link {
+  color: #f8b198;
+}
+
+.story-card-proof .inline-link:hover {
+  color: white;
+}
+
+.story-art {
+  width: 100%;
+  height: auto;
+  border-radius: 18px;
+  border: 1px solid rgba(21, 21, 21, 0.08);
+  background: white;
+}
+
+.story-actions,
+.story-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.story-list {
+  margin: 18px 0 0;
+  padding-left: 20px;
+}
+
+.story-note {
+  padding: 14px 16px;
+  margin-top: 18px;
+  border-radius: 16px;
+  border: 1px solid rgba(222, 91, 47, 0.18);
+  background: rgba(255, 247, 242, 0.9);
+}
+
+.proof-sequence {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.proof-sequence span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
 .section-card {
   padding: 24px;
   background: var(--panel);
@@ -447,6 +567,7 @@ a {
 
 @media (max-width: 980px) {
   .hero,
+  .story-grid,
   .section-grid,
   .proof-grid,
   .docs-strip,
@@ -460,6 +581,7 @@ a {
   }
 
   .section-card h2,
+  .story-card h2,
   .capabilities h2,
   .timeline h2,
   .docs-strip h2 {
@@ -485,7 +607,9 @@ a {
 
   .site-nav,
   .footer-links,
-  .hero-actions {
+  .hero-actions,
+  .story-actions,
+  .story-links {
     width: 100%;
   }
 
