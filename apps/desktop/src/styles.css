@@ -406,6 +406,86 @@ pre {
   flex-wrap: wrap;
 }
 
+.operation-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: rgba(237, 227, 215, 0.38);
+  font-size: 11px;
+}
+
+.operation-template-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.operation-template,
+.operation-step,
+.operation-history {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 245, 235, 0.04);
+  background: rgba(255, 245, 235, 0.02);
+}
+
+.operation-template {
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+
+.operation-template strong,
+.operation-step strong,
+.operation-history strong {
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(237, 227, 215, 0.82);
+}
+
+.operation-template p,
+.operation-step p,
+.operation-history p {
+  margin: 0;
+  color: rgba(237, 227, 215, 0.38);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.operation-template span {
+  color: rgba(196, 112, 74, 0.72);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.operation-step code {
+  margin: 0;
+  padding: 9px 10px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.22);
+  color: rgba(237, 227, 215, 0.64);
+  font-size: 11px;
+  overflow: auto;
+}
+
+.operation-step__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.operation-summary {
+  display: grid;
+  gap: 4px;
+}
+
+.field-hint--danger {
+  color: #c75f5f;
+}
+
 /* ── Terminal ── */
 
 .terminal-output {

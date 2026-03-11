@@ -67,6 +67,7 @@ Available in this repo:
 
 - Electron + React desktop shell;
 - local runtime manager with typed HTTP API;
+- Pro surface for durable multi-step operations with reviewable steps and progress;
 - secure local secret storage with Windows DPAPI protection and local encrypted vault files on macOS/Linux;
 - GONKA mainnet onboarding, validation, balance checks, and strongest-model selection;
 - task system with transcript history and support bundle export;
@@ -93,6 +94,23 @@ Current provider status:
 - onboarding, validation, balance checks, and model discovery on GONKA work in this repo state;
 - the public GONKA-backed chat path is currently blocked by a provider-side transfer-agent panic tracked in [`gonka-ai/gonka#876`](https://github.com/gonka-ai/gonka/issues/876);
 - once that provider-side issue is fixed on the Gonka side, Klava's documented signed `chat/completions` path should be usable again without changing the client architecture.
+
+Current public integration note:
+
+- [GONKA_STATUS.md](./GONKA_STATUS.md)
+
+## New: Operations layer
+
+Klava now has a real `Pro` surface instead of a placeholder tab.
+
+It can stage a multi-step local operation inside one task, keep explicit step status, pause behind approvals, continue one step at a time, and retain the whole runbook in task history.
+
+That means the repo can now honestly show:
+
+- durable multi-step machine work instead of one-shot chat turns;
+- custom local runbooks made of notes and terminal commands;
+- risky steps that stop inside the same approval model instead of escaping it;
+- an operator-facing surface for longer tasks that need structure, not just text generation.
 
 ## Looking for design partners
 
@@ -263,6 +281,7 @@ Klava is published as a working open-source project, not as a source snapshot.
 - Governance: [GOVERNANCE.md](./GOVERNANCE.md)
 - Support: [SUPPORT.md](./SUPPORT.md)
 - Manifesto: [MANIFESTO.md](./MANIFESTO.md)
+- Gonka status: [GONKA_STATUS.md](./GONKA_STATUS.md)
 - Design partners: [DESIGN_PARTNERS.md](./DESIGN_PARTNERS.md)
 - Launch copy: [LAUNCH_POST.md](./LAUNCH_POST.md)
 

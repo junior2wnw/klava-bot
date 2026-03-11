@@ -35,6 +35,10 @@ export function ContextPane({
               <span>Terminal runs</span>
               <strong>{task.terminalEntries.length}</strong>
             </div>
+            <div className="detail-line">
+              <span>Operations</span>
+              <strong>{task.operations.length}</strong>
+            </div>
           </PanelCard>
         ) : null}
 

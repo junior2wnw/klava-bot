@@ -18,6 +18,12 @@ export const approvalRequestSchema = z.object({
   createdAt: z.string(),
   resolvedAt: z.string().nullable(),
   rollbackHint: z.string().nullable(),
+  meta: z
+    .object({
+      operationId: z.string().nullable().optional(),
+      operationStepId: z.string().nullable().optional(),
+    })
+    .default({}),
 });
 
 export type ApprovalRequest = z.infer<typeof approvalRequestSchema>;

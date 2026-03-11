@@ -195,6 +195,12 @@ export function App() {
           onSetGuardMode={(mode) =>
             selectedTask ? mutate(`/tasks/${selectedTask.id}/guard`, { mode }) : Promise.resolve()
           }
+          onCreateOperation={(payload) =>
+            selectedTask ? mutate(`/tasks/${selectedTask.id}/operations`, payload) : Promise.resolve()
+          }
+          onAdvanceOperation={(operationId) =>
+            selectedTask ? mutate(`/tasks/${selectedTask.id}/operations/${operationId}/advance`) : Promise.resolve()
+          }
         />
 
         <ContextPane

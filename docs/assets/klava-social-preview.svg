@@ -12,14 +12,14 @@
     <tspan x="94" dy="96">One approval model.</tspan>
   </text>
   <text x="96" y="506" fill="#4B463F" font-family="'Space Grotesk', sans-serif" font-size="34">
-    <tspan x="96" dy="0">Klava is built for serious local tasks, guarded system workflows,</tspan>
-    <tspan x="96" dy="46">and typed computer operations that can grow into repair and migration work.</tspan>
+    <tspan x="96" dy="0">Klava is built for serious local tasks, multi-step operations,</tspan>
+    <tspan x="96" dy="46">guarded shell work, and typed computer actions that stay reviewable.</tspan>
   </text>
   <rect x="922" y="386" width="238" height="112" rx="24" fill="#13212A" />
   <text x="956" y="430" fill="#F8B198" font-family="'IBM Plex Mono', monospace" font-size="18" letter-spacing="1.8">SHIPPED NOW</text>
   <text x="956" y="468" fill="white" font-family="'Space Grotesk', sans-serif" font-size="26" font-weight="700">Desktop shell</text>
-  <text x="956" y="500" fill="white" font-family="'Space Grotesk', sans-serif" font-size="26" font-weight="700">Guarded terminal</text>
-  <text x="956" y="532" fill="white" font-family="'Space Grotesk', sans-serif" font-size="26" font-weight="700">Win + macOS</text>
+  <text x="956" y="500" fill="white" font-family="'Space Grotesk', sans-serif" font-size="26" font-weight="700">Operations layer</text>
+  <text x="956" y="532" fill="white" font-family="'Space Grotesk', sans-serif" font-size="26" font-weight="700">Guarded terminal</text>
   <defs>
     <linearGradient id="paint0_linear_1_2" x1="96" y1="96" x2="184" y2="184" gradientUnits="userSpaceOnUse">
       <stop stop-color="#DE5B2F"/>

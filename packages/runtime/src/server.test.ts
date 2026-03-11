@@ -169,4 +169,135 @@ test("guarded terminal commands create approvals and rejection returns the task 
   });
 });
 
+test("operations can execute note and terminal steps across multiple advances", async () => {
+  await withTempAppPaths(async (paths) => {
+    const runtime = await createKlavaRuntime({ paths });
+
+    try {
+      const createTaskResponse = await runtime.server.inject({
+        method: "POST",
+        url: "/api/tasks",
+        payload: {
+          title: "Operation flow",
+        },
+      });
+
+      assert.equal(createTaskResponse.statusCode, 200);
+      const createdSnapshot = createTaskResponse.json();
+      const taskId = createdSnapshot.selectedTask.id as string;
+
+      const createOperationResponse = await runtime.server.inject({
+        method: "POST",
+        url: `/api/tasks/${taskId}/operations`,
+        payload: {
+          title: "Repo audit runbook",
+          goal: "Prove that Klava can keep a multi-step local workflow in one task.",
+          steps: [
+            {
+              title: "Write the operator note",
+              detail: "Document the intention before the terminal work starts.",
+              command: null,
+            },
+            {
+              title: "Run a terminal step",
+              detail: "Execute a safe local command and attach the output to the task.",
+              command: "node -e \"console.log('operation ok')\"",
+            },
+          ],
+        },
+      });
+
+      assert.equal(createOperationResponse.statusCode, 200);
+      const operationSnapshot = createOperationResponse.json();
+      const operationId = operationSnapshot.selectedTask.operations[0].id as string;
+
+      const noteAdvanceResponse = await runtime.server.inject({
+        method: "POST",
+        url: `/api/tasks/${taskId}/operations/${operationId}/advance`,
+      });
+
+      assert.equal(noteAdvanceResponse.statusCode, 200);
+      const noteAdvanceSnapshot = noteAdvanceResponse.json();
+      assert.equal(noteAdvanceSnapshot.selectedTask.operations[0].steps[0].status, "succeeded");
+      assert.equal(noteAdvanceSnapshot.selectedTask.operations[0].status, "running");
+
+      const commandAdvanceResponse = await runtime.server.inject({
+        method: "POST",
+        url: `/api/tasks/${taskId}/operations/${operationId}/advance`,
+      });
+
+      assert.equal(commandAdvanceResponse.statusCode, 200);
+      const commandAdvanceSnapshot = commandAdvanceResponse.json();
+      assert.equal(commandAdvanceSnapshot.selectedTask.operations[0].steps[1].status, "succeeded");
+      assert.equal(commandAdvanceSnapshot.selectedTask.operations[0].status, "succeeded");
+      assert.equal(commandAdvanceSnapshot.selectedTask.terminalEntries.length, 1);
+    } finally {
+      await runtime.stop();
+    }
+  });
+});
+
+test("operation guarded steps stay linked to approval rejection", async () => {
+  await withTempAppPaths(async (paths) => {
+    const runtime = await createKlavaRuntime({ paths });
+
+    try {
+      const createTaskResponse = await runtime.server.inject({
+        method: "POST",
+        url: "/api/tasks",
+        payload: {
+          title: "Operation guard flow",
+        },
+      });
+
+      assert.equal(createTaskResponse.statusCode, 200);
+      const createdSnapshot = createTaskResponse.json();
+      const taskId = createdSnapshot.selectedTask.id as string;
+
+      const createOperationResponse = await runtime.server.inject({
+        method: "POST",
+        url: `/api/tasks/${taskId}/operations`,
+        payload: {
+          title: "Guarded install proof",
+          goal: "Show that risky machine changes stop in approvals even inside a multi-step operation.",
+          steps: [
+            {
+              title: "Attempt package install",
+              detail: "This should stop behind a pending approval.",
+              command: "winget install example-package",
+            },
+          ],
+        },
+      });
+
+      assert.equal(createOperationResponse.statusCode, 200);
+      const operationSnapshot = createOperationResponse.json();
+      const operationId = operationSnapshot.selectedTask.operations[0].id as string;
+
+      const advanceResponse = await runtime.server.inject({
+        method: "POST",
+        url: `/api/tasks/${taskId}/operations/${operationId}/advance`,
+      });
+
+      assert.equal(advanceResponse.statusCode, 200);
+      const awaitingSnapshot = advanceResponse.json();
+      assert.equal(awaitingSnapshot.selectedTask.operations[0].status, "awaiting_approval");
+      assert.equal(awaitingSnapshot.selectedTask.operations[0].steps[0].status, "awaiting_approval");
+
+      const approvalId = awaitingSnapshot.selectedTask.approvals[0].id as string;
+      const rejectResponse = await runtime.server.inject({
+        method: "POST",
+        url: `/api/approvals/${approvalId}/reject`,
+      });
+
+      assert.equal(rejectResponse.statusCode, 200);
+      const rejectedSnapshot = rejectResponse.json();
+      assert.equal(rejectedSnapshot.selectedTask.operations[0].status, "failed");
+      assert.equal(rejectedSnapshot.selectedTask.operations[0].steps[0].status, "failed");
+    } finally {
+      await runtime.stop();
+    }
+  });
+});
+
 const TEST_MNEMONIC_PLACEHOLDER = "test recovery phrase";

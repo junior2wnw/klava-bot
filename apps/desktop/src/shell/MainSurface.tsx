@@ -1,6 +1,7 @@
-import type { GuardMode, SurfaceMode, TaskDetail } from "@klava/contracts";
+import type { CreateOperationRequest, GuardMode, SurfaceMode, TaskDetail } from "@klava/contracts";
 import { Button, ShellRegion } from "@klava/ui";
 import { ChatSurface } from "../features/chat/ChatSurface";
+import { ProSurface } from "../features/pro/ProSurface";
 import { TerminalSurface } from "../features/terminal/TerminalSurface";
 
 const surfaceOptions: Array<{ id: SurfaceMode; label: string }> = [
@@ -17,6 +18,8 @@ export function MainSurface({
   onRunTerminal,
   onSendMessage,
   onSetGuardMode,
+  onCreateOperation,
+  onAdvanceOperation,
 }: {
   busy: boolean;
   surfaceMode: SurfaceMode;
@@ -25,6 +28,8 @@ export function MainSurface({
   onSendMessage: (content: string) => Promise<void>;
   onRunTerminal: (command: string) => Promise<void>;
   onSetGuardMode: (mode: GuardMode) => Promise<void>;
+  onCreateOperation: (payload: CreateOperationRequest) => Promise<void>;
+  onAdvanceOperation: (operationId: string) => Promise<void>;
 }) {
   return (
     <ShellRegion
@@ -49,7 +54,12 @@ export function MainSurface({
       ) : surfaceMode === "terminal" ? (
         <TerminalSurface busy={busy} task={task} onRunCommand={onRunTerminal} onSetGuardMode={onSetGuardMode} />
       ) : surfaceMode === "pro" ? (
-        <div className="empty-state">`Pro` surface is reserved for future optional modules.</div>
+        <ProSurface
+          busy={busy}
+          task={task}
+          onCreateOperation={onCreateOperation}
+          onAdvanceOperation={onAdvanceOperation}
+        />
       ) : (
         <ChatSurface busy={busy} task={task} onSendMessage={onSendMessage} />
       )}

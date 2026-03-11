@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { approvalRequestSchema } from "./approvals";
+import { operationRunSchema } from "./operations";
 
 export const taskStatusSchema = z.enum([
   "idle",
@@ -64,6 +65,7 @@ export const taskDetailSchema = taskSummarySchema.extend({
   messages: z.array(taskMessageSchema),
   terminalEntries: z.array(terminalEntrySchema),
   approvals: z.array(approvalRequestSchema),
+  operations: z.array(operationRunSchema),
 });
 
 export type TaskDetail = z.infer<typeof taskDetailSchema>;

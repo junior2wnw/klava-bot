@@ -14,6 +14,7 @@ export const supportBundleTaskSchema = z.object({
   messageCount: z.number().int().nonnegative(),
   terminalEntryCount: z.number().int().nonnegative(),
   approvalCount: z.number().int().nonnegative(),
+  operationCount: z.number().int().nonnegative(),
 });
 
 export const supportBundleSchema = z.object({

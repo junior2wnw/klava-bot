@@ -16,6 +16,7 @@ What is already in the repo:
 
 - Electron desktop shell
 - local runtime
+- multi-step operations layer in the Pro surface
 - secure onboarding and secret handling
 - guarded terminal execution
 - support bundle export
@@ -47,6 +48,7 @@ Current shape:
 
 - one desktop app
 - local runtime
+- multi-step operations with explicit progress
 - secure onboarding and secret handling
 - guarded shell access with approvals
 - typed system workflows instead of "let the model run anything as admin"
@@ -73,6 +75,7 @@ A desktop agent project built around:
 
 - one desktop app
 - local runtime
+- multi-step operations
 - secure onboarding
 - approvals for risky actions
 - typed computer operations instead of raw privileged prompt execution
@@ -91,6 +94,7 @@ The point is straightforward:
 - one task log
 - one approval model
 - local runtime
+- multi-step operations with durable steps
 - secret handling outside the transcript
 - guarded shell operations
 - future typed workflows for serious machine tasks

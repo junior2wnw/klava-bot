@@ -4,6 +4,7 @@ import path from "node:path";
 import type {
   ApprovalRequest,
   GuardMode,
+  OperationRun,
   ProviderBalance,
   ProviderSettings,
   TaskDetail,
@@ -106,6 +107,67 @@ function normalizeProvider(provider?: Partial<ProviderSettings> | null): Provide
   };
 }
 
+function normalizeOperation(operation?: Partial<OperationRun> | null): OperationRun {
+  const createdAt = typeof operation?.createdAt === "string" ? operation.createdAt : nowIso();
+  const updatedAt = typeof operation?.updatedAt === "string" ? operation.updatedAt : createdAt;
+
+  return {
+    id: typeof operation?.id === "string" ? operation.id : crypto.randomUUID(),
+    title: typeof operation?.title === "string" && operation.title.trim().length > 0 ? operation.title.trim() : "Operation",
+    goal: typeof operation?.goal === "string" && operation.goal.trim().length > 0 ? operation.goal.trim() : "Unspecified goal",
+    summary: typeof operation?.summary === "string" ? operation.summary : null,
+    status:
+      operation?.status === "draft" ||
+      operation?.status === "running" ||
+      operation?.status === "awaiting_approval" ||
+      operation?.status === "succeeded" ||
+      operation?.status === "failed"
+        ? operation.status
+        : "draft",
+    createdAt,
+    updatedAt,
+    activeStepId: typeof operation?.activeStepId === "string" ? operation.activeStepId : null,
+    steps: Array.isArray(operation?.steps)
+      ? operation.steps.map((step) => ({
+          id: typeof step?.id === "string" ? step.id : crypto.randomUUID(),
+          title: typeof step?.title === "string" && step.title.trim().length > 0 ? step.title.trim() : "Step",
+          detail: typeof step?.detail === "string" ? step.detail : null,
+          kind: step?.kind === "note" || step?.kind === "terminal" ? step.kind : step?.command ? "terminal" : "note",
+          command: typeof step?.command === "string" ? step.command : null,
+          status:
+            step?.status === "pending" ||
+            step?.status === "running" ||
+            step?.status === "awaiting_approval" ||
+            step?.status === "succeeded" ||
+            step?.status === "failed" ||
+            step?.status === "blocked"
+              ? step.status
+              : "pending",
+          startedAt: typeof step?.startedAt === "string" ? step.startedAt : null,
+          finishedAt: typeof step?.finishedAt === "string" ? step.finishedAt : null,
+          terminalEntryId: typeof step?.terminalEntryId === "string" ? step.terminalEntryId : null,
+          approvalId: typeof step?.approvalId === "string" ? step.approvalId : null,
+        }))
+      : [],
+  };
+}
+
+function normalizeTask(task?: Partial<TaskDetail> | null): TaskDetail {
+  const fallback = createTaskTemplate(typeof task?.title === "string" ? task.title : undefined);
+
+  return {
+    ...fallback,
+    ...task,
+    approvals: Array.isArray(task?.approvals)
+      ? task.approvals.map((approval) => ({
+          ...approval,
+          meta: approval?.meta ?? {},
+        }))
+      : fallback.approvals,
+    operations: Array.isArray(task?.operations) ? task.operations.map((operation) => normalizeOperation(operation)) : [],
+  };
+}
+
 export function createTaskTemplate(title?: string): TaskDetail {
   const timestamp = nowIso();
   const id = crypto.randomUUID();
@@ -132,6 +194,7 @@ export function createTaskTemplate(title?: string): TaskDetail {
     messages: [welcomeMessage],
     terminalEntries: [],
     approvals: [],
+    operations: [],
   };
 }
 
@@ -194,7 +257,7 @@ export class RuntimeStore {
       this.state = {
         provider: normalizeProvider(parsed.provider),
         selectedTaskId: parsed.selectedTaskId ?? parsed.tasks?.[0]?.id ?? fallbackTask.id,
-        tasks: parsed.tasks?.length ? parsed.tasks : baseline.tasks,
+        tasks: parsed.tasks?.length ? parsed.tasks.map((task) => normalizeTask(task)) : baseline.tasks,
       };
     } catch {
       this.state = defaultState();
@@ -255,6 +318,10 @@ export class RuntimeStore {
 
   getTask(taskId: string) {
     return this.state.tasks.find((task) => task.id === taskId) ?? null;
+  }
+
+  getOperation(taskId: string, operationId: string) {
+    return this.getTask(taskId)?.operations.find((operation) => operation.id === operationId) ?? null;
   }
 
   getSelectedTask() {
@@ -343,6 +410,42 @@ export class RuntimeStore {
     this.touchTask(task, "awaiting_approval");
     await this.flush();
     return task;
+  }
+
+  async addOperation(taskId: string, operation: OperationRun, status?: TaskStatus) {
+    const task = this.getTask(taskId);
+    if (!task) {
+      return null;
+    }
+
+    task.operations.unshift(operation);
+    this.touchTask(task, status);
+    await this.flush();
+    return operation;
+  }
+
+  async updateOperation(
+    taskId: string,
+    operationId: string,
+    update: (operation: OperationRun) => void,
+    status?: TaskStatus | ((operation: OperationRun) => TaskStatus),
+  ) {
+    const task = this.getTask(taskId);
+    if (!task) {
+      return null;
+    }
+
+    const operation = task.operations.find((candidate) => candidate.id === operationId);
+    if (!operation) {
+      return null;
+    }
+
+    update(operation);
+    operation.updatedAt = nowIso();
+    const nextStatus = typeof status === "function" ? status(operation) : status;
+    this.touchTask(task, nextStatus);
+    await this.flush();
+    return operation;
   }
 
   async resolveApproval(approvalId: string, status: "approved" | "rejected") {

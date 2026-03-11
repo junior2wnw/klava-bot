@@ -1,9 +1,13 @@
 import Fastify from "fastify";
 import type {
   ApprovalRequest,
+  CreateOperationRequest,
   ExecuteTerminalRequest,
   GonkaWalletBalanceQuery,
   OnboardingValidateRequest,
+  OperationRun,
+  OperationStatus,
+  OperationStep,
   ProviderSettings,
   SendMessageRequest,
   TaskDetail,
@@ -12,6 +16,7 @@ import type {
 } from "@klava/contracts";
 import {
   createTaskRequestSchema,
+  createOperationRequestSchema,
   executeTerminalRequestSchema,
   gonkaWalletBalanceQuerySchema,
   onboardingValidateRequestSchema,
@@ -36,6 +41,27 @@ type CreateRuntimeOptions = {
   port?: number;
   paths?: AppPaths;
 };
+
+type OperationBinding = {
+  operationId: string;
+  stepId: string;
+};
+
+type TerminalExecutionResult =
+  | {
+      kind: "blocked";
+      terminalEntry: TerminalEntry;
+    }
+  | {
+      kind: "awaiting_approval";
+      terminalEntry: TerminalEntry;
+      approval: ApprovalRequest;
+    }
+  | {
+      kind: "completed";
+      terminalEntry: TerminalEntry;
+      succeeded: boolean;
+    };
 
 function nowIso() {
   return new Date().toISOString();
@@ -92,7 +118,7 @@ function createTerminalEntry(
   };
 }
 
-function createApproval(taskId: string, command: string, impact: string): ApprovalRequest {
+function createApproval(taskId: string, command: string, impact: string, binding?: OperationBinding): ApprovalRequest {
   return {
     id: crypto.randomUUID(),
     taskId,
@@ -105,7 +131,86 @@ function createApproval(taskId: string, command: string, impact: string): Approv
     createdAt: nowIso(),
     resolvedAt: null,
     rollbackHint: "Review the command and revert the changed package, file, or service manually if needed.",
+    meta: {
+      operationId: binding?.operationId ?? null,
+      operationStepId: binding?.stepId ?? null,
+    },
   };
+}
+
+function createOperationRun(body: CreateOperationRequest): OperationRun {
+  const timestamp = nowIso();
+  return {
+    id: crypto.randomUUID(),
+    title: body.title.trim(),
+    goal: body.goal.trim(),
+    summary: body.summary?.trim() || null,
+    status: "draft",
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    activeStepId: null,
+    steps: body.steps.map((step) => ({
+      id: crypto.randomUUID(),
+      title: step.title.trim(),
+      detail: step.detail?.trim() || null,
+      kind: step.command ? "terminal" : "note",
+      command: step.command?.trim() || null,
+      status: "pending",
+      startedAt: null,
+      finishedAt: null,
+      terminalEntryId: null,
+      approvalId: null,
+    })),
+  };
+}
+
+function operationStatusToTaskStatus(status: OperationStatus): TaskDetail["status"] {
+  return status === "awaiting_approval"
+    ? "awaiting_approval"
+    : status === "running"
+      ? "running"
+      : status === "succeeded"
+        ? "succeeded"
+        : status === "failed"
+          ? "failed"
+          : "idle";
+}
+
+function getActiveOperation(task: TaskDetail) {
+  return task.operations.find((operation) =>
+    operation.status === "draft" || operation.status === "running" || operation.status === "awaiting_approval",
+  );
+}
+
+function getNextPendingStep(operation: OperationRun) {
+  return operation.steps.find((step) => step.status === "pending") ?? null;
+}
+
+function settleOperationStatus(operation: OperationRun) {
+  const pendingStep = operation.steps.find((step) => step.status === "pending");
+  const awaitingApproval = operation.steps.find((step) => step.status === "awaiting_approval");
+  const failedStep = operation.steps.find((step) => step.status === "failed" || step.status === "blocked");
+
+  if (failedStep) {
+    operation.status = "failed";
+    operation.activeStepId = null;
+    return;
+  }
+
+  if (awaitingApproval) {
+    operation.status = "awaiting_approval";
+    operation.activeStepId = awaitingApproval.id;
+    return;
+  }
+
+  if (pendingStep) {
+    operation.status = operation.steps.some((step) => step.status === "succeeded") ? "running" : "draft";
+    operation.activeStepId = null;
+    return;
+  }
+
+  operation.status = "succeeded";
+  operation.activeStepId = null;
 }
 
 export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
@@ -226,6 +331,7 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
           messageCount: detail?.messages.length ?? 0,
           terminalEntryCount: detail?.terminalEntries.length ?? 0,
           approvalCount: detail?.approvals.length ?? 0,
+          operationCount: detail?.operations.length ?? 0,
         };
       }),
     };
@@ -304,13 +410,19 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
     }
   }
 
-  async function executeTerminal(task: TaskDetail, command: string, allowGuardBypass = false) {
+  async function executeTerminal(
+    task: TaskDetail,
+    command: string,
+    allowGuardBypass = false,
+    binding?: OperationBinding,
+  ): Promise<TerminalExecutionResult> {
     const assessment = assessCommand(command);
 
     if (assessment.kind === "blocked") {
+      const terminalEntry = createTerminalEntry(task.id, command, `Blocked: ${assessment.reason}`, 1, "blocked");
       await store.addTerminalEntry(
         task.id,
-        createTerminalEntry(task.id, command, `Blocked: ${assessment.reason}`, 1, "blocked"),
+        terminalEntry,
         "failed",
       );
       await store.addMessage(
@@ -318,20 +430,24 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
         createMessage(task.id, "assistant", `I blocked that command: ${assessment.reason}.`),
         "failed",
       );
-      return;
+      return {
+        kind: "blocked",
+        terminalEntry,
+      };
     }
 
     if (!allowGuardBypass && assessment.kind === "guarded") {
       if (task.guardMode === "strict") {
+        const terminalEntry = createTerminalEntry(
+          task.id,
+          command,
+          `Guard strict blocked the command: ${assessment.reason}`,
+          1,
+          "blocked",
+        );
         await store.addTerminalEntry(
           task.id,
-          createTerminalEntry(
-            task.id,
-            command,
-            `Guard strict blocked the command: ${assessment.reason}`,
-            1,
-            "blocked",
-          ),
+          terminalEntry,
           "failed",
         );
         await store.addMessage(
@@ -339,15 +455,19 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
           createMessage(task.id, "assistant", `Guard strict blocked that command: ${assessment.reason}.`),
           "failed",
         );
-        return;
+        return {
+          kind: "blocked",
+          terminalEntry,
+        };
       }
 
       if (task.guardMode === "balanced") {
-        const approval = createApproval(task.id, command, assessment.reason);
+        const approval = createApproval(task.id, command, assessment.reason, binding);
+        const terminalEntry = createTerminalEntry(task.id, command, "Awaiting approval.", 0, "pending_approval");
         await store.addApproval(task.id, approval);
         await store.addTerminalEntry(
           task.id,
-          createTerminalEntry(task.id, command, "Awaiting approval.", 0, "pending_approval"),
+          terminalEntry,
           "awaiting_approval",
         );
         await store.addMessage(
@@ -360,21 +480,26 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
           ),
           "awaiting_approval",
         );
-        return;
+        return {
+          kind: "awaiting_approval",
+          terminalEntry,
+          approval,
+        };
       }
     }
 
     await store.addMessage(task.id, createMessage(task.id, "tool", `Running terminal command: ${command}`), "running");
     const result = await runCommand(command);
+    const terminalEntry = createTerminalEntry(
+      task.id,
+      command,
+      result.output,
+      result.exitCode,
+      result.exitCode === 0 ? "completed" : "failed",
+    );
     await store.addTerminalEntry(
       task.id,
-      createTerminalEntry(
-        task.id,
-        command,
-        result.output,
-        result.exitCode,
-        result.exitCode === 0 ? "completed" : "failed",
-      ),
+      terminalEntry,
       result.exitCode === 0 ? "succeeded" : "failed",
     );
     await store.addMessage(
@@ -385,9 +510,158 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
         result.exitCode === 0
           ? `Command finished.\n\n${result.output}`
           : `Command failed with exit code ${result.exitCode}.\n\n${result.output}`,
-      ),
+        ),
       result.exitCode === 0 ? "succeeded" : "failed",
     );
+    return {
+      kind: "completed",
+      terminalEntry,
+      succeeded: result.exitCode === 0,
+    };
+  }
+
+  async function createOperation(task: TaskDetail, body: CreateOperationRequest) {
+    const activeOperation = getActiveOperation(task);
+    if (activeOperation) {
+      throw new Error(`Task already has an active operation: ${activeOperation.title}.`);
+    }
+
+    const operation = createOperationRun(body);
+    await store.addOperation(task.id, operation, "idle");
+    await store.addMessage(
+      task.id,
+      createMessage(
+        task.id,
+        "assistant",
+        `Operation "${operation.title}" created with ${operation.steps.length} steps. Open Pro and continue step by step.`,
+      ),
+      "idle",
+    );
+    return buildSnapshot(task.id);
+  }
+
+  async function advanceOperation(taskId: string, operationId: string) {
+    const task = store.getTask(taskId);
+    if (!task) {
+      throw new Error("Task not found");
+    }
+
+    const operation = store.getOperation(taskId, operationId);
+    if (!operation) {
+      throw new Error("Operation not found");
+    }
+
+    if (operation.status === "awaiting_approval") {
+      throw new Error("Operation is waiting for an approval before it can continue.");
+    }
+
+    const nextStep = getNextPendingStep(operation);
+    if (!nextStep) {
+      await store.updateOperation(
+        taskId,
+        operationId,
+        (updatedOperation) => {
+          settleOperationStatus(updatedOperation);
+        },
+        (updatedOperation) => operationStatusToTaskStatus(updatedOperation.status),
+      );
+      return buildSnapshot(taskId);
+    }
+
+    const startedAt = nowIso();
+    await store.updateOperation(
+      taskId,
+      operationId,
+      (updatedOperation) => {
+        const step = updatedOperation.steps.find((candidate) => candidate.id === nextStep.id);
+        if (!step) {
+          return;
+        }
+        step.status = "running";
+        step.startedAt ??= startedAt;
+        updatedOperation.status = "running";
+        updatedOperation.activeStepId = step.id;
+      },
+      "running",
+    );
+
+    const liveTask = store.getTask(taskId);
+    const liveOperation = store.getOperation(taskId, operationId);
+    const liveStep = liveOperation?.steps.find((candidate) => candidate.id === nextStep.id);
+
+    if (!liveTask || !liveOperation || !liveStep) {
+      throw new Error("Operation state was lost while advancing.");
+    }
+
+    if (liveStep.kind === "note") {
+      await store.addMessage(
+        taskId,
+        createMessage(
+          taskId,
+          "assistant",
+          liveStep.detail
+            ? `Operation step: ${liveStep.title}\n\n${liveStep.detail}`
+            : `Operation step: ${liveStep.title}`,
+        ),
+        "running",
+      );
+
+      await store.updateOperation(
+        taskId,
+        operationId,
+        (updatedOperation) => {
+          const step = updatedOperation.steps.find((candidate) => candidate.id === liveStep.id);
+          if (!step) {
+            return;
+          }
+          step.status = "succeeded";
+          step.finishedAt = nowIso();
+          settleOperationStatus(updatedOperation);
+        },
+        (updatedOperation) => operationStatusToTaskStatus(updatedOperation.status),
+      );
+
+      return buildSnapshot(taskId);
+    }
+
+    const execution = await executeTerminal(liveTask, liveStep.command ?? "", false, {
+      operationId,
+      stepId: liveStep.id,
+    });
+
+    await store.updateOperation(
+      taskId,
+      operationId,
+      (updatedOperation) => {
+        const step = updatedOperation.steps.find((candidate) => candidate.id === liveStep.id);
+        if (!step) {
+          return;
+        }
+
+        step.terminalEntryId = execution.terminalEntry.id;
+
+        if (execution.kind === "awaiting_approval") {
+          step.status = "awaiting_approval";
+          step.approvalId = execution.approval.id;
+          updatedOperation.status = "awaiting_approval";
+          updatedOperation.activeStepId = step.id;
+          return;
+        }
+
+        step.finishedAt = nowIso();
+
+        if (execution.kind === "blocked") {
+          step.status = "blocked";
+        } else {
+          step.status = execution.succeeded ? "succeeded" : "failed";
+        }
+
+        settleOperationStatus(updatedOperation);
+      },
+      (updatedOperation) => operationStatusToTaskStatus(updatedOperation.status),
+    );
+
+    return buildSnapshot(taskId);
   }
 
   async function respondToMessage(task: TaskDetail, body: SendMessageRequest) {
@@ -677,6 +951,43 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
     return buildSnapshot(task.id);
   });
 
+  server.post("/api/tasks/:taskId/operations", async (request, reply) => {
+    const params = request.params as { taskId: string };
+    const task = store.getTask(params.taskId);
+    if (!task) {
+      reply.code(404);
+      return { message: "Task not found" };
+    }
+
+    try {
+      const body = createOperationRequestSchema.parse(request.body) as CreateOperationRequest;
+      return await createOperation(task, body);
+    } catch (error) {
+      reply.code(400);
+      return {
+        message: error instanceof Error ? error.message : "Unable to create operation",
+      };
+    }
+  });
+
+  server.post("/api/tasks/:taskId/operations/:operationId/advance", async (request, reply) => {
+    const params = request.params as { taskId: string; operationId: string };
+    const task = store.getTask(params.taskId);
+    if (!task) {
+      reply.code(404);
+      return { message: "Task not found" };
+    }
+
+    try {
+      return await advanceOperation(params.taskId, params.operationId);
+    } catch (error) {
+      reply.code(400);
+      return {
+        message: error instanceof Error ? error.message : "Unable to advance operation",
+      };
+    }
+  });
+
   server.post("/api/approvals/:approvalId/approve", async (request, reply) => {
     const params = request.params as { approvalId: string };
     const resolved = await store.resolveApproval(params.approvalId, "approved");
@@ -693,7 +1004,33 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
 
     const latestTask = store.getTask(resolved.task.id);
     if (latestTask) {
-      await executeTerminal(latestTask, resolved.approval.command, true);
+      const execution = await executeTerminal(latestTask, resolved.approval.command, true);
+
+      if (resolved.approval.meta.operationId && resolved.approval.meta.operationStepId) {
+        await store.updateOperation(
+          resolved.task.id,
+          resolved.approval.meta.operationId,
+          (operation) => {
+            const step = operation.steps.find((candidate) => candidate.id === resolved.approval.meta.operationStepId);
+            if (!step) {
+              return;
+            }
+
+            step.approvalId = resolved.approval.id;
+            step.terminalEntryId = execution.terminalEntry.id;
+            step.finishedAt = nowIso();
+
+            if (execution.kind === "blocked") {
+              step.status = "blocked";
+            } else if (execution.kind === "completed") {
+              step.status = execution.succeeded ? "succeeded" : "failed";
+            }
+
+            settleOperationStatus(operation);
+          },
+          (operation) => operationStatusToTaskStatus(operation.status),
+        );
+      }
     }
 
     return buildSnapshot(resolved.task.id);
@@ -712,6 +1049,26 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
       createMessage(resolved.task.id, "assistant", `Approval rejected. I did not run \`${resolved.approval.command}\`.`),
       "idle",
     );
+
+    if (resolved.approval.meta.operationId && resolved.approval.meta.operationStepId) {
+      await store.updateOperation(
+        resolved.task.id,
+        resolved.approval.meta.operationId,
+        (operation) => {
+          const step = operation.steps.find((candidate) => candidate.id === resolved.approval.meta.operationStepId);
+          if (!step) {
+            return;
+          }
+
+          step.approvalId = resolved.approval.id;
+          step.finishedAt = nowIso();
+          step.status = "failed";
+          settleOperationStatus(operation);
+        },
+        (operation) => operationStatusToTaskStatus(operation.status),
+      );
+    }
+
     return buildSnapshot(resolved.task.id);
   });
 
