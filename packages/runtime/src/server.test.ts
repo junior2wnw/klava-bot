@@ -731,6 +731,80 @@ test("natural-language computer diagnostics bypass provider chat and use the loc
   }
 });
 
+test("generic russian driver-update requests route into the local driver overview path", async () => {
+  const originalExecuteIntent = ComputerOperator.prototype.executeIntent;
+  const originalValidate = OpenAIService.prototype.validate;
+  const originalComplete = OpenAIService.prototype.complete;
+
+  ComputerOperator.prototype.executeIntent = async function executeIntent(intent) {
+    assert.equal(intent.kind, "driver_overview");
+    return {
+      kind: "answer",
+      status: "succeeded",
+      skill: "driver_inspection",
+      intent: "driver_overview",
+      toolMessage: "Local driver overview matched.",
+      assistantMessage: "USB controller driver needs attention first.",
+    };
+  };
+  OpenAIService.prototype.validate = async function validate() {
+    return {
+      model: "gpt-5.2",
+      models: ["gpt-5.2"],
+    };
+  };
+  OpenAIService.prototype.complete = async function complete() {
+    throw new Error("provider chat should not have been called for a local driver overview skill");
+  };
+
+  try {
+    await withTempAppPaths(async (paths) => {
+      const runtime = await createKlavaRuntime({ paths });
+
+      try {
+        const onboarding = await runtime.server.inject({
+          method: "POST",
+          url: "/api/onboarding/validate",
+          payload: {
+            provider: "openai",
+            secret: "sk-driver-overview",
+          },
+        });
+
+        assert.equal(onboarding.statusCode, 200);
+
+        const workspace = await runtime.server.inject({
+          method: "GET",
+          url: "/api/workspace",
+        });
+        const taskId = workspace.json().selectedTask.id as string;
+
+        const response = await runtime.server.inject({
+          method: "POST",
+          url: `/api/tasks/${taskId}/messages`,
+          payload: {
+            content: "\u043a\u0430\u043a\u0438\u0435 \u0434\u0440\u0430\u0439\u0432\u0435\u0440\u0430 \u0441\u0442\u043e\u0438\u0442 \u043e\u0431\u043d\u043e\u0432\u0438\u0442\u044c?",
+          },
+        });
+
+        assert.equal(response.statusCode, 200);
+        const snapshot = response.json();
+        const messages = snapshot.selectedTask.messages;
+        assert.equal(messages.at(-2).role, "tool");
+        assert.equal(messages.at(-2).meta.computerSkill, "driver_inspection");
+        assert.equal(messages.at(-2).meta.computerIntent, "driver_overview");
+        assert.equal(messages.at(-1).content, "USB controller driver needs attention first.");
+      } finally {
+        await runtime.stop();
+      }
+    });
+  } finally {
+    ComputerOperator.prototype.executeIntent = originalExecuteIntent;
+    OpenAIService.prototype.validate = originalValidate;
+    OpenAIService.prototype.complete = originalComplete;
+  }
+});
+
 test("natural-language package installs route into guarded terminal approvals", async () => {
   const originalHandle = ComputerOperator.prototype.handle;
 

@@ -58,15 +58,73 @@ function sanitizeOutput(output: string) {
   return trimmed.length > 6000 ? `${trimmed.slice(0, 6000)}\n\n[output truncated]` : trimmed;
 }
 
+function buildWindowsPowerShellBootstrap(command: string) {
+  const encodedCommand = Buffer.from(command, "utf8").toString("base64");
+  return [
+    "$ErrorActionPreference = 'Continue'",
+    "[Console]::InputEncoding = [System.Text.Encoding]::UTF8",
+    "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8",
+    "$OutputEncoding = [System.Text.Encoding]::UTF8",
+    "try { chcp 65001 > $null } catch {}",
+    `$klavaBytes = [Convert]::FromBase64String('${encodedCommand}')`,
+    "$klavaCommand = [System.Text.Encoding]::UTF8.GetString($klavaBytes)",
+    "Invoke-Expression $klavaCommand",
+  ].join("; ");
+}
+
+function splitCommandLine(command: string) {
+  const tokens: string[] = [];
+  let current = "";
+  let quote: '"' | "'" | null = null;
+
+  for (let index = 0; index < command.length; index += 1) {
+    const char = command[index];
+    if (!quote && /\s/.test(char)) {
+      if (current.length > 0) {
+        tokens.push(current);
+        current = "";
+      }
+      continue;
+    }
+
+    if (char === '"' || char === "'") {
+      if (!quote) {
+        quote = char;
+        continue;
+      }
+
+      if (quote === char) {
+        quote = null;
+        continue;
+      }
+    }
+
+    current += char;
+  }
+
+  if (current.length > 0) {
+    tokens.push(current);
+  }
+
+  return tokens;
+}
+
 export function runCommand(command: string): Promise<{ output: string; exitCode: number }> {
   return new Promise((resolve) => {
     const unixShell = process.env.SHELL?.trim() || (process.platform === "darwin" ? "/bin/zsh" : "/bin/bash");
+    const explicitPowerShellProcess = /^\s*(?:powershell|pwsh)(?:\.exe)?\b/i.test(command);
+    const explicitPowerShellTokens = explicitPowerShellProcess ? splitCommandLine(command) : [];
     const shellCommand =
       process.platform === "win32"
-        ? {
-            file: "powershell",
-            args: ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", command],
-          }
+        ? explicitPowerShellProcess
+          ? {
+              file: explicitPowerShellTokens[0] || "powershell",
+              args: explicitPowerShellTokens.slice(1),
+            }
+          : {
+              file: "powershell",
+              args: ["-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", buildWindowsPowerShellBootstrap(command)],
+            }
         : {
             file: unixShell,
             args: ["-lc", command],

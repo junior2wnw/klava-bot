@@ -63,6 +63,22 @@ type WindowsUpdateDriverSummary = {
   availableDriverUpdates: number;
 };
 
+type ProblemDeviceRow = {
+  Name?: string | null;
+  Status?: string | null;
+  ConfigManagerErrorCode?: number | null;
+  DeviceID?: string | null;
+  PNPClass?: string | null;
+  Manufacturer?: string | null;
+  Service?: string | null;
+};
+
+type VideoControllerRow = {
+  Name?: string | null;
+  DriverVersion?: string | null;
+  DriverDate?: string | null;
+};
+
 type InstalledSoftwareRow = {
   DisplayName?: string | null;
   DisplayVersion?: string | null;
@@ -316,6 +332,8 @@ export class ComputerOperator {
         return this.describeCapabilities(intent);
       case "inspect_driver":
         return this.inspectDrivers(intent);
+      case "driver_overview":
+        return this.inspectDriverOverview(intent);
       case "software_version":
         return this.inspectSoftwareVersion(intent);
       case "installed_software":
@@ -484,6 +502,41 @@ export class ComputerOperator {
       intent.skill,
       intent.kind,
       `Investigated local ${config.label} drivers using Get-PnpDevice, Win32_PnPSignedDriver, pnputil, and Windows Update state.`,
+      assistantMessage,
+    );
+  }
+
+  async inspectDriverOverview(intent: Extract<ComputerIntent, { kind: "driver_overview" }>) {
+    this.assertWindowsCapability("driver inspection");
+    const problemDevices = await this.queryProblemDevices();
+    const problemDeviceIds = problemDevices
+      .map((device) => device.DeviceID?.trim() ?? "")
+      .filter((value) => value.length > 0);
+    const problemDriverRows = problemDeviceIds.length ? await this.queryDriverRowsForDeviceIds(problemDeviceIds) : [];
+    const graphicsRows = await this.queryVideoControllerRows();
+    const updateSummary = intent.queryLatest ? await this.queryWindowsUpdateDriverSummary() : null;
+
+    const problemLines = this.describeProblemDevices(problemDevices, problemDriverRows);
+    const graphicsLines = this.describeVideoControllers(graphicsRows);
+    const updateSummaryLines = updateSummary ? this.describeWindowsUpdateDriverSummary(updateSummary) : [];
+    const assistantMessage = [
+      "I audited the local driver state using Windows device health, signed-driver inventory, key graphics-driver versions, and Windows Update.",
+      "",
+      "Devices that currently need attention:",
+      ...(problemLines.length ? problemLines : ["- I do not currently see Plug and Play devices with a non-zero ConfigManagerErrorCode."]),
+      "",
+      "Key graphics drivers currently installed:",
+      ...(graphicsLines.length ? graphicsLines : ["- No graphics controller rows were returned by Win32_VideoController."]),
+      ...(updateSummaryLines.length ? ["", "Windows Update:", ...updateSummaryLines] : []),
+      "",
+      "Priority recommendation:",
+      ...this.buildDriverOverviewRecommendation(problemDevices, graphicsRows, updateSummary),
+    ].join("\n");
+
+    return buildAssistantResult(
+      intent.skill,
+      intent.kind,
+      "Audited local driver health across problem devices, key graphics drivers, and Windows Update state.",
       assistantMessage,
     );
   }
@@ -856,6 +909,8 @@ export class ComputerOperator {
     switch (intent.kind) {
       case "inspect_driver":
         return `${intent.kind}:${intent.deviceCategory}:${intent.queryLatest}`;
+      case "driver_overview":
+        return `${intent.kind}:${intent.queryLatest}`;
       case "software_version":
         return `${intent.kind}:${intent.software.key}:${intent.queryLatest}`;
       case "installed_software":
@@ -967,6 +1022,117 @@ export class ComputerOperator {
         resultCode: null,
         availableDriverUpdates: 0,
       };
+    }
+  }
+
+  private async queryProblemDevices() {
+    const script = [
+      "$ErrorActionPreference = 'Stop'",
+      "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8",
+      "Get-CimInstance Win32_PnPEntity | Where-Object { $_.ConfigManagerErrorCode -ne 0 } | Select-Object Name, Status, ConfigManagerErrorCode, DeviceID, PNPClass, Manufacturer, Service | ConvertTo-Json -Depth 4 -Compress",
+    ].join("; ");
+
+    const rows = await this.runPowerShellJson<ProblemDeviceRow>(script);
+    return dedupeByKey(rows, (row) => `${row.DeviceID ?? row.Name ?? ""}|${row.ConfigManagerErrorCode ?? ""}`);
+  }
+
+  private async queryVideoControllerRows() {
+    const script = [
+      "$ErrorActionPreference = 'Stop'",
+      "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8",
+      "Get-CimInstance Win32_VideoController | Select-Object Name, DriverVersion, @{Name='DriverDate';Expression={ if ($_.DriverDate) { try { (Get-Date $_.DriverDate).ToString('yyyy-MM-dd') } catch { [string]$_.DriverDate } } else { $null } }} | ConvertTo-Json -Depth 4 -Compress",
+    ].join("; ");
+
+    const rows = await this.runPowerShellJson<VideoControllerRow>(script);
+    return dedupeByKey(rows, (row) => `${row.Name ?? ""}|${row.DriverVersion ?? ""}`);
+  }
+
+  private describeProblemDevices(problemDevices: ProblemDeviceRow[], problemDriverRows: DriverRow[]) {
+    const driverById = new Map(problemDriverRows.map((row) => [(row.DeviceID ?? "").toLowerCase(), row]));
+    return problemDevices.slice(0, 8).map((device, index) => {
+      const deviceId = device.DeviceID?.trim() ?? "";
+      const driver = driverById.get(deviceId.toLowerCase());
+      const name = device.Name?.trim() || "Unknown device";
+      const code = typeof device.ConfigManagerErrorCode === "number" ? device.ConfigManagerErrorCode : null;
+      const codeText = code === null ? "unknown problem code" : `error code ${code}`;
+      const status = device.Status?.trim() ? `, status ${device.Status.trim().toLowerCase()}` : "";
+      const pnpClass = device.PNPClass?.trim() ? `, class ${device.PNPClass.trim()}` : "";
+      const inf = driver?.InfName?.trim() ? `, INF ${driver.InfName.trim()}` : "";
+      const version = driver?.DriverVersion?.trim() ? ` ${driver.DriverVersion.trim()}` : "";
+      const provider = driver?.DriverProviderName?.trim() || device.Manufacturer?.trim() || null;
+      const providerText = provider ? `, provider ${provider}` : "";
+      const service = device.Service?.trim() ? `, service ${device.Service.trim()}` : "";
+      const hint = code !== null ? ` (${this.describeConfigManagerError(code)})` : "";
+      return `${index + 1}. ${name} - ${codeText}${hint}${status}${pnpClass}${inf}${version}${providerText}${service}`;
+    });
+  }
+
+  private describeVideoControllers(rows: VideoControllerRow[]) {
+    return rows.slice(0, 5).map((row, index) => {
+      const name = row.Name?.trim() || "Unknown graphics controller";
+      const version = row.DriverVersion?.trim() || "unknown version";
+      const date = row.DriverDate?.trim() ? `, date ${row.DriverDate.trim()}` : "";
+      return `${index + 1}. ${name} - ${version}${date}`;
+    });
+  }
+
+  private buildDriverOverviewRecommendation(
+    problemDevices: ProblemDeviceRow[],
+    graphicsRows: VideoControllerRow[],
+    updateSummary: WindowsUpdateDriverSummary | null,
+  ) {
+    const firstProblem = problemDevices[0];
+    if (firstProblem) {
+      const label = firstProblem.Name?.trim() || "the top problem device";
+      const lines = [`- Update or reinstall the driver for ${label} first, because it is currently reporting a device problem in Windows.`];
+
+      if ((firstProblem.PNPClass ?? "").toLowerCase().includes("usb") || /usb/i.test(firstProblem.Name ?? "")) {
+        lines.push("- For a USB controller problem, prefer the motherboard or OEM chipset/USB package before generic driver packs.");
+      }
+
+      if (graphicsRows.length > 0) {
+        lines.push("- I do not currently see a local failure signal on the active graphics drivers, so they are lower priority than the broken device above.");
+      }
+
+      if (updateSummary?.querySucceeded && updateSummary.availableDriverUpdates > 0) {
+        lines.push("- Windows Update still reports pending driver updates, so check that queue after fixing the broken device.");
+      }
+
+      lines.push("- This is still a local-only conclusion; the hardware vendor site can carry a newer OEM-specific package than Windows.");
+      return lines;
+    }
+
+    if (updateSummary?.querySucceeded && updateSummary.availableDriverUpdates > 0) {
+      return [
+        "- I do not see a broken Plug and Play device locally, but Windows Update does report pending driver updates.",
+        "- Start with the pending Windows Update driver items, then verify whether any vendor-specific package is still newer.",
+      ];
+    }
+
+    return [
+      "- I do not currently see a broken Plug and Play device or a pending Windows Update driver item that clearly demands attention.",
+      "- If you want a stricter check, the next step is a vendor-specific pass for GPU, chipset, Wi-Fi, audio, and motherboard drivers.",
+    ];
+  }
+
+  private describeConfigManagerError(code: number) {
+    switch (code) {
+      case 1:
+        return "device is not configured correctly";
+      case 10:
+        return "device cannot start";
+      case 14:
+        return "device needs a restart";
+      case 22:
+        return "device is disabled";
+      case 28:
+        return "driver is not installed";
+      case 31:
+        return "Windows cannot load the required drivers";
+      case 43:
+        return "device reported a failure after it started";
+      default:
+        return "Windows reports a device problem";
     }
   }
 

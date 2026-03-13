@@ -138,3 +138,69 @@ test("driver investigation explains the installed driver, outranked candidates, 
     assert.match(result.assistantMessage, /I do not see a newer driver being offered right now/i);
   });
 });
+
+test("driver overview prioritizes broken devices before healthy graphics drivers", async () => {
+  await withTempLogger(async (logger) => {
+    const operator = new ComputerOperator({
+      machineProfile: TEST_MACHINE_PROFILE,
+      localRuntimeAdvice: TEST_LOCAL_ADVICE,
+      logger,
+    }) as any;
+
+    operator.queryProblemDevices = async () => [
+      {
+        Name: "AMD USB 3.10 eXtensible Host Controller",
+        Status: "Error",
+        ConfigManagerErrorCode: 43,
+        DeviceID: "PCI\\VEN_1022&DEV_1639",
+        PNPClass: "USB",
+        Manufacturer: "Advanced Micro Devices, Inc.",
+        Service: "USBXHCI",
+      },
+    ];
+    operator.queryDriverRowsForDeviceIds = async () => [
+      {
+        DeviceName: "AMD USB 3.10 eXtensible Host Controller",
+        DeviceID: "PCI\\VEN_1022&DEV_1639",
+        DriverVersion: "10.0.22621.3527",
+        DriverProviderName: "Microsoft",
+        DriverDate: "2025-12-11",
+        InfName: "usbxhci.inf",
+        Manufacturer: "Microsoft",
+        DeviceClass: "USB",
+      },
+    ];
+    operator.queryVideoControllerRows = async () => [
+      {
+        Name: "NVIDIA GeForce RTX 3070",
+        DriverVersion: "32.0.15.9159",
+        DriverDate: "2025-12-11",
+      },
+      {
+        Name: "AMD Radeon(TM) Graphics",
+        DriverVersion: "31.0.21924.61",
+        DriverDate: "2025-12-11",
+      },
+    ];
+    operator.queryWindowsUpdateDriverSummary = async () => ({
+      querySucceeded: true,
+      resultCode: 2,
+      availableDriverUpdates: 1,
+    });
+
+    const result = await operator.executeIntent({
+      kind: "driver_overview",
+      skill: "driver_inspection",
+      queryLatest: true,
+    });
+
+    assert.equal(result.kind, "answer");
+    assert.equal(result.status, "succeeded");
+    assert.match(result.assistantMessage, /Devices that currently need attention:/i);
+    assert.match(result.assistantMessage, /AMD USB 3\.10 eXtensible Host Controller - error code 43/i);
+    assert.match(result.assistantMessage, /usbxhci\.inf 10\.0\.22621\.3527/i);
+    assert.match(result.assistantMessage, /Key graphics drivers currently installed:/i);
+    assert.match(result.assistantMessage, /NVIDIA GeForce RTX 3070 - 32\.0\.15\.9159/i);
+    assert.match(result.assistantMessage, /Update or reinstall the driver for AMD USB 3\.10 eXtensible Host Controller first/i);
+  });
+});

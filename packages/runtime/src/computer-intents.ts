@@ -53,6 +53,9 @@ export type ComputerIntent =
       deviceCategory: DeviceCategory;
       queryLatest: boolean;
     })
+  | (BaseComputerIntent<"driver_overview", "driver_inspection"> & {
+      queryLatest: boolean;
+    })
   | (BaseComputerIntent<"software_version", "software_version"> & {
       software: SoftwareCatalogEntry;
       queryLatest: boolean;
@@ -95,6 +98,21 @@ const uninstallKeywords = ["uninstall", "remove", "delete", "удали", "уд�
 
 const driverKeywords = ["driver", "drivers", "драйвер", "драйвера", "драйверы"];
 const latestKeywords = ["latest", "newest", "current latest", "последн", "свеж", "актуальн", "самый новый"];
+const driverOverviewKeywords = [
+  "какие драйвера",
+  "какие драйверы",
+  "какой драйвер",
+  "what drivers",
+  "which drivers",
+  "problem driver",
+  "driver problem",
+  "ошибк",
+  "проблем",
+  "неисправ",
+  "стоит обнов",
+  "нужно обнов",
+  "надо обнов",
+];
 const versionKeywords = [
   "version",
   "build",
@@ -383,6 +401,14 @@ export function detectComputerIntent(input: string): ComputerIntent | null {
         skill: "driver_inspection",
         deviceCategory,
         queryLatest: wantsLatest,
+      };
+    }
+
+    if (wantsLatest || containsAny(normalized, driverOverviewKeywords)) {
+      return {
+        kind: "driver_overview",
+        skill: "driver_inspection",
+        queryLatest: true,
       };
     }
   }

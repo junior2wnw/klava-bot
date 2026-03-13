@@ -339,6 +339,71 @@ const russianStructuredReplacements: LocalizedReplacement[] = [
     replace: "Сводка по этой системе:",
   },
   {
+    pattern: /^I audited the local driver state using Windows device health, signed-driver inventory, key graphics-driver versions, and Windows Update\.$/gim,
+    replace:
+      "Я провела локальный аудит состояния драйверов через здоровье устройств Windows, инвентарь подписанных драйверов, версии ключевых графических драйверов и Windows Update.",
+  },
+  {
+    pattern: /^Devices that currently need attention:$/gim,
+    replace: "Устройства, которым сейчас нужно внимание:",
+  },
+  {
+    pattern: /^Key graphics drivers currently installed:$/gim,
+    replace: "Ключевые графические драйверы, которые сейчас установлены:",
+  },
+  {
+    pattern: /^Priority recommendation:$/gim,
+    replace: "Приоритетная рекомендация:",
+  },
+  {
+    pattern: /I do not currently see Plug and Play devices with a non-zero ConfigManagerErrorCode\./gi,
+    replace: "Сейчас я не вижу устройств Plug and Play с ненулевым ConfigManagerErrorCode.",
+  },
+  {
+    pattern: /Update or reinstall the driver for (.+?) first, because it is currently reporting a device problem in Windows\./gi,
+    replace: "Сначала обнови или переустанови драйвер для $1, потому что это устройство сейчас сообщает о проблеме в Windows.",
+  },
+  {
+    pattern: /For a USB controller problem, prefer the motherboard or OEM chipset\/USB package before generic driver packs\./gi,
+    replace: "Для проблемы с USB-контроллером лучше сначала взять пакет chipset/USB с сайта производителя платы или OEM, а не общий набор драйверов.",
+  },
+  {
+    pattern: /I do not currently see a local failure signal on the active graphics drivers, so they are lower priority than the broken device above\./gi,
+    replace: "Сейчас я не вижу локального сигнала сбоя на активных графических драйверах, поэтому их приоритет ниже, чем у проблемного устройства выше.",
+  },
+  {
+    pattern: /I do not currently see a broken Plug and Play device or a pending Windows Update driver item that clearly demands attention\./gi,
+    replace: "Сейчас я не вижу ни сломанного устройства Plug and Play, ни ожидающего драйверного обновления в Windows Update, которое явно требует внимания.",
+  },
+  {
+    pattern: /If you want a stricter check, the next step is a vendor-specific pass for GPU, chipset, Wi-Fi, audio, and motherboard drivers\./gi,
+    replace: "Если нужна более строгая проверка, следующий шаг — vendor-specific проход по GPU, chipset, Wi-Fi, audio и драйверам материнской платы.",
+  },
+  {
+    pattern: /error code (\d+)/gi,
+    replace: "код ошибки $1",
+  },
+  {
+    pattern: /status error/gi,
+    replace: "статус: ошибка",
+  },
+  {
+    pattern: /status unknown/gi,
+    replace: "статус: неизвестно",
+  },
+  {
+    pattern: /class ([A-Za-z0-9_-]+)/gi,
+    replace: "класс $1",
+  },
+  {
+    pattern: /provider ([^,\n]+)/gi,
+    replace: "поставщик $1",
+  },
+  {
+    pattern: /service ([^,\n]+)/gi,
+    replace: "служба $1",
+  },
+  {
     pattern: /^Local AI verdict: (.+?)\.$/gim,
     replace: "Вердикт по локальному ИИ: $1.",
   },
