@@ -2,8 +2,12 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import type {
+  AgentRun,
   ApprovalRequest,
   GuardMode,
+  LocalRuntime,
+  LocalRuntimeAdvice,
+  MachineProfile,
   OperationRun,
   ProviderBalance,
   ProviderSettings,
@@ -14,7 +18,7 @@ import type {
   TerminalEntry,
   WorkspaceSnapshot,
 } from "@klava/contracts";
-import { DEFAULT_MODEL } from "./constants";
+import { defaultApiBaseUrlForProvider, defaultModelForProvider } from "./provider-catalog";
 
 type RuntimeState = {
   provider: ProviderSettings;
@@ -66,6 +70,19 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+function uniqueModelIds(models: string[]) {
+  return [...new Set(models.map((model) => model.trim()).filter((model) => model.length > 0))];
+}
+
+function normalizeAvailableModels(models: unknown, fallbackModel: string) {
+  if (!Array.isArray(models)) {
+    return [fallbackModel];
+  }
+
+  const normalized = uniqueModelIds(models.filter((value): value is string => typeof value === "string"));
+  return normalized.length ? normalized : [fallbackModel];
+}
+
 function normalizeProviderBalance(balance?: Partial<ProviderBalance> | null): ProviderBalance | null {
   if (!balance || typeof balance !== "object") {
     return null;
@@ -93,15 +110,113 @@ function normalizeProviderBalance(balance?: Partial<ProviderBalance> | null): Pr
 }
 
 function normalizeProvider(provider?: Partial<ProviderSettings> | null): ProviderSettings {
+  const providerRecord = provider as Record<string, unknown> | null | undefined;
+  const providerId =
+    provider?.provider === "gonka" ||
+    provider?.provider === "openai" ||
+    provider?.provider === "gemini" ||
+    provider?.provider === "groq" ||
+    provider?.provider === "openrouter" ||
+    provider?.provider === "local"
+      ? provider.provider
+      : "openai";
+  const localRuntime: LocalRuntime =
+    providerId === "local" && providerRecord?.localRuntime === "vllm" ? "vllm" : "ollama";
+  const fallbackModel = defaultModelForProvider(providerId, localRuntime);
   const validatedAt = typeof provider?.validatedAt === "string" ? provider.validatedAt : null;
+  const model =
+    typeof provider?.model === "string" && provider.model.trim().length > 0 ? provider.model.trim() : fallbackModel;
+  const availableModels = normalizeAvailableModels(provider?.availableModels, model);
+
+  if (providerId === "gonka") {
+    return {
+      provider: "gonka",
+      selectionMode: "auto",
+      model,
+      availableModels,
+      secretConfigured: provider?.secretConfigured ?? false,
+      requesterAddress: typeof provider?.requesterAddress === "string" ? provider.requesterAddress : null,
+      balance: normalizeProviderBalance(provider?.balance),
+      validatedAt,
+      modelRefreshedAt: typeof provider?.modelRefreshedAt === "string" ? provider.modelRefreshedAt : validatedAt,
+    };
+  }
+
+  const apiBaseUrl =
+    typeof providerRecord?.apiBaseUrl === "string" && providerRecord.apiBaseUrl.trim().length > 0
+      ? providerRecord.apiBaseUrl.trim()
+      : defaultApiBaseUrlForProvider(providerId, localRuntime) ?? defaultApiBaseUrlForProvider("openai") ?? "";
+
+  if (providerId === "local") {
+    return {
+      provider: "local",
+      selectionMode: provider?.selectionMode === "manual" ? "manual" : "auto",
+      model,
+      availableModels,
+      secretConfigured: provider?.secretConfigured ?? false,
+      requesterAddress: null,
+      balance: null,
+      apiBaseUrl,
+      localRuntime,
+      validatedAt,
+      modelRefreshedAt: typeof provider?.modelRefreshedAt === "string" ? provider.modelRefreshedAt : validatedAt,
+    };
+  }
+
+  if (providerId === "gemini") {
+    return {
+      provider: "gemini",
+      selectionMode: provider?.selectionMode === "manual" ? "manual" : "auto",
+      model,
+      availableModels,
+      secretConfigured: provider?.secretConfigured ?? false,
+      requesterAddress: null,
+      balance: null,
+      apiBaseUrl,
+      validatedAt,
+      modelRefreshedAt: typeof provider?.modelRefreshedAt === "string" ? provider.modelRefreshedAt : validatedAt,
+    };
+  }
+
+  if (providerId === "groq") {
+    return {
+      provider: "groq",
+      selectionMode: provider?.selectionMode === "manual" ? "manual" : "auto",
+      model,
+      availableModels,
+      secretConfigured: provider?.secretConfigured ?? false,
+      requesterAddress: null,
+      balance: null,
+      apiBaseUrl,
+      validatedAt,
+      modelRefreshedAt: typeof provider?.modelRefreshedAt === "string" ? provider.modelRefreshedAt : validatedAt,
+    };
+  }
+
+  if (providerId === "openrouter") {
+    return {
+      provider: "openrouter",
+      selectionMode: provider?.selectionMode === "manual" ? "manual" : "auto",
+      model,
+      availableModels,
+      secretConfigured: provider?.secretConfigured ?? false,
+      requesterAddress: null,
+      balance: null,
+      apiBaseUrl,
+      validatedAt,
+      modelRefreshedAt: typeof provider?.modelRefreshedAt === "string" ? provider.modelRefreshedAt : validatedAt,
+    };
+  }
 
   return {
-    provider: "gonka",
-    selectionMode: "auto",
-    model: typeof provider?.model === "string" && provider.model.trim().length > 0 ? provider.model.trim() : DEFAULT_MODEL,
+    provider: "openai",
+    selectionMode: provider?.selectionMode === "manual" ? "manual" : "auto",
+    model,
+    availableModels,
     secretConfigured: provider?.secretConfigured ?? false,
-    requesterAddress: typeof provider?.requesterAddress === "string" ? provider.requesterAddress : null,
-    balance: normalizeProviderBalance(provider?.balance),
+    requesterAddress: null,
+    balance: null,
+    apiBaseUrl,
     validatedAt,
     modelRefreshedAt: typeof provider?.modelRefreshedAt === "string" ? provider.modelRefreshedAt : validatedAt,
   };
@@ -152,6 +267,88 @@ function normalizeOperation(operation?: Partial<OperationRun> | null): Operation
   };
 }
 
+function normalizeAgentRun(run?: Partial<AgentRun> | null): AgentRun {
+  const createdAt = typeof run?.startedAt === "string" ? run.startedAt : nowIso();
+  const updatedAt = typeof run?.updatedAt === "string" ? run.updatedAt : createdAt;
+
+  return {
+    id: typeof run?.id === "string" ? run.id : crypto.randomUUID(),
+    taskId: typeof run?.taskId === "string" ? run.taskId : "",
+    title: typeof run?.title === "string" && run.title.trim().length > 0 ? run.title.trim() : "Agent run",
+    goal: typeof run?.goal === "string" && run.goal.trim().length > 0 ? run.goal.trim() : "Unspecified goal",
+    status:
+      run?.status === "running" ||
+      run?.status === "awaiting_approval" ||
+      run?.status === "needs_input" ||
+      run?.status === "succeeded" ||
+      run?.status === "failed" ||
+      run?.status === "blocked"
+        ? run.status
+        : "running",
+    provider:
+      run?.provider === "gonka" ||
+      run?.provider === "openai" ||
+      run?.provider === "gemini" ||
+      run?.provider === "groq" ||
+      run?.provider === "openrouter" ||
+      run?.provider === "local"
+        ? run.provider
+        : null,
+    model: typeof run?.model === "string" ? run.model : null,
+    autoResume: run?.autoResume ?? true,
+    maxIterations: typeof run?.maxIterations === "number" && run.maxIterations > 0 ? Math.trunc(run.maxIterations) : 8,
+    iteration: typeof run?.iteration === "number" && run.iteration >= 0 ? Math.trunc(run.iteration) : 0,
+    startedAt: createdAt,
+    updatedAt,
+    finishedAt: typeof run?.finishedAt === "string" ? run.finishedAt : null,
+    pendingApprovalId: typeof run?.pendingApprovalId === "string" ? run.pendingApprovalId : null,
+    lastAssistantMessage: typeof run?.lastAssistantMessage === "string" ? run.lastAssistantMessage : null,
+    summary: typeof run?.summary === "string" ? run.summary : null,
+    plan: Array.isArray(run?.plan)
+      ? run.plan.map((item) => ({
+          id: typeof item?.id === "string" ? item.id : crypto.randomUUID(),
+          title: typeof item?.title === "string" && item.title.trim().length > 0 ? item.title.trim() : "Plan item",
+          detail: typeof item?.detail === "string" ? item.detail : null,
+          status:
+            item?.status === "pending" ||
+            item?.status === "running" ||
+            item?.status === "completed" ||
+            item?.status === "failed" ||
+            item?.status === "blocked"
+              ? item.status
+              : "pending",
+        }))
+      : [],
+    toolCalls: Array.isArray(run?.toolCalls)
+      ? run.toolCalls.map((toolCall) => ({
+          id: typeof toolCall?.id === "string" ? toolCall.id : crypto.randomUUID(),
+          kind:
+            toolCall?.kind === "computer.inspect" ||
+            toolCall?.kind === "shell.command" ||
+            toolCall?.kind === "filesystem.read" ||
+            toolCall?.kind === "filesystem.search"
+              ? toolCall.kind
+              : "shell.command",
+          status:
+            toolCall?.status === "completed" ||
+            toolCall?.status === "failed" ||
+            toolCall?.status === "awaiting_approval" ||
+            toolCall?.status === "blocked"
+              ? toolCall.status
+              : "failed",
+          summary: typeof toolCall?.summary === "string" ? toolCall.summary : "Tool call",
+          input: typeof toolCall?.input === "string" ? toolCall.input : null,
+          command: typeof toolCall?.command === "string" ? toolCall.command : null,
+          outputPreview: typeof toolCall?.outputPreview === "string" ? toolCall.outputPreview : null,
+          terminalEntryId: typeof toolCall?.terminalEntryId === "string" ? toolCall.terminalEntryId : null,
+          approvalId: typeof toolCall?.approvalId === "string" ? toolCall.approvalId : null,
+          startedAt: typeof toolCall?.startedAt === "string" ? toolCall.startedAt : createdAt,
+          finishedAt: typeof toolCall?.finishedAt === "string" ? toolCall.finishedAt : null,
+        }))
+      : [],
+  };
+}
+
 function normalizeTask(task?: Partial<TaskDetail> | null): TaskDetail {
   const fallback = createTaskTemplate(typeof task?.title === "string" ? task.title : undefined);
 
@@ -165,6 +362,7 @@ function normalizeTask(task?: Partial<TaskDetail> | null): TaskDetail {
         }))
       : fallback.approvals,
     operations: Array.isArray(task?.operations) ? task.operations.map((operation) => normalizeOperation(operation)) : [],
+    agentRuns: Array.isArray(task?.agentRuns) ? task.agentRuns.map((run) => normalizeAgentRun(run)) : [],
   };
 }
 
@@ -195,15 +393,16 @@ export function createTaskTemplate(title?: string): TaskDetail {
     terminalEntries: [],
     approvals: [],
     operations: [],
+    agentRuns: [],
   };
 }
 
 function defaultState(): RuntimeState {
   return {
     provider: normalizeProvider({
+      provider: "openai",
       secretConfigured: false,
-      requesterAddress: null,
-      balance: null,
+      apiBaseUrl: defaultApiBaseUrlForProvider("openai") ?? "",
       validatedAt: null,
       modelRefreshedAt: null,
     }),
@@ -324,6 +523,10 @@ export class RuntimeStore {
     return this.getTask(taskId)?.operations.find((operation) => operation.id === operationId) ?? null;
   }
 
+  getAgentRun(taskId: string, agentRunId: string) {
+    return this.getTask(taskId)?.agentRuns.find((run) => run.id === agentRunId) ?? null;
+  }
+
   getSelectedTask() {
     if (!this.state.selectedTaskId) {
       return null;
@@ -332,10 +535,16 @@ export class RuntimeStore {
     return this.getTask(this.state.selectedTaskId);
   }
 
-  getSnapshot(health: WorkspaceSnapshot["health"]): WorkspaceSnapshot {
+  getSnapshot(
+    health: WorkspaceSnapshot["health"],
+    machineProfile: MachineProfile,
+    localRuntimeAdvice: LocalRuntimeAdvice,
+  ): WorkspaceSnapshot {
     return {
       health,
       provider: this.state.provider,
+      machineProfile,
+      localRuntimeAdvice,
       tasks: this.listTaskSummaries(),
       selectedTaskId: this.state.selectedTaskId,
       selectedTask: this.getSelectedTask(),
@@ -424,6 +633,18 @@ export class RuntimeStore {
     return operation;
   }
 
+  async addAgentRun(taskId: string, agentRun: AgentRun, status?: TaskStatus) {
+    const task = this.getTask(taskId);
+    if (!task) {
+      return null;
+    }
+
+    task.agentRuns.unshift(normalizeAgentRun(agentRun));
+    this.touchTask(task, status);
+    await this.flush();
+    return agentRun;
+  }
+
   async updateOperation(
     taskId: string,
     operationId: string,
@@ -446,6 +667,30 @@ export class RuntimeStore {
     this.touchTask(task, nextStatus);
     await this.flush();
     return operation;
+  }
+
+  async updateAgentRun(
+    taskId: string,
+    agentRunId: string,
+    update: (agentRun: AgentRun) => void,
+    status?: TaskStatus | ((agentRun: AgentRun) => TaskStatus),
+  ) {
+    const task = this.getTask(taskId);
+    if (!task) {
+      return null;
+    }
+
+    const agentRun = task.agentRuns.find((candidate) => candidate.id === agentRunId);
+    if (!agentRun) {
+      return null;
+    }
+
+    update(agentRun);
+    agentRun.updatedAt = nowIso();
+    const nextStatus = typeof status === "function" ? status(agentRun) : status;
+    this.touchTask(task, nextStatus);
+    await this.flush();
+    return agentRun;
   }
 
   async resolveApproval(approvalId: string, status: "approved" | "rejected") {

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { healthResponseSchema } from "./health";
 import { providerSettingsSchema } from "./onboarding";
+import { localRuntimeAdviceSchema, machineProfileSchema } from "./system";
 import { guardModeSchema, taskStatusSchema } from "./tasks";
 
 export const supportBundleTaskSchema = z.object({
@@ -15,13 +16,22 @@ export const supportBundleTaskSchema = z.object({
   terminalEntryCount: z.number().int().nonnegative(),
   approvalCount: z.number().int().nonnegative(),
   operationCount: z.number().int().nonnegative(),
+  agentRunCount: z.number().int().nonnegative(),
+});
+
+export const supportBundleLogsSchema = z.object({
+  path: z.string(),
+  recentEvents: z.array(z.string()),
 });
 
 export const supportBundleSchema = z.object({
   generatedAt: z.string(),
   health: healthResponseSchema,
   provider: providerSettingsSchema,
+  machineProfile: machineProfileSchema,
+  localRuntimeAdvice: localRuntimeAdviceSchema,
   tasks: z.array(supportBundleTaskSchema),
+  logs: supportBundleLogsSchema,
 });
 
 export type SupportBundle = z.infer<typeof supportBundleSchema>;

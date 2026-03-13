@@ -306,6 +306,71 @@ pre {
   overflow: hidden;
 }
 
+.app-fatal {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: grid;
+  place-items: center;
+}
+
+.model-dock {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 245, 235, 0.08);
+  border-radius: 14px;
+  background:
+    linear-gradient(145deg, rgba(255, 245, 235, 0.06), rgba(255, 245, 235, 0.03)),
+    rgba(18, 15, 13, 0.62);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.24);
+  backdrop-filter: blur(14px);
+}
+
+.model-dock__summary {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.model-dock__badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.model-dock__controls {
+  display: flex;
+  gap: 8px;
+  align-items: end;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.model-dock__field {
+  display: grid;
+  gap: 6px;
+  min-width: 280px;
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(237, 227, 215, 0.60);
+}
+
+.model-dock__select {
+  width: 100%;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 245, 235, 0.08);
+  background: rgba(255, 245, 235, 0.04);
+  color: rgba(237, 227, 215, 0.86);
+  padding: 0 12px;
+  font-size: 12px;
+}
+
 /* ── Surface tabs ── */
 
 .surface-tabs {
@@ -388,6 +453,12 @@ pre {
   color: #d4a04a;
   font-size: 11px;
   font-weight: 500;
+}
+
+.message-approval {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 /* ── Composer ── */
@@ -589,6 +660,209 @@ pre {
   align-items: center;
 }
 
+.provider-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.provider-choice-grid--wide {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.provider-card {
+  display: grid;
+  gap: 6px;
+  text-align: left;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 245, 235, 0.05);
+  background: rgba(255, 245, 235, 0.02);
+  color: inherit;
+  cursor: pointer;
+}
+
+.provider-card--active {
+  border-color: rgba(196, 112, 74, 0.20);
+  background: rgba(196, 112, 74, 0.08);
+}
+
+.provider-card strong {
+  font-size: 13px;
+  color: rgba(237, 227, 215, 0.82);
+}
+
+.provider-card p {
+  margin: 0;
+  color: rgba(237, 227, 215, 0.38);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.provider-guide {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr);
+  gap: 14px;
+}
+
+.provider-guide__main,
+.provider-guide__side {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.provider-guide__list {
+  display: grid;
+  gap: 10px;
+}
+
+.provider-guide__step {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 245, 235, 0.05);
+  background: rgba(255, 245, 235, 0.02);
+}
+
+.provider-guide__step-count {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(196, 112, 74, 0.12);
+  color: rgba(232, 164, 129, 0.92);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.provider-guide__step-copy {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.provider-guide__step-copy strong {
+  font-size: 12px;
+  color: rgba(237, 227, 215, 0.82);
+}
+
+.provider-guide__step-copy p {
+  margin: 0;
+  color: rgba(237, 227, 215, 0.38);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.provider-guide__link {
+  color: rgba(232, 164, 129, 0.92);
+  font-size: 11px;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.provider-guide__code {
+  display: block;
+  padding: 9px 10px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.24);
+  color: rgba(237, 227, 215, 0.72);
+  font-size: 11px;
+  overflow: auto;
+}
+
+.machine-panel {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 245, 235, 0.05);
+  background: rgba(255, 245, 235, 0.02);
+}
+
+.machine-panel__head {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.machine-panel p {
+  margin: 0;
+  color: rgba(237, 227, 215, 0.38);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.machine-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.machine-facts__item {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.18);
+  min-width: 0;
+}
+
+.machine-facts__item span {
+  color: rgba(237, 227, 215, 0.26);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.machine-facts__item strong {
+  color: rgba(237, 227, 215, 0.76);
+  font-size: 12px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.runtime-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.runtime-choice {
+  display: grid;
+  gap: 6px;
+  text-align: left;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 245, 235, 0.05);
+  background: rgba(255, 245, 235, 0.02);
+  color: inherit;
+  cursor: pointer;
+}
+
+.runtime-choice--active {
+  border-color: rgba(196, 112, 74, 0.20);
+  background: rgba(196, 112, 74, 0.08);
+}
+
+.runtime-choice strong {
+  font-size: 13px;
+  color: rgba(237, 227, 215, 0.82);
+}
+
+.runtime-choice p,
+.runtime-choice span {
+  margin: 0;
+  color: rgba(237, 227, 215, 0.38);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 /* ── Onboarding ── */
 
 .onboarding-status {
@@ -633,6 +907,11 @@ pre {
   color: rgba(237, 227, 215, 0.30);
   font-size: 12px;
   line-height: 1.5;
+}
+
+.onboarding-note--warning {
+  border-color: rgba(212, 160, 74, 0.10);
+  background: rgba(212, 160, 74, 0.04);
 }
 
 .wallet-preview {
@@ -721,6 +1000,19 @@ pre {
   .app-grid > :nth-child(3) {
     display: none;
   }
+
+  .model-dock {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .model-dock__controls {
+    justify-content: flex-start;
+  }
+
+  .app-fatal {
+    place-items: start stretch;
+  }
 }
 
 @media (max-width: 940px) {
@@ -759,6 +1051,27 @@ pre {
 
   .secret-input-row {
     grid-template-columns: 1fr;
+  }
+
+  .provider-choice-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .provider-choice-grid--wide {
+    grid-template-columns: 1fr;
+  }
+
+  .provider-guide {
+    grid-template-columns: 1fr;
+  }
+
+  .runtime-choice-grid,
+  .machine-facts {
+    grid-template-columns: 1fr;
+  }
+
+  .model-dock__field {
+    min-width: 0;
   }
 
   .task-card__meta {

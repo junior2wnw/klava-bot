@@ -22,6 +22,8 @@ export const approvalRequestSchema = z.object({
     .object({
       operationId: z.string().nullable().optional(),
       operationStepId: z.string().nullable().optional(),
+      agentRunId: z.string().nullable().optional(),
+      agentToolCallId: z.string().nullable().optional(),
     })
     .default({}),
 });

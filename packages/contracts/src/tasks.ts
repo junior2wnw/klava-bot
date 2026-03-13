@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { agentRunSchema } from "./agent";
 import { approvalRequestSchema } from "./approvals";
 import { operationRunSchema } from "./operations";
 
@@ -43,6 +44,11 @@ export const taskMessageSchema = z.object({
     .object({
       terminalCommand: z.string().nullable().optional(),
       pendingApprovalId: z.string().nullable().optional(),
+      computerSkill: z.string().nullable().optional(),
+      computerIntent: z.string().nullable().optional(),
+      agentRunId: z.string().nullable().optional(),
+      agentToolCallId: z.string().nullable().optional(),
+      agentToolKind: z.string().nullable().optional(),
     })
     .default({}),
 });
@@ -66,6 +72,7 @@ export const taskDetailSchema = taskSummarySchema.extend({
   terminalEntries: z.array(terminalEntrySchema),
   approvals: z.array(approvalRequestSchema),
   operations: z.array(operationRunSchema),
+  agentRuns: z.array(agentRunSchema),
 });
 
 export type TaskDetail = z.infer<typeof taskDetailSchema>;

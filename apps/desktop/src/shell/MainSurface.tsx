@@ -14,22 +14,28 @@ export function MainSurface({
   busy,
   surfaceMode,
   task,
+  onApprove,
   onChangeSurface,
+  onReject,
   onRunTerminal,
   onSendMessage,
   onSetGuardMode,
   onCreateOperation,
   onAdvanceOperation,
+  onContinueAgent,
 }: {
   busy: boolean;
+  onApprove: (approvalId: string) => Promise<void>;
   surfaceMode: SurfaceMode;
   task: TaskDetail | null;
   onChangeSurface: (mode: SurfaceMode) => void;
+  onReject: (approvalId: string) => Promise<void>;
   onSendMessage: (content: string) => Promise<void>;
   onRunTerminal: (command: string) => Promise<void>;
   onSetGuardMode: (mode: GuardMode) => Promise<void>;
   onCreateOperation: (payload: CreateOperationRequest) => Promise<void>;
   onAdvanceOperation: (operationId: string) => Promise<void>;
+  onContinueAgent: (agentRunId: string) => Promise<void>;
 }) {
   return (
     <ShellRegion
@@ -59,9 +65,10 @@ export function MainSurface({
           task={task}
           onCreateOperation={onCreateOperation}
           onAdvanceOperation={onAdvanceOperation}
+          onContinueAgent={onContinueAgent}
         />
       ) : (
-        <ChatSurface busy={busy} task={task} onSendMessage={onSendMessage} />
+        <ChatSurface busy={busy} task={task} onSendMessage={onSendMessage} onApprove={onApprove} onReject={onReject} />
       )}
     </ShellRegion>
   );

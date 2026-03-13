@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { CreateOperationRequest, OperationRun, TaskDetail } from "@klava/contracts";
+import type { AgentRun, CreateOperationRequest, OperationRun, TaskDetail } from "@klava/contracts";
 import { Button, PanelCard, Stack, StatusPill, TextField } from "@klava/ui";
 
 const operationTemplates: CreateOperationRequest[] = [
@@ -80,6 +80,18 @@ function stepTone(status: OperationRun["steps"][number]["status"]) {
         ? "warning"
         : status === "running"
           ? "accent"
+      : "neutral";
+}
+
+function agentTone(status: AgentRun["status"]) {
+  return status === "succeeded"
+    ? "success"
+    : status === "failed" || status === "blocked"
+      ? "danger"
+      : status === "awaiting_approval"
+        ? "warning"
+        : status === "running"
+          ? "accent"
           : "neutral";
 }
 
@@ -105,11 +117,13 @@ export function ProSurface({
   task,
   onAdvanceOperation,
   onCreateOperation,
+  onContinueAgent,
 }: {
   busy: boolean;
   task: TaskDetail;
   onAdvanceOperation: (operationId: string) => Promise<void>;
   onCreateOperation: (payload: CreateOperationRequest) => Promise<void>;
+  onContinueAgent: (agentRunId: string) => Promise<void>;
 }) {
   const [customTitle, setCustomTitle] = useState("Custom operation");
   const [customGoal, setCustomGoal] = useState("Drive a real local workflow through explicit steps, commands, and approvals.");
@@ -128,6 +142,15 @@ export function ProSurface({
     [task.operations],
   );
 
+  const activeAgentRun = useMemo(
+    () =>
+      task.agentRuns.find(
+        (run) => run.status === "running" || run.status === "awaiting_approval" || run.status === "needs_input",
+      ) ?? null,
+    [task.agentRuns],
+  );
+
+  const recentAgentRuns = useMemo(() => task.agentRuns.slice().reverse(), [task.agentRuns]);
   const recentOperations = useMemo(() => task.operations.slice().reverse(), [task.operations]);
 
   async function handleCreateTemplate(template: CreateOperationRequest) {
@@ -157,6 +180,92 @@ export function ProSurface({
 
   return (
     <div className="surface-stack">
+      <PanelCard
+        title="Agent Layer"
+        subtitle="Persistent provider-agnostic planning with shell, filesystem, computer diagnostics, approvals, and resumable passes."
+      >
+        <div className="operation-facts">
+          <span>{task.agentRuns.length} total agent runs</span>
+          <span>{activeAgentRun ? "1 active agent run" : "No active agent run"}</span>
+          <span>{task.approvals.filter((approval) => approval.status === "pending").length} pending approvals</span>
+        </div>
+      </PanelCard>
+
+      {activeAgentRun ? (
+        <PanelCard
+          title={activeAgentRun.title}
+          subtitle={activeAgentRun.summary ?? activeAgentRun.goal}
+          actions={<StatusPill tone={agentTone(activeAgentRun.status)} value={activeAgentRun.status.replace("_", " ")} />}
+        >
+          <div className="operation-summary">
+            <div className="detail-line">
+              <span>Goal</span>
+              <strong>{activeAgentRun.goal}</strong>
+            </div>
+            <div className="detail-line">
+              <span>Iterations</span>
+              <strong>
+                {activeAgentRun.iteration}/{activeAgentRun.maxIterations}
+              </strong>
+            </div>
+            <div className="detail-line">
+              <span>Provider</span>
+              <strong>{activeAgentRun.provider ? `${activeAgentRun.provider}${activeAgentRun.model ? ` / ${activeAgentRun.model}` : ""}` : "n/a"}</strong>
+            </div>
+          </div>
+
+          {activeAgentRun.plan.length ? (
+            <Stack gap={10}>
+              {activeAgentRun.plan.map((item, index) => (
+                <div className="operation-step" key={item.id}>
+                  <div className="operation-step__head">
+                    <div>
+                      <strong>
+                        {index + 1}. {item.title}
+                      </strong>
+                      <p>{item.detail ?? "Agent plan item."}</p>
+                    </div>
+                    <StatusPill tone={agentTone(item.status === "completed" ? "succeeded" : item.status === "running" ? "running" : item.status === "failed" ? "failed" : item.status === "blocked" ? "blocked" : "needs_input")} value={item.status} />
+                  </div>
+                </div>
+              ))}
+            </Stack>
+          ) : null}
+
+          {activeAgentRun.toolCalls.length ? (
+            <Stack gap={10}>
+              {activeAgentRun.toolCalls.slice(0, 4).map((toolCall) => (
+                <div className="operation-step" key={toolCall.id}>
+                  <div className="operation-step__head">
+                    <div>
+                      <strong>{toolCall.kind}</strong>
+                      <p>{toolCall.summary}</p>
+                    </div>
+                    <StatusPill tone={agentTone(toolCall.status === "completed" ? "succeeded" : toolCall.status === "failed" ? "failed" : toolCall.status === "blocked" ? "blocked" : "awaiting_approval")} value={toolCall.status.replace("_", " ")} />
+                  </div>
+                  {toolCall.command ? <code>{toolCall.command}</code> : null}
+                </div>
+              ))}
+            </Stack>
+          ) : null}
+
+          <div className="composer__actions">
+            {activeAgentRun.status === "awaiting_approval" ? (
+              <span className="field-hint">This agent run is paused on a guarded command approval.</span>
+            ) : activeAgentRun.status === "needs_input" ? (
+              <span className="field-hint">The last pass hit its iteration budget. Continue it to keep working toward the same goal.</span>
+            ) : null}
+            <Button
+              onClick={() => void onContinueAgent(activeAgentRun.id)}
+              disabled={busy || activeAgentRun.status === "awaiting_approval" || activeAgentRun.status === "succeeded" || activeAgentRun.status === "failed" || activeAgentRun.status === "blocked"}
+              style={{ height: 34 }}
+            >
+              {busy ? "Working..." : "Continue agent"}
+            </Button>
+          </div>
+        </PanelCard>
+      ) : null}
+
       <PanelCard
         title="Operations Layer"
         subtitle="Durable multi-step local work with explicit progress, commands, and approvals."
@@ -271,6 +380,27 @@ export function ProSurface({
           </div>
         </div>
       </PanelCard>
+
+      {recentAgentRuns.length ? (
+        <PanelCard title="Agent history" subtitle="Every autonomous run stays attached to the task with plan and tool history.">
+          <Stack gap={10}>
+            {recentAgentRuns.map((run) => (
+              <div className="operation-history" key={run.id}>
+                <div className="operation-step__head">
+                  <div>
+                    <strong>{run.title}</strong>
+                    <p>{run.summary ?? run.goal}</p>
+                  </div>
+                  <StatusPill tone={agentTone(run.status)} value={run.status.replace("_", " ")} />
+                </div>
+                <span className="field-hint">
+                  {run.toolCalls.length} tool calls, iteration {run.iteration}/{run.maxIterations}
+                </span>
+              </div>
+            ))}
+          </Stack>
+        </PanelCard>
+      ) : null}
 
       {recentOperations.length ? (
         <PanelCard title="Operation history" subtitle="Every run stays attached to the task.">

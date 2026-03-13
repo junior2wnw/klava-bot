@@ -105,7 +105,7 @@ export class SecretVault {
       }
 
       throw new Error(
-        "Unable to unlock the local secret vault for the current user profile. Reconnect GONKA to create a new vault.",
+        "Unable to unlock the local secret vault for the current user profile. Reconnect the provider to create a new vault.",
       );
     }
   }
@@ -143,5 +143,15 @@ export class SecretVault {
       return null;
     }
     return this.decrypt(stored);
+  }
+
+  async deleteSecret(name: string) {
+    const secrets = await loadJsonMap(this.paths.secretsPath);
+    if (!(name in secrets)) {
+      return;
+    }
+
+    delete secrets[name];
+    await writeFile(this.paths.secretsPath, JSON.stringify(secrets, null, 2), "utf8");
   }
 }

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { providerIdSchema } from "./onboarding";
 
 export const healthResponseSchema = z.object({
   ok: z.boolean(),
@@ -7,6 +8,7 @@ export const healthResponseSchema = z.object({
   startedAt: z.string(),
   uptimeMs: z.number().int().nonnegative(),
   storagePath: z.string(),
+  activeProvider: providerIdSchema,
   providerConfigured: z.boolean(),
 });
 
