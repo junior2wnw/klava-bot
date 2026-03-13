@@ -84,13 +84,13 @@ export function ChatSurface({
 
       <PanelCard
         title="Composer"
-        subtitle="Persistent agent chat, natural language computer tasks, /terminal, $ command, or guard strict|balanced|off"
+        subtitle="Persistent agent chat, translation, model switching, natural language computer tasks, /terminal, $ command, /models, /model, or guard strict|balanced|off"
       >
         <div className="composer">
           <TextField
             multiline
             rows={4}
-            placeholder="Give Klava a real machine goal. It can inspect the computer, read/search files, run shell commands, pause on approval, and continue iterating toward the result."
+            placeholder="Give Klava a real machine goal. It can inspect the computer, translate previous replies, read/search files, run shell commands, switch models with /model, pause on approval, and continue iterating toward the result."
             value={value}
             onChange={setValue}
           />

@@ -13,6 +13,7 @@ import type {
 import { buildKlavaAgentPrompt } from "../assistant-prompt";
 import type { ComputerOperator } from "../computer-operator";
 import type { RuntimeLogger } from "../logging";
+import type { SupportedLanguage } from "../language";
 import { buildBlockedObjectiveMessage, assessAgentObjective } from "./safety";
 import { parseAgentDecision } from "./parser";
 import { readTextFileSnippet, searchWorkspaceText } from "./tools";
@@ -44,6 +45,7 @@ export type AgentOrchestratorBindings = {
   taskId: string;
   providerId: ProviderId;
   model: string | null;
+  preferredLanguage: SupportedLanguage;
   cwd: string;
   guardMode: TaskDetail["guardMode"];
   machineSummary: string;
@@ -151,7 +153,7 @@ function summarizeToolCalls(toolCalls: AgentToolCall[]) {
 function buildAgentMessages(
   task: TaskDetail,
   run: AgentRun,
-  bindings: Pick<AgentOrchestratorBindings, "cwd" | "guardMode" | "machineSummary" | "providerId" | "model">,
+  bindings: Pick<AgentOrchestratorBindings, "cwd" | "guardMode" | "machineSummary" | "providerId" | "model" | "preferredLanguage">,
   resumeReason: string | null,
 ): TaskMessage[] {
   const recentTranscript = summarizeRecentTranscript(task, run.id);
@@ -161,6 +163,7 @@ function buildAgentMessages(
     `Workspace root: ${bindings.cwd}`,
     `Guard mode: ${bindings.guardMode}`,
     `Provider: ${bindings.providerId}${bindings.model ? ` (${bindings.model})` : ""}`,
+    `Preferred reply language: ${bindings.preferredLanguage === "ru" ? "Russian" : "English"}`,
     `Machine summary: ${bindings.machineSummary}`,
     `Task title: ${task.title}`,
     `Task status: ${task.status}`,

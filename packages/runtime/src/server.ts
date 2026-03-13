@@ -44,6 +44,16 @@ import { GeminiService } from "./gemini-service";
 import { GonkaService } from "./gonka-service";
 import { GroqService } from "./groq-service";
 import { LocalAiService } from "./local-ai-service";
+import {
+  buildLanguageInstruction,
+  detectModelCommandIntent,
+  buildTranslationInstruction,
+  detectPreferredAssistantLanguage,
+  detectTranslationIntent,
+  localizeStructuredComputerText,
+  normalizeLanguageName,
+  type SupportedLanguage,
+} from "./language";
 import { RuntimeLogger } from "./logging";
 import { OpenAIService } from "./openai-service";
 import { OpenRouterService } from "./openrouter-service";
@@ -323,6 +333,42 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
       `RAM ${machineProfile.memoryGb.toFixed(1)}GB`,
       `GPU ${gpuSummary}`,
     ].join("; ");
+  }
+
+  function createSyntheticSystemMessage(taskId: string, content: string): TaskMessage {
+    return {
+      id: crypto.randomUUID(),
+      taskId,
+      role: "system",
+      content,
+      createdAt: nowIso(),
+      meta: {},
+    };
+  }
+
+  function withLanguageSystemMessage(taskId: string, messages: TaskMessage[], language: SupportedLanguage) {
+    const systemMessages = messages.filter((message) => message.role === "system");
+    const nonSystemMessages = messages.filter((message) => message.role !== "system");
+    return [...systemMessages, createSyntheticSystemMessage(taskId, buildLanguageInstruction(language)), ...nonSystemMessages];
+  }
+
+  function summarizeAvailableModels(provider: ProviderSettings, language: SupportedLanguage) {
+    const models = provider.availableModels.length ? provider.availableModels : [provider.model];
+    if (language === "ru") {
+      return [
+        `${labelForProvider(provider.provider, provider, provider.provider === "local" ? provider.localRuntime : undefined)} сейчас использует модель ${provider.model}.`,
+        `Режим выбора: ${provider.selectionMode}.`,
+        `Доступные модели (${models.length}):`,
+        ...models.slice(0, 40).map((model, index) => `${index + 1}. ${model}${model === provider.model ? " [текущая]" : ""}`),
+      ].join("\n");
+    }
+
+    return [
+      `${labelForProvider(provider.provider, provider, provider.provider === "local" ? provider.localRuntime : undefined)} is using ${provider.model}.`,
+      `Selection mode: ${provider.selectionMode}.`,
+      `Available models (${models.length}):`,
+      ...models.slice(0, 40).map((model, index) => `${index + 1}. ${model}${model === provider.model ? " [current]" : ""}`),
+    ].join("\n");
   }
 
   function providerReadyForChat(provider: ProviderSettings) {
@@ -1095,6 +1141,7 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
     originalProvider: ProviderSettings,
     providerSelection: { provider: ProviderSettings; candidates: string[] },
     secret: string | null,
+    language: SupportedLanguage,
   ) {
     let activeProvider = provider;
     const attemptedModel =
@@ -1102,7 +1149,7 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
       defaultModelForProvider(activeProvider.provider, activeProvider.provider === "local" ? activeProvider.localRuntime : "ollama");
 
     try {
-      const completion = await completeProviderRequest(activeProvider, secret, task.messages);
+      const completion = await completeProviderRequest(activeProvider, secret, withLanguageSystemMessage(task.id, task.messages, language));
       await store.addMessage(task.id, createMessage(task.id, "assistant", completion), "succeeded");
       return { completed: true as const };
     } catch (error) {
@@ -1147,7 +1194,7 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
             const completion = await completeProviderRequest(
               activeProvider.provider === "gonka" ? originalProvider : { ...activeProvider, model: candidate },
               secret,
-              task.messages,
+              withLanguageSystemMessage(task.id, task.messages, language),
             );
 
             if (candidate !== activeProvider.model) {
@@ -1181,6 +1228,159 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
     }
   }
 
+  async function pinProviderModel(model: string) {
+    const provider = store.getProvider();
+    if (provider.provider === "gonka" || !providerReadyForChat(provider)) {
+      throw new Error("A live chat provider must be connected before selecting a model.");
+    }
+
+    if (provider.availableModels.length && !provider.availableModels.includes(model)) {
+      throw new Error(
+        `Model ${model} is not in the current ${labelForProvider(provider.provider, provider, provider.provider === "local" ? provider.localRuntime : undefined)} model list.`,
+      );
+    }
+
+    const secret = await readConfiguredSecret(provider.provider);
+    if (provider.provider !== "local" && !secret) {
+      throw new Error(
+        `The saved ${labelForProvider(provider.provider, provider)} API key is unavailable in the current local profile. Please reconnect the provider.`,
+      );
+    }
+
+    await validateConfiguredProviderModel(provider, secret, model);
+    const updatedProvider = buildApiProviderSettings({
+      providerId: provider.provider,
+      current: provider,
+      model,
+      availableModels: provider.availableModels,
+      selectionMode: "manual",
+      secretConfigured: true,
+      validatedAt: provider.validatedAt,
+      modelRefreshedAt: nowIso(),
+      apiBaseUrl: provider.apiBaseUrl,
+      localRuntime: provider.provider === "local" ? provider.localRuntime : undefined,
+    });
+    await store.setProvider(updatedProvider);
+    await runtimeLog.log(
+      `${labelForProvider(provider.provider, provider, provider.provider === "local" ? provider.localRuntime : undefined)} model manually pinned to ${model}.`,
+    );
+    return updatedProvider;
+  }
+
+  async function refreshLiveProviderModels() {
+    const provider = store.getProvider();
+    if (provider.provider === "gonka" || !providerReadyForChat(provider)) {
+      throw new Error("A live chat provider must be connected before refreshing models.");
+    }
+
+    const secret = await readConfiguredSecret(provider.provider);
+    if (provider.provider !== "local" && !secret) {
+      throw new Error(
+        `The saved ${labelForProvider(provider.provider, provider)} API key is unavailable in the current local profile. Please reconnect the provider.`,
+      );
+    }
+
+    await ensureFreshApiSelection(
+      provider.provider,
+      secret,
+      {
+        force: true,
+        throwOnError: true,
+      },
+      provider.provider === "local" ? provider.localRuntime : undefined,
+      provider.apiBaseUrl,
+    );
+    await runtimeLog.log(
+      `${labelForProvider(provider.provider, provider, provider.provider === "local" ? provider.localRuntime : undefined)} model list refreshed from the live API.`,
+    );
+    return store.getProvider();
+  }
+
+  async function resetProviderModelToAuto() {
+    const provider = store.getProvider();
+    if (provider.provider === "gonka" || !providerReadyForChat(provider)) {
+      throw new Error("A live chat provider must be connected before returning to automatic model selection.");
+    }
+
+    const secret = await readConfiguredSecret(provider.provider);
+    if (provider.provider !== "local" && !secret) {
+      throw new Error(
+        `The saved ${labelForProvider(provider.provider, provider)} API key is unavailable in the current local profile. Please reconnect the provider.`,
+      );
+    }
+
+    await ensureFreshApiSelection(
+      provider.provider,
+      secret,
+      {
+        force: true,
+        throwOnError: true,
+        preserveManualSelection: false,
+      },
+      provider.provider === "local" ? provider.localRuntime : undefined,
+      provider.apiBaseUrl,
+    );
+    await runtimeLog.log(
+      `${labelForProvider(provider.provider, provider, provider.provider === "local" ? provider.localRuntime : undefined)} model selection returned to automatic mode.`,
+    );
+    return store.getProvider();
+  }
+
+  async function translateTaskText(
+    task: TaskDetail,
+    sourceText: string,
+    targetLanguage: SupportedLanguage,
+  ) {
+    const provider = store.getProvider();
+    const fallbackText =
+      targetLanguage === "ru" ? localizeStructuredComputerText(sourceText, "ru") : null;
+
+    if (!providerReadyForChat(provider) || provider.provider === "gonka") {
+      if (fallbackText && fallbackText !== sourceText) {
+        return fallbackText;
+      }
+
+      throw new Error(`Translation to ${normalizeLanguageName(targetLanguage)} requires a working chat provider in this build.`);
+    }
+
+    const secret = await readConfiguredSecret(provider.provider);
+    if (provider.provider !== "local" && !secret) {
+      throw new Error(
+        `The saved ${labelForProvider(provider.provider, provider)} API key is unavailable in the current local profile. Please reconnect the provider.`,
+      );
+    }
+
+    const selection =
+      provider.provider === "local"
+        ? await ensureFreshApiSelection(provider.provider, secret, {}, provider.localRuntime, provider.apiBaseUrl)
+        : await ensureFreshApiSelection(provider.provider, secret, {}, undefined, provider.apiBaseUrl);
+    const translationMessages: TaskMessage[] = [
+      createSyntheticSystemMessage(task.id, buildTranslationInstruction(targetLanguage)),
+      createSyntheticSystemMessage(task.id, buildLanguageInstruction(targetLanguage)),
+      {
+        id: crypto.randomUUID(),
+        taskId: task.id,
+        role: "user",
+        content: sourceText,
+        createdAt: nowIso(),
+        meta: {},
+      },
+    ];
+
+    try {
+      return await completeProviderRequest(selection.provider, secret, translationMessages);
+    } catch (error) {
+      if (fallbackText && fallbackText !== sourceText) {
+        await runtimeLog.log(
+          `Provider translation fell back to structured local localization. ${error instanceof Error ? error.message : String(error)}`,
+        );
+        return fallbackText;
+      }
+
+      throw error;
+    }
+  }
+
   async function continueAgentRun(taskId: string, agentRunId: string, resumeReason: string | null) {
     const task = store.getTask(taskId);
     if (!task) {
@@ -1200,11 +1400,13 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
     }
 
     const resolved = await resolveActiveChatProvider();
+    const preferredLanguage = detectPreferredAssistantLanguage(task.messages, resumeReason ?? "");
     const outcome = await runAgentLoop(
       {
         taskId,
         providerId: resolved.activeProvider.provider,
         model: resolved.activeProvider.model,
+        preferredLanguage,
         cwd: process.cwd(),
         guardMode: task.guardMode,
         machineSummary: machineSummaryText(),
@@ -1224,7 +1426,14 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
     if (outcome.kind === "fallback") {
       const latestTask = store.getTask(taskId);
       if (latestTask) {
-        await completeTaskWithProvider(latestTask, resolved.activeProvider, resolved.originalProvider, resolved.providerSelection, resolved.secret);
+        await completeTaskWithProvider(
+          latestTask,
+          resolved.activeProvider,
+          resolved.originalProvider,
+          resolved.providerSelection,
+          resolved.secret,
+          preferredLanguage,
+        );
       }
     }
 
@@ -1684,11 +1893,16 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
   }
 
   async function respondToMessage(task: TaskDetail, body: SendMessageRequest) {
+    const previousMessages = [...task.messages];
     await store.addMessage(task.id, createMessage(task.id, "user", body.content), "running");
 
+    const currentTask = store.getTask(task.id) ?? task;
     const raw = body.content.trim();
+    const responseLanguage = detectPreferredAssistantLanguage(previousMessages, raw);
     const terminalShortcut = raw.match(/^\/terminal\s+(.+)$/i) ?? raw.match(/^\$\s+(.+)$/);
     const guardShortcut = raw.match(/^guard\s+(strict|balanced|off)$/i);
+    const modelCommand = detectModelCommandIntent(raw);
+    const translationIntent = detectTranslationIntent(raw, previousMessages);
 
     if (/^new task$/i.test(raw)) {
       const nextTask = await store.createTask();
@@ -1737,11 +1951,11 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
       if (!command) {
         return buildSnapshot(task.id);
       }
-      await executeTerminal(task, command);
+      await executeTerminal(currentTask, command);
       return buildSnapshot(task.id);
     }
 
-    const latestPendingApproval = getLatestPendingApproval(task);
+    const latestPendingApproval = getLatestPendingApproval(currentTask);
     if (latestPendingApproval) {
       if (isApprovalAffirmation(raw)) {
         await store.addMessage(
@@ -1770,7 +1984,134 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
         await rejectResolvedApproval(latestPendingApproval.id);
         return buildSnapshot(task.id);
       }
+    }
 
+    if (translationIntent) {
+      if (!translationIntent.sourceText?.trim()) {
+        await store.addMessage(
+          task.id,
+          createMessage(
+            task.id,
+            "assistant",
+            responseLanguage === "ru"
+              ? "Мне нечего переводить. Пришли текст прямо в сообщении или попроси перевести предыдущий ответ после того, как он появится."
+              : "There is no source text to translate yet. Paste the text directly or ask me to translate the previous answer after it appears.",
+          ),
+          "idle",
+        );
+        return buildSnapshot(task.id);
+      }
+
+      try {
+        const translation = await translateTaskText(currentTask, translationIntent.sourceText, translationIntent.targetLanguage);
+        await store.addMessage(
+          task.id,
+          createMessage(task.id, "assistant", translation),
+          "succeeded",
+        );
+      } catch (error) {
+        await store.addMessage(
+          task.id,
+          createMessage(task.id, "assistant", error instanceof Error ? error.message : "Translation failed."),
+          "failed",
+        );
+      }
+      return buildSnapshot(task.id);
+    }
+
+    if (modelCommand?.kind === "list") {
+      const provider = store.getProvider();
+      if (provider.provider === "gonka" || !providerReadyForChat(provider)) {
+        await store.addMessage(
+          task.id,
+          createMessage(
+            task.id,
+            "assistant",
+            responseLanguage === "ru"
+              ? "Список моделей доступен только после подключения рабочего провайдера."
+              : "The model list is available only after a working provider is connected.",
+          ),
+          "failed",
+        );
+        return buildSnapshot(task.id);
+      }
+
+      await store.addMessage(
+        task.id,
+        createMessage(
+          task.id,
+          "assistant",
+          summarizeAvailableModels(provider, responseLanguage),
+        ),
+        "idle",
+      );
+      return buildSnapshot(task.id);
+    }
+
+    if (modelCommand?.kind === "refresh") {
+      try {
+        const provider = await refreshLiveProviderModels();
+        await store.addMessage(
+          task.id,
+          createMessage(
+            task.id,
+            "assistant",
+            responseLanguage === "ru"
+              ? `Список моделей обновлён. Сейчас активна ${provider.model}.`
+              : `The model list was refreshed. ${provider.model} is active right now.`,
+          ),
+          "succeeded",
+        );
+      } catch (error) {
+        await store.addMessage(
+          task.id,
+          createMessage(task.id, "assistant", error instanceof Error ? error.message : "Unable to refresh models."),
+          "failed",
+        );
+      }
+      return buildSnapshot(task.id);
+    }
+
+    if (modelCommand?.kind === "auto" || modelCommand?.kind === "pin") {
+      try {
+        if (modelCommand.kind === "auto") {
+          const provider = await resetProviderModelToAuto();
+          await store.addMessage(
+            task.id,
+            createMessage(
+              task.id,
+              "assistant",
+              responseLanguage === "ru"
+                ? `Автовыбор модели включён снова. Сейчас активна ${provider.model}.`
+                : `Automatic model selection is enabled again. ${provider.model} is active right now.`,
+            ),
+            "succeeded",
+          );
+        } else {
+          const provider = await pinProviderModel(modelCommand.model);
+          await store.addMessage(
+            task.id,
+            createMessage(
+              task.id,
+              "assistant",
+              responseLanguage === "ru"
+                ? `Модель переключена на ${provider.model}. Режим выбора: manual.`
+                : `Switched to ${provider.model}. Selection mode is now manual.`,
+            ),
+            "succeeded",
+          );
+        }
+      } catch (error) {
+        await store.addMessage(
+          task.id,
+          createMessage(task.id, "assistant", error instanceof Error ? error.message : "Unable to change the model."),
+          "failed",
+        );
+      }
+      return buildSnapshot(task.id);
+    }
+
+    if (latestPendingApproval) {
       await store.addMessage(
         task.id,
         createMessage(
@@ -1784,10 +2125,10 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
       return buildSnapshot(task.id);
     }
 
-    const activeAgentRun = getActiveAgentRun(store.getTask(task.id) ?? task);
+    const activeAgentRun = getActiveAgentRun(store.getTask(task.id) ?? currentTask);
     if (/^continue(?:\s+agent)?$/i.test(raw) && activeAgentRun && activeAgentRun.status !== "awaiting_approval") {
       try {
-        await continueAgentRun(task.id, activeAgentRun.id, "operator requested another agent pass");
+        await continueAgentRun(currentTask.id, activeAgentRun.id, "operator requested another agent pass");
       } catch (error) {
         await store.addMessage(
           task.id,
@@ -1805,30 +2146,35 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
 
     const computerAction = await computerOperator.handle(raw);
     if (computerAction.kind !== "not_handled") {
+      const localizedToolMessage = localizeStructuredComputerText(computerAction.toolMessage, responseLanguage);
+      const localizedAssistantMessage = localizeStructuredComputerText(computerAction.assistantMessage, responseLanguage);
       const meta = {
         computerSkill: computerAction.skill,
         computerIntent: computerAction.intent,
       };
-      await store.addMessage(task.id, createMessage(task.id, "tool", computerAction.toolMessage, meta), "running");
+      await store.addMessage(task.id, createMessage(task.id, "tool", localizedToolMessage, meta), "running");
 
       if (computerAction.kind === "answer") {
         await store.addMessage(
           task.id,
-          createMessage(task.id, "assistant", computerAction.assistantMessage, meta),
+          createMessage(task.id, "assistant", localizedAssistantMessage, meta),
           computerAction.status === "failed" ? "failed" : "succeeded",
         );
         return buildSnapshot(task.id);
       }
 
-      await store.addMessage(task.id, createMessage(task.id, "assistant", computerAction.assistantMessage, meta), "running");
-      await executeTerminal(task, computerAction.command);
+      await store.addMessage(task.id, createMessage(task.id, "assistant", localizedAssistantMessage, meta), "running");
+      await executeTerminal(currentTask, computerAction.command);
       return buildSnapshot(task.id);
     }
 
     const safetyDecision = assessAgentObjective(raw);
     if (safetyDecision.kind === "blocked") {
-      const blockedMessage = buildBlockedObjectiveMessage(safetyDecision);
-      const blockedRun = buildAgentRun(task, raw, null, null);
+      const blockedMessage =
+        responseLanguage === "ru"
+          ? `Я не буду помогать с этой целью, потому что ${safetyDecision.reason}.`
+          : buildBlockedObjectiveMessage(safetyDecision);
+      const blockedRun = buildAgentRun(currentTask, raw, null, null);
       blockedRun.status = "blocked";
       blockedRun.summary = safetyDecision.reason;
       blockedRun.lastAssistantMessage = blockedMessage;
@@ -1856,14 +2202,14 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
       return buildSnapshot(task.id);
     }
 
-    const agentRun = buildAgentRun(task, raw, providerResolution.activeProvider.provider, providerResolution.activeProvider.model);
+    const agentRun = buildAgentRun(currentTask, raw, providerResolution.activeProvider.provider, providerResolution.activeProvider.model);
     await store.addAgentRun(task.id, agentRun, "running");
     await runtimeLog.log(
       `Agent run started. task=${task.id} run=${agentRun.id} provider=${providerResolution.activeProvider.provider} model=${providerResolution.activeProvider.model ?? "unknown"}`,
     );
 
     try {
-      await continueAgentRun(task.id, agentRun.id, "initial operator request");
+      await continueAgentRun(currentTask.id, agentRun.id, "initial operator request");
     } catch (error) {
       await store.updateAgentRun(
         task.id,
@@ -1995,48 +2341,9 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
   });
 
   server.post("/api/provider/model", async (request, reply) => {
-    const provider = store.getProvider();
-    if (provider.provider === "gonka" || !providerReadyForChat(provider)) {
-      reply.code(400);
-      return {
-        message: "A live chat provider must be connected before selecting a model.",
-      };
-    }
-
     const body = setProviderModelRequestSchema.parse(request.body) as SetProviderModelRequest;
-    if (provider.availableModels.length && !provider.availableModels.includes(body.model)) {
-      reply.code(400);
-      return {
-        message: `Model ${body.model} is not in the current ${labelForProvider(provider.provider, provider, provider.provider === "local" ? provider.localRuntime : undefined)} model list.`,
-      };
-    }
-
-    const secret = await readConfiguredSecret(provider.provider);
-    if (provider.provider !== "local" && !secret) {
-      reply.code(400);
-      return {
-        message: `The saved ${labelForProvider(provider.provider, provider)} API key is unavailable in the current local profile. Please reconnect the provider.`,
-      };
-    }
-
     try {
-      await validateConfiguredProviderModel(provider, secret, body.model);
-      const updatedProvider = buildApiProviderSettings({
-        providerId: provider.provider,
-        current: provider,
-        model: body.model,
-        availableModels: provider.availableModels,
-        selectionMode: "manual",
-        secretConfigured: true,
-        validatedAt: provider.validatedAt,
-        modelRefreshedAt: nowIso(),
-        apiBaseUrl: provider.apiBaseUrl,
-        localRuntime: provider.provider === "local" ? provider.localRuntime : undefined,
-      });
-      await store.setProvider(updatedProvider);
-      await runtimeLog.log(
-        `${labelForProvider(provider.provider, provider, provider.provider === "local" ? provider.localRuntime : undefined)} model manually pinned to ${body.model}.`,
-      );
+      await pinProviderModel(body.model);
       return buildSnapshot();
     } catch (error) {
       reply.code(400);
@@ -2047,36 +2354,8 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
   });
 
   server.post("/api/provider/models/refresh", async (_request, reply) => {
-    const provider = store.getProvider();
-    if (provider.provider === "gonka" || !providerReadyForChat(provider)) {
-      reply.code(400);
-      return {
-        message: "A live chat provider must be connected before refreshing models.",
-      };
-    }
-
-    const secret = await readConfiguredSecret(provider.provider);
-    if (provider.provider !== "local" && !secret) {
-      reply.code(400);
-      return {
-        message: `The saved ${labelForProvider(provider.provider, provider)} API key is unavailable in the current local profile. Please reconnect the provider.`,
-      };
-    }
-
     try {
-      await ensureFreshApiSelection(
-        provider.provider,
-        secret,
-        {
-          force: true,
-          throwOnError: true,
-        },
-        provider.provider === "local" ? provider.localRuntime : undefined,
-        provider.apiBaseUrl,
-      );
-      await runtimeLog.log(
-        `${labelForProvider(provider.provider, provider, provider.provider === "local" ? provider.localRuntime : undefined)} model list refreshed from the live API.`,
-      );
+      await refreshLiveProviderModels();
       return buildSnapshot();
     } catch (error) {
       reply.code(400);
@@ -2087,37 +2366,8 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
   });
 
   server.post("/api/provider/model/auto", async (_request, reply) => {
-    const provider = store.getProvider();
-    if (provider.provider === "gonka" || !providerReadyForChat(provider)) {
-      reply.code(400);
-      return {
-        message: "A live chat provider must be connected before returning to automatic model selection.",
-      };
-    }
-
-    const secret = await readConfiguredSecret(provider.provider);
-    if (provider.provider !== "local" && !secret) {
-      reply.code(400);
-      return {
-        message: `The saved ${labelForProvider(provider.provider, provider)} API key is unavailable in the current local profile. Please reconnect the provider.`,
-      };
-    }
-
     try {
-      await ensureFreshApiSelection(
-        provider.provider,
-        secret,
-        {
-          force: true,
-          throwOnError: true,
-          preserveManualSelection: false,
-        },
-        provider.provider === "local" ? provider.localRuntime : undefined,
-        provider.apiBaseUrl,
-      );
-      await runtimeLog.log(
-        `${labelForProvider(provider.provider, provider, provider.provider === "local" ? provider.localRuntime : undefined)} model selection returned to automatic mode.`,
-      );
+      await resetProviderModelToAuto();
       return buildSnapshot();
     } catch (error) {
       reply.code(400);

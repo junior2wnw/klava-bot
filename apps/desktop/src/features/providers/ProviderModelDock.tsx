@@ -39,9 +39,13 @@ export function ProviderModelDock({
           <span className={providerReady ? "app-badge app-badge--success" : "app-badge"}>
             {providerReady ? "Ready for chat" : provider?.provider === "gonka" ? "Paused" : "Setup required"}
           </span>
+          {provider?.model ? <span className="app-badge app-badge--accent">{provider.model}</span> : null}
+          {provider?.selectionMode ? <span className="app-badge">{provider.selectionMode}</span> : null}
           {provider?.provider === "local" ? <span className="app-badge">{provider.localRuntime}</span> : null}
         </div>
-        <span className="field-hint">{providerSummary}</span>
+        <span className="field-hint">
+          {providerSummary} Use `/models`, `/model auto`, or `/model &lt;name&gt;` directly in chat if you want to switch models without the footer selector.
+        </span>
       </div>
 
       <div className="model-dock__controls">

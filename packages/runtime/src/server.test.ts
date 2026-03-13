@@ -786,6 +786,433 @@ test("natural-language package installs route into guarded terminal approvals", 
   }
 });
 
+test("russian computer-diagnostic requests return localized structured output", async () => {
+  const originalHandle = ComputerOperator.prototype.handle;
+
+  ComputerOperator.prototype.handle = async function handle(input: string) {
+    assert.equal(input, "проверь драйвер мышки");
+    return {
+      kind: "answer",
+      status: "succeeded",
+      skill: "driver_inspection",
+      intent: "inspect_driver",
+      toolMessage: "Investigated local mouse drivers using Get-PnpDevice, Win32_PnPSignedDriver, pnputil, and Windows Update state.",
+      assistantMessage: [
+        "I checked the local mouse path through Windows device inventory, driver ranking, and local update state.",
+        "",
+        "Active devices and installed drivers:",
+        "1. HID-compliant mouse x2 - msmouse.inf 10.0.26100.1150 by Microsoft, date 2006-06-21, status started",
+        "",
+        "Conclusion: the active mouse driver currently selected by Windows is msmouse.inf 10.0.26100.1150.",
+      ].join("\n"),
+    };
+  };
+
+  try {
+    await withTempAppPaths(async (paths) => {
+      const runtime = await createKlavaRuntime({ paths });
+
+      try {
+        const workspace = await runtime.server.inject({
+          method: "GET",
+          url: "/api/workspace",
+        });
+        const taskId = workspace.json().selectedTask.id as string;
+
+        const response = await runtime.server.inject({
+          method: "POST",
+          url: `/api/tasks/${taskId}/messages`,
+          payload: {
+            content: "проверь драйвер мышки",
+          },
+        });
+
+        assert.equal(response.statusCode, 200);
+        const snapshot = response.json();
+        assert.match(snapshot.selectedTask.messages.at(-2).content, /локальный путь драйвера мыши|драйвер мыши/i);
+        assert.match(snapshot.selectedTask.messages.at(-1).content, /Я проверила локальный путь драйвера мыши/i);
+        assert.match(snapshot.selectedTask.messages.at(-1).content, /Активные устройства и установленные драйверы/i);
+        assert.match(snapshot.selectedTask.messages.at(-1).content, /Вывод: активный драйвер мыши/i);
+      } finally {
+        await runtime.stop();
+      }
+    });
+  } finally {
+    ComputerOperator.prototype.handle = originalHandle;
+  }
+});
+
+test("translation requests use the previous answer as context and do not re-trigger the computer operator", async () => {
+  const originalHandle = ComputerOperator.prototype.handle;
+  const originalValidate = OpenAIService.prototype.validate;
+  const originalComplete = OpenAIService.prototype.complete;
+  let computerCallCount = 0;
+
+  ComputerOperator.prototype.handle = async function handle(input: string) {
+    computerCallCount += 1;
+    assert.equal(input, "check my mouse driver");
+    return {
+      kind: "answer",
+      status: "succeeded",
+      skill: "driver_inspection",
+      intent: "inspect_driver",
+      toolMessage: "Investigated local mouse drivers using Get-PnpDevice, Win32_PnPSignedDriver, pnputil, and Windows Update state.",
+      assistantMessage: [
+        "I checked the local mouse path through Windows device inventory, driver ranking, and local update state.",
+        "",
+        "Active devices and installed drivers:",
+        "1. HID-compliant mouse x2 - msmouse.inf 10.0.26100.1150 by Microsoft, date 2006-06-21, status started",
+        "",
+        "Conclusion: the active mouse driver currently selected by Windows is msmouse.inf 10.0.26100.1150.",
+      ].join("\n"),
+    };
+  };
+
+  OpenAIService.prototype.validate = async function validate() {
+    return {
+      model: "gpt-5.2",
+      models: ["gpt-5.2"],
+    };
+  };
+  OpenAIService.prototype.complete = async function complete({ messages }) {
+    const lastUserMessage = messages.at(-1)?.content ?? "";
+    assert.match(lastUserMessage, /I checked the local mouse path/i);
+    return [
+      "Я проверила локальный путь драйвера мыши через инвентарь устройств Windows, ранжирование драйверов и локальное состояние обновлений.",
+      "",
+      "Активные устройства и установленные драйверы:",
+      "1. HID-совместимая мышь x2 - msmouse.inf 10.0.26100.1150 от Microsoft, дата 2006-06-21, статус: запущено",
+      "",
+      "Вывод: активный драйвер мыши, который сейчас выбран Windows, это msmouse.inf 10.0.26100.1150.",
+    ].join("\n");
+  };
+
+  try {
+    await withTempAppPaths(async (paths) => {
+      const runtime = await createKlavaRuntime({ paths });
+
+      try {
+        const onboarding = await runtime.server.inject({
+          method: "POST",
+          url: "/api/onboarding/validate",
+          payload: {
+            provider: "openai",
+            secret: "sk-translate-context",
+          },
+        });
+
+        assert.equal(onboarding.statusCode, 200);
+        const workspace = await runtime.server.inject({
+          method: "GET",
+          url: "/api/workspace",
+        });
+        const taskId = workspace.json().selectedTask.id as string;
+
+        const firstResponse = await runtime.server.inject({
+          method: "POST",
+          url: `/api/tasks/${taskId}/messages`,
+          payload: {
+            content: "check my mouse driver",
+          },
+        });
+
+        assert.equal(firstResponse.statusCode, 200);
+        assert.equal(computerCallCount, 1);
+
+        const translationResponse = await runtime.server.inject({
+          method: "POST",
+          url: `/api/tasks/${taskId}/messages`,
+          payload: {
+            content: "переведи на русский",
+          },
+        });
+
+        assert.equal(translationResponse.statusCode, 200);
+        const snapshot = translationResponse.json();
+        assert.equal(computerCallCount, 1);
+        assert.equal(snapshot.selectedTask.messages.filter((message: { role: string }) => message.role === "tool").length, 1);
+        assert.match(snapshot.selectedTask.messages.at(-1).content, /Я проверила локальный путь драйвера мыши/i);
+      } finally {
+        await runtime.stop();
+      }
+    });
+  } finally {
+    ComputerOperator.prototype.handle = originalHandle;
+    OpenAIService.prototype.validate = originalValidate;
+    OpenAIService.prototype.complete = originalComplete;
+  }
+});
+
+test("inline translation requests translate the pasted text instead of re-running local diagnostics", async () => {
+  const originalHandle = ComputerOperator.prototype.handle;
+  const originalValidate = OpenAIService.prototype.validate;
+  const originalComplete = OpenAIService.prototype.complete;
+  let computerCallCount = 0;
+
+  ComputerOperator.prototype.handle = async function handle() {
+    computerCallCount += 1;
+    return {
+      kind: "not_handled",
+    };
+  };
+
+  OpenAIService.prototype.validate = async function validate() {
+    return {
+      model: "gpt-5.2",
+      models: ["gpt-5.2"],
+    };
+  };
+  OpenAIService.prototype.complete = async function complete({ messages }) {
+    const lastUserMessage = messages.at(-1)?.content ?? "";
+    assert.match(lastUserMessage, /I checked the local mouse path/i);
+    return "Я проверила локальный путь драйвера мыши через инвентарь устройств Windows.";
+  };
+
+  try {
+    await withTempAppPaths(async (paths) => {
+      const runtime = await createKlavaRuntime({ paths });
+
+      try {
+        const onboarding = await runtime.server.inject({
+          method: "POST",
+          url: "/api/onboarding/validate",
+          payload: {
+            provider: "openai",
+            secret: "sk-inline-translate",
+          },
+        });
+
+        assert.equal(onboarding.statusCode, 200);
+        const workspace = await runtime.server.inject({
+          method: "GET",
+          url: "/api/workspace",
+        });
+        const taskId = workspace.json().selectedTask.id as string;
+
+        const translationResponse = await runtime.server.inject({
+          method: "POST",
+          url: `/api/tasks/${taskId}/messages`,
+          payload: {
+            content: [
+              "I checked the local mouse path through Windows device inventory, driver ranking, and local update state.",
+              "",
+              "это переведи на русский",
+            ].join("\n"),
+          },
+        });
+
+        assert.equal(translationResponse.statusCode, 200);
+        const snapshot = translationResponse.json();
+        assert.equal(computerCallCount, 0);
+        assert.equal(snapshot.selectedTask.messages.filter((message: { role: string }) => message.role === "tool").length, 0);
+        assert.match(snapshot.selectedTask.messages.at(-1).content, /Я проверила локальный путь драйвера мыши/i);
+      } finally {
+        await runtime.stop();
+      }
+    });
+  } finally {
+    ComputerOperator.prototype.handle = originalHandle;
+    OpenAIService.prototype.validate = originalValidate;
+    OpenAIService.prototype.complete = originalComplete;
+  }
+});
+
+test("natural-language russian model commands pin the model and keep it for the next provider pass", async () => {
+  const originalValidate = OpenAIService.prototype.validate;
+  const originalValidateModel = OpenAIService.prototype.validateModel;
+  const originalComplete = OpenAIService.prototype.complete;
+  const usedModels: string[] = [];
+
+  OpenAIService.prototype.validate = async function validate() {
+    return {
+      model: "gpt-5.2",
+      models: ["gpt-5.2", "gpt-5.2-mini"],
+    };
+  };
+  OpenAIService.prototype.validateModel = async function validateModel(secret: string, model: string) {
+    assert.equal(secret, "sk-natural-model");
+    assert.equal(model, "gpt-5.2-mini");
+  };
+  OpenAIService.prototype.complete = async function complete({ model, messages }) {
+    usedModels.push(model);
+    const joined = messages.map((message) => `${message.role}:${message.content}`).join("\n");
+
+    if (/Klava Agent mode/i.test(joined)) {
+      return JSON.stringify({
+        kind: "final",
+        summary: "Natural-language pin confirmed",
+        message: "Natural-language model switch is working.",
+        plan: [{ title: "Respond with the pinned model", status: "completed" }],
+      });
+    }
+
+    return "Natural-language model switch is working.";
+  };
+
+  try {
+    await withTempAppPaths(async (paths) => {
+      const runtime = await createKlavaRuntime({ paths });
+
+      try {
+        const onboarding = await runtime.server.inject({
+          method: "POST",
+          url: "/api/onboarding/validate",
+          payload: {
+            provider: "openai",
+            secret: "sk-natural-model",
+          },
+        });
+
+        assert.equal(onboarding.statusCode, 200);
+        const workspace = await runtime.server.inject({
+          method: "GET",
+          url: "/api/workspace",
+        });
+        const taskId = workspace.json().selectedTask.id as string;
+
+        const pinResponse = await runtime.server.inject({
+          method: "POST",
+          url: `/api/tasks/${taskId}/messages`,
+          payload: {
+            content: "переключи модель на gpt-5.2-mini",
+          },
+        });
+
+        assert.equal(pinResponse.statusCode, 200);
+        assert.equal(pinResponse.json().provider.model, "gpt-5.2-mini");
+
+        const listResponse = await runtime.server.inject({
+          method: "POST",
+          url: `/api/tasks/${taskId}/messages`,
+          payload: {
+            content: "покажи модели",
+          },
+        });
+
+        assert.equal(listResponse.statusCode, 200);
+        assert.match(listResponse.json().selectedTask.messages.at(-1).content, /gpt-5\.2-mini/i);
+
+        const agentResponse = await runtime.server.inject({
+          method: "POST",
+          url: `/api/tasks/${taskId}/messages`,
+          payload: {
+            content: "say hi after the russian model switch",
+          },
+        });
+
+        assert.equal(agentResponse.statusCode, 200);
+        assert.match(agentResponse.json().selectedTask.messages.at(-1).content, /Natural-language model switch is working/i);
+        assert.ok(usedModels.length >= 1);
+        assert.ok(usedModels.every((model) => model === "gpt-5.2-mini"));
+      } finally {
+        await runtime.stop();
+      }
+    });
+  } finally {
+    OpenAIService.prototype.validate = originalValidate;
+    OpenAIService.prototype.validateModel = originalValidateModel;
+    OpenAIService.prototype.complete = originalComplete;
+  }
+});
+
+test("chat model commands pin the model and the next agent pass uses that pinned model", async () => {
+  const originalValidate = OpenAIService.prototype.validate;
+  const originalValidateModel = OpenAIService.prototype.validateModel;
+  const originalComplete = OpenAIService.prototype.complete;
+  const usedModels: string[] = [];
+
+  OpenAIService.prototype.validate = async function validate() {
+    return {
+      model: "gpt-5.2",
+      models: ["gpt-5.2", "gpt-5.2-mini"],
+    };
+  };
+  OpenAIService.prototype.validateModel = async function validateModel(secret: string, model: string) {
+    assert.equal(secret, "sk-chat-model");
+    assert.equal(model, "gpt-5.2-mini");
+  };
+  OpenAIService.prototype.complete = async function complete({ model, messages }) {
+    usedModels.push(model);
+    const joined = messages.map((message) => `${message.role}:${message.content}`).join("\n");
+
+    if (/Klava Agent mode/i.test(joined)) {
+      return JSON.stringify({
+        kind: "final",
+        summary: "Pinned model confirmed",
+        message: "Pinned model reply is working.",
+        plan: [{ title: "Respond with the pinned model", status: "completed" }],
+      });
+    }
+
+    return "Pinned model reply is working.";
+  };
+
+  try {
+    await withTempAppPaths(async (paths) => {
+      const runtime = await createKlavaRuntime({ paths });
+
+      try {
+        const onboarding = await runtime.server.inject({
+          method: "POST",
+          url: "/api/onboarding/validate",
+          payload: {
+            provider: "openai",
+            secret: "sk-chat-model",
+          },
+        });
+
+        assert.equal(onboarding.statusCode, 200);
+        const workspace = await runtime.server.inject({
+          method: "GET",
+          url: "/api/workspace",
+        });
+        const taskId = workspace.json().selectedTask.id as string;
+
+        const pinResponse = await runtime.server.inject({
+          method: "POST",
+          url: `/api/tasks/${taskId}/messages`,
+          payload: {
+            content: "/model gpt-5.2-mini",
+          },
+        });
+
+        assert.equal(pinResponse.statusCode, 200);
+        assert.equal(pinResponse.json().provider.model, "gpt-5.2-mini");
+
+        const listResponse = await runtime.server.inject({
+          method: "POST",
+          url: `/api/tasks/${taskId}/messages`,
+          payload: {
+            content: "/models",
+          },
+        });
+
+        assert.equal(listResponse.statusCode, 200);
+        assert.match(listResponse.json().selectedTask.messages.at(-1).content, /gpt-5\.2-mini \[current\]/i);
+
+        const agentResponse = await runtime.server.inject({
+          method: "POST",
+          url: `/api/tasks/${taskId}/messages`,
+          payload: {
+            content: "say hi from the agent path",
+          },
+        });
+
+        assert.equal(agentResponse.statusCode, 200);
+        assert.match(agentResponse.json().selectedTask.messages.at(-1).content, /Pinned model reply is working/i);
+        assert.ok(usedModels.length >= 1);
+        assert.ok(usedModels.every((model) => model === "gpt-5.2-mini"));
+      } finally {
+        await runtime.stop();
+      }
+    });
+  } finally {
+    OpenAIService.prototype.validate = originalValidate;
+    OpenAIService.prototype.validateModel = originalValidateModel;
+    OpenAIService.prototype.complete = originalComplete;
+  }
+});
+
 test("support bundle includes the runtime log tail for diagnostics", async () => {
   await withTempAppPaths(async (paths) => {
     const runtime = await createKlavaRuntime({ paths });
