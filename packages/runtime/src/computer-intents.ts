@@ -98,6 +98,17 @@ const uninstallKeywords = ["uninstall", "remove", "delete", "удали", "уд�
 
 const driverKeywords = ["driver", "drivers", "драйвер", "драйвера", "драйверы"];
 const latestKeywords = ["latest", "newest", "current latest", "последн", "свеж", "актуальн", "самый новый"];
+const updateAdviceKeywords = [
+  "should i update",
+  "should update",
+  "need to update",
+  "do i need to update",
+  "worth updating",
+  "worth an update",
+  "надо обнов",
+  "нужно обнов",
+  "стоит обнов",
+];
 const driverOverviewKeywords = [
   "какие драйвера",
   "какие драйверы",
@@ -370,6 +381,10 @@ export function detectComputerIntent(input: string): ComputerIntent | null {
   const normalized = normalizeInput(input);
   const software = pickSoftware(normalized);
   const wantsLatest = containsAny(normalized, latestKeywords);
+  const wantsUpdateAdvice =
+    containsAny(normalized, updateAdviceKeywords) ||
+    /(?:should|need|worth)(?:\s+\w+){0,4}\s+update/iu.test(normalized) ||
+    /(?:надо|нужно|стоит)(?:\s+\S+){0,4}\s+обнов/iu.test(normalized);
   const packageInstall = installKeywords.some((keyword) => containsWholePhrase(normalized, keyword));
   const packageUpgrade = upgradeKeywords.some((keyword) => containsWholePhrase(normalized, keyword));
   const packageUninstall = uninstallKeywords.some((keyword) => containsWholePhrase(normalized, keyword));
@@ -400,11 +415,11 @@ export function detectComputerIntent(input: string): ComputerIntent | null {
         kind: "inspect_driver",
         skill: "driver_inspection",
         deviceCategory,
-        queryLatest: wantsLatest,
+        queryLatest: wantsLatest || wantsUpdateAdvice,
       };
     }
 
-    if (wantsLatest || containsAny(normalized, driverOverviewKeywords)) {
+    if (wantsLatest || wantsUpdateAdvice || containsAny(normalized, driverOverviewKeywords)) {
       return {
         kind: "driver_overview",
         skill: "driver_inspection",

@@ -75,7 +75,7 @@ type ToolObservation = {
   approvalId?: string | null;
 };
 
-const MAX_AGENT_ITERATIONS_PER_PASS = 8;
+const MAX_AGENT_ITERATIONS_PER_PASS = 12;
 
 type ToolDecision = AgentDecision & {
   kind: "tool";
@@ -322,7 +322,9 @@ async function handleComputerTool(
   bindings: AgentOrchestratorBindings,
 ): Promise<ToolObservation> {
   const toolCallId = crypto.randomUUID();
-  const result = await bindings.computerOperator.handle(decision.tool.instruction);
+  const result = await bindings.computerOperator.handle(decision.tool.instruction, {
+    language: bindings.preferredLanguage,
+  });
   const toolMeta = {
     agentRunId: run.id,
     agentToolCallId: toolCallId,
@@ -684,7 +686,9 @@ export async function runAgentLoop(bindings: AgentOrchestratorBindings, resumeRe
   }
 
   const message =
-    "I made progress, but I reached the current iteration budget for one pass. Continue the agent run to keep working toward the same goal.";
+    bindings.preferredLanguage === "ru"
+      ? "Я уже прошла заметную часть плана, но упёрлась в лимит одного прохода агента. Если хочешь, продолжу тот же план следующим проходом без потери контекста."
+      : "I already made tangible progress on the plan, but I hit the per-pass agent limit. If you want, I can continue the same plan on the next pass without losing context.";
   await bindings.updateRun(
     (currentRun) => {
       currentRun.status = "needs_input";

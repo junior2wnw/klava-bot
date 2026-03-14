@@ -9,6 +9,7 @@ import {
   type PackageAction,
   type SoftwareCatalogEntry,
 } from "./computer-intents";
+import { localizeStructuredComputerText, type SupportedLanguage } from "./language";
 import { RuntimeLogger } from "./logging";
 
 type CommandResult = {
@@ -127,6 +128,10 @@ type StorageRow = {
 type CachedResult = {
   expiresAt: number;
   result: ComputerHandledResult;
+};
+
+type ComputerHandleOptions = {
+  language?: SupportedLanguage;
 };
 
 export type ComputerHandledResult =
@@ -279,6 +284,60 @@ function buildAssistantResult(
   };
 }
 
+function inLanguage(language: SupportedLanguage, english: string, russian: string) {
+  return language === "ru" ? russian : english;
+}
+
+function formatDriverTarget(category: DeviceCategory, language: SupportedLanguage) {
+  if (language === "ru") {
+    switch (category) {
+      case "mouse":
+        return "мыши";
+      case "keyboard":
+        return "клавиатуры";
+      case "gpu":
+        return "графики";
+      case "network":
+        return "сетевого адаптера";
+      case "audio":
+        return "аудиоустройства";
+      case "bluetooth":
+        return "Bluetooth-адаптера";
+      case "storage":
+        return "накопителя";
+      case "camera":
+        return "камеры";
+      case "printer":
+        return "принтера";
+      default:
+        return "устройства";
+    }
+  }
+
+  switch (category) {
+    case "mouse":
+      return "mouse";
+    case "keyboard":
+      return "keyboard";
+    case "gpu":
+      return "graphics";
+    case "network":
+      return "network adapter";
+    case "audio":
+      return "audio";
+    case "bluetooth":
+      return "Bluetooth";
+    case "storage":
+      return "storage";
+    case "camera":
+      return "camera";
+    case "printer":
+      return "printer";
+    default:
+      return "device";
+  }
+}
+
 export class ComputerOperator {
   private readonly cache = new Map<string, CachedResult>();
 
@@ -290,13 +349,14 @@ export class ComputerOperator {
     },
   ) {}
 
-  async handle(input: string): Promise<ComputerHandledResult> {
+  async handle(input: string, options: ComputerHandleOptions = {}): Promise<ComputerHandledResult> {
+    const language = options.language ?? "en";
     const intent = detectComputerIntent(input);
     if (!intent) {
       return { kind: "not_handled" };
     }
 
-    const cacheKey = this.cacheKey(intent);
+    const cacheKey = this.cacheKey(intent, language);
     if (cacheKey) {
       const cached = this.cache.get(cacheKey);
       if (cached && cached.expiresAt > Date.now()) {
@@ -308,7 +368,7 @@ export class ComputerOperator {
     await this.options.logger.log(`Computer skill matched. skill=${intent.skill} intent=${intent.kind}.`);
 
     try {
-      const result = await this.executeIntent(intent);
+      const result = await this.executeIntent(intent, language);
       if (cacheKey && result.kind === "answer" && result.status === "succeeded") {
         this.cache.set(cacheKey, { expiresAt: Date.now() + CACHE_TTL_MS, result });
       }
@@ -319,21 +379,29 @@ export class ComputerOperator {
       return buildAssistantResult(
         intent.skill,
         intent.kind,
-        `Computer skill matched ${intent.kind}, but the local execution failed.`,
-        `I understood this as a local computer action, but the local check failed: ${message}`,
+        inLanguage(
+          language,
+          `Computer skill matched ${intent.kind}, but the local execution failed.`,
+          `Локальный компьютерный навык распознал intent ${intent.kind}, но проверка завершилась ошибкой.`,
+        ),
+        inLanguage(
+          language,
+          `I understood this as a local computer action, but the local check failed: ${message}`,
+          `Я распознала это как локальное действие на компьютере, но проверка завершилась ошибкой: ${message}`,
+        ),
         "failed",
       );
     }
   }
 
-  async executeIntent(intent: ComputerIntent): Promise<ComputerHandledResult> {
+  async executeIntent(intent: ComputerIntent, language: SupportedLanguage = "en"): Promise<ComputerHandledResult> {
     switch (intent.kind) {
       case "computer_capabilities":
         return this.describeCapabilities(intent);
       case "inspect_driver":
-        return this.inspectDrivers(intent);
+        return this.inspectDrivers(intent, language);
       case "driver_overview":
-        return this.inspectDriverOverview(intent);
+        return this.inspectDriverOverview(intent, language);
       case "software_version":
         return this.inspectSoftwareVersion(intent);
       case "installed_software":
@@ -456,7 +524,7 @@ export class ComputerOperator {
     } satisfies ComputerHandledResult;
   }
 
-  async inspectDrivers(intent: Extract<ComputerIntent, { kind: "inspect_driver" }>) {
+  async inspectDrivers(intent: Extract<ComputerIntent, { kind: "inspect_driver" }>, language: SupportedLanguage = "en") {
     this.assertWindowsCapability("driver inspection");
     const config = driverCategoryConfig[intent.deviceCategory];
     const devices = await this.queryPnpDevices(config.pnpClassName);
@@ -484,10 +552,7 @@ export class ComputerOperator {
     const activeDriverSummary = this.summarizeActiveDriverRows(rows, activeDevices, relevantReports);
     const outrankedSummary = this.summarizeOutrankedDriverCandidates(relevantReports);
     const updateSummaryLines = updateSummary ? this.describeWindowsUpdateDriverSummary(updateSummary) : [];
-
-    const assistantMessage = [
-      `I checked the local ${config.label} path through Windows device inventory, driver ranking, and local update state.`,
-      "",
+    const driverDetails = [
       activeDriverSummary.length
         ? "Active devices and installed drivers:"
         : `I found ${config.label} driver evidence, but not a clean active-device mapping.`,
@@ -497,16 +562,21 @@ export class ComputerOperator {
       "",
       ...this.buildDriverConclusion(config.label, rows, outrankedSummary, updateSummary, intent.queryLatest),
     ].join("\n");
+    const assistantMessage = this.buildDriverInspectionNarrative(intent.deviceCategory, driverDetails, rows, outrankedSummary, updateSummary, intent.queryLatest, language);
 
     return buildAssistantResult(
       intent.skill,
       intent.kind,
-      `Investigated local ${config.label} drivers using Get-PnpDevice, Win32_PnPSignedDriver, pnputil, and Windows Update state.`,
+      inLanguage(
+        language,
+        `Investigated local ${config.label} drivers using Get-PnpDevice, Win32_PnPSignedDriver, pnputil, and Windows Update state.`,
+        `Проверка драйвера ${formatDriverTarget(intent.deviceCategory, language)} завершена: активный драйвер, альтернативные пакеты и Windows Update уже сверены.`,
+      ),
       assistantMessage,
     );
   }
 
-  async inspectDriverOverview(intent: Extract<ComputerIntent, { kind: "driver_overview" }>) {
+  async inspectDriverOverview(intent: Extract<ComputerIntent, { kind: "driver_overview" }>, language: SupportedLanguage = "en") {
     this.assertWindowsCapability("driver inspection");
     const problemDevices = await this.queryProblemDevices();
     const problemDeviceIds = problemDevices
@@ -519,9 +589,7 @@ export class ComputerOperator {
     const problemLines = this.describeProblemDevices(problemDevices, problemDriverRows);
     const graphicsLines = this.describeVideoControllers(graphicsRows);
     const updateSummaryLines = updateSummary ? this.describeWindowsUpdateDriverSummary(updateSummary) : [];
-    const assistantMessage = [
-      "I audited the local driver state using Windows device health, signed-driver inventory, key graphics-driver versions, and Windows Update.",
-      "",
+    const auditDetails = [
       "Devices that currently need attention:",
       ...(problemLines.length ? problemLines : ["- I do not currently see Plug and Play devices with a non-zero ConfigManagerErrorCode."]),
       "",
@@ -532,11 +600,16 @@ export class ComputerOperator {
       "Priority recommendation:",
       ...this.buildDriverOverviewRecommendation(problemDevices, graphicsRows, updateSummary),
     ].join("\n");
+    const assistantMessage = this.buildDriverOverviewNarrative(problemDevices, graphicsRows, updateSummary, auditDetails, language);
 
     return buildAssistantResult(
       intent.skill,
       intent.kind,
-      "Audited local driver health across problem devices, key graphics drivers, and Windows Update state.",
+      inLanguage(
+        language,
+        "Audited local driver health across problem devices, key graphics drivers, and Windows Update state.",
+        "Проверка драйверов по системе завершена: проблемные устройства, графические драйверы и Windows Update уже сверены.",
+      ),
       assistantMessage,
     );
   }
@@ -905,27 +978,27 @@ export class ComputerOperator {
     return best?.DriverVersion?.trim() || null;
   }
 
-  private cacheKey(intent: ComputerIntent) {
+  private cacheKey(intent: ComputerIntent, language: SupportedLanguage) {
     switch (intent.kind) {
       case "inspect_driver":
-        return `${intent.kind}:${intent.deviceCategory}:${intent.queryLatest}`;
+        return `${intent.kind}:${intent.deviceCategory}:${intent.queryLatest}:${language}`;
       case "driver_overview":
-        return `${intent.kind}:${intent.queryLatest}`;
+        return `${intent.kind}:${intent.queryLatest}:${language}`;
       case "software_version":
-        return `${intent.kind}:${intent.software.key}:${intent.queryLatest}`;
+        return `${intent.kind}:${intent.software.key}:${intent.queryLatest}:${language}`;
       case "installed_software":
-        return `${intent.kind}:${intent.software?.key ?? "all"}`;
+        return `${intent.kind}:${intent.software?.key ?? "all"}:${language}`;
       case "system_summary":
       case "disk_usage":
       case "network_summary":
       case "storage_devices":
       case "local_runtime_advice":
       case "computer_capabilities":
-        return intent.kind;
+        return `${intent.kind}:${language}`;
       case "process_lookup":
-        return `${intent.kind}:${intent.software.key}`;
+        return `${intent.kind}:${intent.software.key}:${language}`;
       case "service_lookup":
-        return `${intent.kind}:${intent.software?.key ?? ""}:${intent.query ?? ""}`;
+        return `${intent.kind}:${intent.software?.key ?? ""}:${intent.query ?? ""}:${language}`;
       default:
         return null;
     }
@@ -1113,6 +1186,209 @@ export class ComputerOperator {
       "- I do not currently see a broken Plug and Play device or a pending Windows Update driver item that clearly demands attention.",
       "- If you want a stricter check, the next step is a vendor-specific pass for GPU, chipset, Wi-Fi, audio, and motherboard drivers.",
     ];
+  }
+
+  private buildDriverInspectionNarrative(
+    deviceCategory: DeviceCategory,
+    detailBlock: string,
+    rows: DriverRow[],
+    outrankedSummary: string[],
+    updateSummary: WindowsUpdateDriverSummary | null,
+    queryLatest: boolean,
+    language: SupportedLanguage,
+  ) {
+    const target = formatDriverTarget(deviceCategory, language);
+    const primary = rows[0];
+    const primaryInf = primary?.InfName?.trim() || "unknown INF";
+    const primaryVersion = primary?.DriverVersion?.trim() || "unknown version";
+    const noPendingWindowsUpdate = queryLatest && updateSummary?.querySucceeded && updateSummary.availableDriverUpdates === 0;
+    const windowsUpdatePending = queryLatest && (updateSummary?.availableDriverUpdates ?? 0) > 0;
+    const verdict = language === "ru"
+      ? noPendingWindowsUpdate
+        ? `Короткий ответ: по пути, который управляется Windows, я не вижу причины обновлять драйвер ${target} прямо сейчас.`
+        : windowsUpdatePending
+          ? `Короткий ответ: обновление для драйвера ${target} ещё стоит проверить, потому что Windows Update показывает ожидающие драйверные обновления.`
+          : queryLatest
+            ? `Короткий ответ: по локальным данным драйвер ${target} выглядит рабочим, но я не смогла полностью доказать, что более нового варианта нет.`
+            : `Короткий ответ: я проверила, какой драйвер ${target} установлен локально.`
+      : noPendingWindowsUpdate
+        ? `Short answer: from the Windows-managed path, I do not see a reason to update the ${target} driver right now.`
+        : windowsUpdatePending
+          ? `Short answer: the ${target} driver is still worth checking because Windows Update shows pending driver updates.`
+          : queryLatest
+            ? `Short answer: the local evidence says the ${target} driver is working, but I could not fully prove that no newer option exists.`
+            : `Short answer: I checked which ${target} driver is installed locally.`;
+    const whyLines =
+      language === "ru"
+        ? [
+            `- Сейчас активен ${primaryInf} ${primaryVersion}.`,
+            ...(outrankedSummary.length > 0
+              ? ["- Пакет с более высоким номером в списке драйверов не считается активным, если он уступает установленному драйверу по рангу."]
+              : []),
+            ...(noPendingWindowsUpdate ? ["- Windows Update сейчас не предлагает ожидающих драйверных обновлений по этому пути проверки."] : []),
+            ...(windowsUpdatePending ? ["- В Windows Update есть ожидающие драйверные обновления, поэтому проверку нельзя считать окончательной."] : []),
+          ]
+        : [
+            `- Windows is currently using ${primaryInf} ${primaryVersion}.`,
+            ...(outrankedSummary.length > 0
+              ? ["- A higher-numbered package in a raw driver list is not automatically active when it is outranked by the installed driver."]
+              : []),
+            ...(noPendingWindowsUpdate ? ["- Windows Update does not currently offer a pending driver update on the path I checked."] : []),
+            ...(windowsUpdatePending ? ["- Windows Update still has pending driver updates, so I do not consider the check fully closed yet."] : []),
+          ];
+    const planLines =
+      language === "ru"
+        ? [
+            "План проверки, который я уже выполнила:",
+            `1. Определила активный драйвер ${target}.`,
+            "2. Проверила альтернативные пакеты и их ранг.",
+            queryLatest ? "3. Сверила локальное состояние Windows Update." : "3. Ограничилась локальным инвентарём без внешней сверки.",
+          ]
+        : [
+            "Completed check plan:",
+            `1. Identified the active ${target} driver.`,
+            "2. Checked alternative matching packages and ranking.",
+            queryLatest ? "3. Checked the local Windows Update state." : "3. Stayed on the local inventory path only.",
+          ];
+    const nextStepLines =
+      language === "ru"
+        ? !queryLatest
+          ? [
+              "Что делать дальше:",
+              `- Сейчас я только определила, какой драйвер ${target} установлен локально.`,
+              "- Если хочешь именно вердикт про обновление, следующим проходом я могу отдельно проверить Windows Update и vendor-specific/OEM путь.",
+            ]
+          : noPendingWindowsUpdate
+          ? [
+              "Что делать дальше:",
+              `- Если ${target} работает нормально, обновлять его сейчас не нужно.`,
+              "- Если хочешь более строгую проверку, я могу отдельно поискать OEM- или vendor-specific драйвер вне Windows Update.",
+            ]
+          : [
+              "Что делать дальше:",
+              "- Сначала проверь ожидающие драйверные обновления в Windows Update.",
+              "- Если устройство реально работает с ошибками, после этого стоит проверить OEM- или vendor-specific пакет.",
+            ]
+        : !queryLatest
+          ? [
+              "Next step:",
+              `- I have only identified which ${target} driver is installed locally so far.`,
+              "- If you want an update verdict, I can next check Windows Update and the vendor/OEM path separately.",
+            ]
+          : noPendingWindowsUpdate
+          ? [
+              "Next step:",
+              `- If the ${target} is working normally, you do not need to update it right now.`,
+              "- If you want the strictest check, I can also look for an OEM- or vendor-specific driver outside Windows Update.",
+            ]
+          : [
+              "Next step:",
+              "- Check the pending Windows Update driver items first.",
+              "- If the device is actually misbehaving, the next step is an OEM- or vendor-specific package check.",
+            ];
+
+    return [
+      verdict,
+      "",
+      inLanguage(language, "Why I think that:", "Почему я так думаю:"),
+      ...whyLines,
+      "",
+      ...planLines,
+      "",
+      inLanguage(language, "Technical evidence:", "Технические основания:"),
+      localizeStructuredComputerText(detailBlock, language),
+      "",
+      ...nextStepLines,
+    ].join("\n");
+  }
+
+  private buildDriverOverviewNarrative(
+    problemDevices: ProblemDeviceRow[],
+    graphicsRows: VideoControllerRow[],
+    updateSummary: WindowsUpdateDriverSummary | null,
+    detailBlock: string,
+    language: SupportedLanguage,
+  ) {
+    const firstProblem = problemDevices[0];
+    const firstProblemLabel = firstProblem?.Name?.trim() || inLanguage(language, "the top problem device", "главное проблемное устройство");
+    const verdict =
+      language === "ru"
+        ? firstProblem
+          ? `Короткий ответ: в первую очередь я бы занялась драйвером для ${firstProblemLabel}, потому что Windows уже показывает у этого устройства проблему.`
+          : updateSummary?.querySucceeded && updateSummary.availableDriverUpdates > 0
+            ? "Короткий ответ: явного сломанного драйвера я не вижу, но Windows Update всё ещё показывает драйверные обновления, которые стоит проверить."
+            : "Короткий ответ: по локальной проверке я не вижу драйвера, который срочно требует обновления."
+        : firstProblem
+          ? `Short answer: I would deal with the driver for ${firstProblemLabel} first because Windows is already reporting a problem on that device.`
+          : updateSummary?.querySucceeded && updateSummary.availableDriverUpdates > 0
+            ? "Short answer: I do not see a clearly broken driver, but Windows Update still reports driver updates worth checking."
+            : "Short answer: the local audit does not show a driver that urgently needs an update.";
+    const whyLines =
+      language === "ru"
+        ? [
+            ...(firstProblem ? [`- У ${firstProblemLabel} уже есть локальный сигнал проблемы от Windows.`] : ["- Локальный аудит не нашёл устройства с ненулевым ConfigManagerErrorCode."]),
+            ...(graphicsRows.length > 0 ? ["- По видеодрайверам я вижу текущие версии, но не явный локальный сигнал поломки."] : []),
+            ...(updateSummary?.querySucceeded && updateSummary.availableDriverUpdates > 0 ? ["- В Windows Update ещё есть ожидающие драйверные обновления."] : []),
+          ]
+        : [
+            ...(firstProblem ? [`- ${firstProblemLabel} already has a local Windows problem signal.`] : ["- The local audit did not find a device with a non-zero ConfigManagerErrorCode."]),
+            ...(graphicsRows.length > 0 ? ["- I can see current graphics-driver versions, but not a local failure signal on them."] : []),
+            ...(updateSummary?.querySucceeded && updateSummary.availableDriverUpdates > 0 ? ["- Windows Update still has pending driver updates."] : []),
+          ];
+    const planLines =
+      language === "ru"
+        ? [
+            "План проверки, который я уже выполнила:",
+            "1. Проверила проблемные устройства Windows.",
+            "2. Сняла версии ключевых графических драйверов.",
+            "3. Сверила локальное состояние Windows Update.",
+          ]
+        : [
+            "Completed check plan:",
+            "1. Checked Windows problem devices.",
+            "2. Collected key graphics-driver versions.",
+            "3. Checked the local Windows Update state.",
+          ];
+    const nextStepLines =
+      language === "ru"
+        ? firstProblem
+          ? [
+              "Что делать дальше:",
+              `- Сначала обнови или переустанови драйвер для ${firstProblemLabel}.`,
+              "- После этого перезагрузи систему и проверь, исчез ли код ошибки.",
+              "- Если хочешь, я могу следующим проходом отдельно разобрать OEM-источник именно для этого устройства.",
+            ]
+          : [
+              "Что делать дальше:",
+              "- Если проблем в работе нет, обновлять всё подряд не нужно.",
+              "- Если нужна более строгая проверка, я могу сделать vendor-specific проход по GPU, chipset, Wi-Fi, audio и плате.",
+            ]
+        : firstProblem
+          ? [
+              "Next step:",
+              `- Update or reinstall the driver for ${firstProblemLabel} first.`,
+              "- Reboot and verify whether the problem code disappears.",
+              "- If you want, I can do a vendor-specific pass for that device next.",
+            ]
+          : [
+              "Next step:",
+              "- If the machine is stable, there is no reason to update everything blindly.",
+              "- If you want a stricter audit, I can do a vendor-specific pass for GPU, chipset, Wi-Fi, audio, and motherboard drivers.",
+            ];
+
+    return [
+      verdict,
+      "",
+      inLanguage(language, "Why I think that:", "Почему я так думаю:"),
+      ...whyLines,
+      "",
+      ...planLines,
+      "",
+      inLanguage(language, "Technical evidence:", "Технические основания:"),
+      localizeStructuredComputerText(detailBlock, language),
+      "",
+      ...nextStepLines,
+    ].join("\n");
   }
 
   private describeConfigManagerError(code: number) {

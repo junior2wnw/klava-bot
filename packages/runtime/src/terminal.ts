@@ -78,7 +78,7 @@ function splitCommandLine(command: string) {
   let quote: '"' | "'" | null = null;
 
   for (let index = 0; index < command.length; index += 1) {
-    const char = command[index];
+    const char = command[index] ?? "";
     if (!quote && /\s/.test(char)) {
       if (current.length > 0) {
         tokens.push(current);

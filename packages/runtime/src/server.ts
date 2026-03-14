@@ -2144,7 +2144,7 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
       return buildSnapshot(task.id);
     }
 
-    const computerAction = await computerOperator.handle(raw);
+    const computerAction = await computerOperator.handle(raw, { language: responseLanguage });
     if (computerAction.kind !== "not_handled") {
       const localizedToolMessage = localizeStructuredComputerText(computerAction.toolMessage, responseLanguage);
       const localizedAssistantMessage = localizeStructuredComputerText(computerAction.assistantMessage, responseLanguage);

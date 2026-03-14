@@ -14,6 +14,18 @@ test("detects a russian mouse-driver query as a local driver inspection intent",
   assert.equal(intent.queryLatest, true);
 });
 
+test("detects a russian do-i-need-to-update mouse-driver query as a verdict-first inspection intent", () => {
+  const intent = detectComputerIntent(
+    "\u043d\u0430\u0439\u0434\u0438 \u0438\u043d\u0444\u043e\u0440\u043c\u0430\u0446\u0438\u044e \u043d\u0430\u0434\u043e \u043b\u0438 \u043c\u043d\u0435 \u043e\u0431\u043d\u043e\u0432\u0438\u0442\u044c \u0434\u0440\u0430\u0439\u0432\u0435\u0440 \u043d\u0430 \u043c\u044b\u0448\u043a\u0443?",
+  );
+
+  assert.ok(intent);
+  assert.equal(intent.kind, "inspect_driver");
+  assert.equal(intent.skill, "driver_inspection");
+  assert.equal(intent.deviceCategory, "mouse");
+  assert.equal(intent.queryLatest, true);
+});
+
 test("detects a generic russian driver-update query as a local driver overview intent", () => {
   const intent = detectComputerIntent(
     "\u043a\u0430\u043a\u0438\u0435 \u0434\u0440\u0430\u0439\u0432\u0435\u0440\u0430 \u0441\u0442\u043e\u0438\u0442 \u043e\u0431\u043d\u043e\u0432\u0438\u0442\u044c?",

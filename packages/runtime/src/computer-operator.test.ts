@@ -127,15 +127,77 @@ test("driver investigation explains the installed driver, outranked candidates, 
       skill: "driver_inspection",
       deviceCategory: "mouse",
       queryLatest: true,
-    });
+    }, "en");
 
     assert.equal(result.kind, "answer");
     assert.equal(result.status, "succeeded");
+    assert.match(result.assistantMessage, /Short answer:/i);
+    assert.match(result.assistantMessage, /do not see a reason to update the mouse driver right now/i);
+    assert.match(result.assistantMessage, /Completed check plan:/i);
     assert.match(result.assistantMessage, /msmouse\.inf 10\.0\.26100\.1150/i);
     assert.match(result.assistantMessage, /input\.inf 06\/21\/2006 10\.0\.26100\.7920/i);
     assert.match(result.assistantMessage, /outranked by the installed driver/i);
     assert.match(result.assistantMessage, /Windows Update does not currently report any pending driver updates/i);
-    assert.match(result.assistantMessage, /I do not see a newer driver being offered right now/i);
+    assert.match(result.assistantMessage, /Next step:/i);
+  });
+});
+
+test("driver investigation can produce a direct russian verdict-first answer", async () => {
+  await withTempLogger(async (logger) => {
+    const operator = new ComputerOperator({
+      machineProfile: TEST_MACHINE_PROFILE,
+      localRuntimeAdvice: TEST_LOCAL_ADVICE,
+      logger,
+    }) as any;
+
+    operator.queryPnpDevices = async () => [
+      {
+        Status: "OK",
+        Class: "Mouse",
+        FriendlyName: "HID-compliant mouse",
+        InstanceId: "HID\\VID_A8A5&PID_2255&MI_00&COL01\\8&29555156&0&0000",
+        Manufacturer: "Microsoft",
+        Present: true,
+      },
+    ];
+    operator.queryDriverRowsForDeviceIds = async () => [
+      {
+        DeviceName: "HID-compliant mouse",
+        DeviceID: "HID\\VID_A8A5&PID_2255&MI_00&COL01\\8&29555156&0&0000",
+        DriverVersion: "10.0.26100.1150",
+        DriverProviderName: "Microsoft",
+        DriverDate: "2006-06-21",
+        InfName: "msmouse.inf",
+        Manufacturer: "Microsoft",
+        DeviceClass: "Mouse",
+      },
+    ];
+    operator.queryPnPUtilDriverReports = async () => [
+      {
+        InstanceId: "HID\\VID_A8A5&PID_2255&MI_00&COL01\\8&29555156&0&0000",
+        DeviceDescription: "HID-compliant mouse",
+        ClassName: "Mouse",
+        ManufacturerName: "Microsoft",
+        Status: "Started",
+        DriverName: "msmouse.inf",
+        MatchingDrivers: [],
+      },
+    ];
+    operator.queryWindowsUpdateDriverSummary = async () => ({
+      querySucceeded: true,
+      resultCode: 2,
+      availableDriverUpdates: 0,
+    });
+
+    const result = await operator.handle("надо ли мне обновить драйвер на мышку?", { language: "ru" });
+
+    assert.equal(result.kind, "answer");
+    assert.equal(result.status, "succeeded");
+    assert.match(result.toolMessage, /Проверка драйвера мыши завершена/i);
+    assert.match(result.assistantMessage, /Короткий ответ:/i);
+    assert.match(result.assistantMessage, /не вижу причины обновлять драйвер мыши прямо сейчас/i);
+    assert.match(result.assistantMessage, /План проверки, который я уже выполнила:/i);
+    assert.match(result.assistantMessage, /Что делать дальше:/i);
   });
 });
 
@@ -192,15 +254,18 @@ test("driver overview prioritizes broken devices before healthy graphics drivers
       kind: "driver_overview",
       skill: "driver_inspection",
       queryLatest: true,
-    });
+    }, "en");
 
     assert.equal(result.kind, "answer");
     assert.equal(result.status, "succeeded");
+    assert.match(result.assistantMessage, /Short answer:/i);
+    assert.match(result.assistantMessage, /AMD USB 3\.10 eXtensible Host Controller first/i);
+    assert.match(result.assistantMessage, /Completed check plan:/i);
     assert.match(result.assistantMessage, /Devices that currently need attention:/i);
     assert.match(result.assistantMessage, /AMD USB 3\.10 eXtensible Host Controller - error code 43/i);
     assert.match(result.assistantMessage, /usbxhci\.inf 10\.0\.22621\.3527/i);
     assert.match(result.assistantMessage, /Key graphics drivers currently installed:/i);
     assert.match(result.assistantMessage, /NVIDIA GeForce RTX 3070 - 32\.0\.15\.9159/i);
-    assert.match(result.assistantMessage, /Update or reinstall the driver for AMD USB 3\.10 eXtensible Host Controller first/i);
+    assert.match(result.assistantMessage, /Next step:/i);
   });
 });

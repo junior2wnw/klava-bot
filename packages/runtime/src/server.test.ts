@@ -805,6 +805,82 @@ test("generic russian driver-update requests route into the local driver overvie
   }
 });
 
+test("specific russian mouse-driver update questions route into the local inspect-driver path with a verdict check", async () => {
+  const originalExecuteIntent = ComputerOperator.prototype.executeIntent;
+  const originalValidate = OpenAIService.prototype.validate;
+  const originalComplete = OpenAIService.prototype.complete;
+
+  ComputerOperator.prototype.executeIntent = async function executeIntent(intent) {
+    assert.equal(intent.kind, "inspect_driver");
+    assert.equal(intent.deviceCategory, "mouse");
+    assert.equal(intent.queryLatest, true);
+    return {
+      kind: "answer",
+      status: "succeeded",
+      skill: "driver_inspection",
+      intent: "inspect_driver",
+      toolMessage: "Local mouse-driver verdict matched.",
+      assistantMessage: "Сейчас не вижу причины обновлять драйвер мыши: Windows не показывает ожидающее драйверное обновление.",
+    };
+  };
+  OpenAIService.prototype.validate = async function validate() {
+    return {
+      model: "gpt-5.2",
+      models: ["gpt-5.2"],
+    };
+  };
+  OpenAIService.prototype.complete = async function complete() {
+    throw new Error("provider chat should not have been called for a specific local driver inspection");
+  };
+
+  try {
+    await withTempAppPaths(async (paths) => {
+      const runtime = await createKlavaRuntime({ paths });
+
+      try {
+        const onboarding = await runtime.server.inject({
+          method: "POST",
+          url: "/api/onboarding/validate",
+          payload: {
+            provider: "openai",
+            secret: "sk-driver-inspect",
+          },
+        });
+
+        assert.equal(onboarding.statusCode, 200);
+
+        const workspace = await runtime.server.inject({
+          method: "GET",
+          url: "/api/workspace",
+        });
+        const taskId = workspace.json().selectedTask.id as string;
+
+        const response = await runtime.server.inject({
+          method: "POST",
+          url: `/api/tasks/${taskId}/messages`,
+          payload: {
+            content: "\u043d\u0430\u0439\u0434\u0438 \u0438\u043d\u0444\u043e\u0440\u043c\u0430\u0446\u0438\u044e \u043d\u0430\u0434\u043e \u043b\u0438 \u043c\u043d\u0435 \u043e\u0431\u043d\u043e\u0432\u0438\u0442\u044c \u0434\u0440\u0430\u0439\u0432\u0435\u0440 \u043d\u0430 \u043c\u044b\u0448\u043a\u0443?",
+          },
+        });
+
+        assert.equal(response.statusCode, 200);
+        const snapshot = response.json();
+        const messages = snapshot.selectedTask.messages;
+        assert.equal(messages.at(-2).role, "tool");
+        assert.equal(messages.at(-2).meta.computerSkill, "driver_inspection");
+        assert.equal(messages.at(-2).meta.computerIntent, "inspect_driver");
+        assert.match(messages.at(-1).content, /\u043d\u0435 \u0432\u0438\u0436\u0443 \u043f\u0440\u0438\u0447\u0438\u043d\u044b \u043e\u0431\u043d\u043e\u0432\u043b\u044f\u0442\u044c \u0434\u0440\u0430\u0439\u0432\u0435\u0440 \u043c\u044b\u0448\u0438/i);
+      } finally {
+        await runtime.stop();
+      }
+    });
+  } finally {
+    ComputerOperator.prototype.executeIntent = originalExecuteIntent;
+    OpenAIService.prototype.validate = originalValidate;
+    OpenAIService.prototype.complete = originalComplete;
+  }
+});
+
 test("natural-language package installs route into guarded terminal approvals", async () => {
   const originalHandle = ComputerOperator.prototype.handle;
 
@@ -863,8 +939,9 @@ test("natural-language package installs route into guarded terminal approvals", 
 test("russian computer-diagnostic requests return localized structured output", async () => {
   const originalHandle = ComputerOperator.prototype.handle;
 
-  ComputerOperator.prototype.handle = async function handle(input: string) {
+  ComputerOperator.prototype.handle = async function handle(input: string, options?: { language?: string }) {
     assert.equal(input, "проверь драйвер мышки");
+    assert.equal(options?.language, "ru");
     return {
       kind: "answer",
       status: "succeeded",
