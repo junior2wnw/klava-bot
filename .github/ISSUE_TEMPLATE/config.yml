@@ -3,6 +3,9 @@ contact_links:
   - name: Security issue
     url: https://github.com/junior2wnw/klava-bot/security
     about: Use private vulnerability reporting for sensitive security issues when available.
+  - name: Paid pilot
+    url: https://github.com/junior2wnw/klava-bot/issues/new?template=paid_pilot.md
+    about: Bring a real workflow with budget, security constraints, and operational pain.
   - name: Project docs
     url: https://github.com/junior2wnw/klava-bot/blob/main/README.md
     about: Start with the README, lineage notes, and architecture docs before opening broad design issues.

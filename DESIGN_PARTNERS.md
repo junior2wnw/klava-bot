@@ -41,3 +41,18 @@ Open a public issue with the design-partner template:
 - https://github.com/junior2wnw/klava-bot/issues/new?template=design_partner.md
 
 Do not post secrets, credentials, customer data, or private infrastructure details in public issues.
+
+## Commercial path
+
+If the workflow has budget behind it, Klava is open to paid pilot discussions and scoped implementation work around the same design-partner intake.
+
+Budgeted teams should prefer the dedicated paid-pilot path:
+
+- [PAID_PILOT.md](./PAID_PILOT.md)
+- https://github.com/junior2wnw/klava-bot/issues/new?template=paid_pilot.md
+
+Start with the same issue template and include:
+
+- the workflow and why it is expensive today;
+- the safety constraints and approval requirements;
+- the urgency, timeline, and whether there is budget for a pilot.

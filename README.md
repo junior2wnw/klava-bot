@@ -8,8 +8,6 @@
 [![Issues](https://img.shields.io/github/issues/junior2wnw/klava-bot)](https://github.com/junior2wnw/klava-bot/issues)
 [![Discussions](https://img.shields.io/github/discussions/junior2wnw/klava-bot)](https://github.com/junior2wnw/klava-bot/discussions)
 
-![Klava social preview](./docs/assets/klava-social-preview.svg)
-
 Languages: **English** | [README.ru](./README.ru.md)
 
 Klava is a local-first desktop agent for people who need an AI to work on the actual machine, not just answer inside a chat box.
@@ -19,13 +17,40 @@ It combines a local runtime, secret storage, approvals, and task history so chat
 Quick links:
 
 - [Public site](https://junior2wnw.github.io/klava-bot/)
+- [Paid pilot page](https://junior2wnw.github.io/klava-bot/pilot.html)
 - [Latest release](https://github.com/junior2wnw/klava-bot/releases/latest)
 - [Design partner program](./DESIGN_PARTNERS.md)
+- [Paid pilot offer](./PAID_PILOT.md)
+- [Enterprise route](./ENTERPRISE_ROUTE.md)
+- [Account map](./ACCOUNT_MAP.md)
 - [Apply as a design partner](https://github.com/junior2wnw/klava-bot/issues/new?template=design_partner.md)
+- [Open a paid pilot request](https://github.com/junior2wnw/klava-bot/issues/new?template=paid_pilot.md)
 - [Task intake](https://github.com/junior2wnw/machine-work-index/issues/new?template=case_note.md)
 - [Field note 01](https://junior2wnw.github.io/klava-bot/field-note-01.html)
 - [Launch copy](./LAUNCH_POST.md)
 - [Field notes](./FIELD_NOTES.md)
+
+## Product surface
+
+![Klava desktop surface preview](./docs/assets/klava-desktop-preview.svg)
+
+Preview above is a simplified map of the shipped task rail, Pro operations surface, approvals, and diagnostics flow in this repo.
+
+## Fast evaluation path
+
+If you only have a few minutes, use this order:
+
+1. Open [`apps/desktop/src/features/pro/ProSurface.tsx`](./apps/desktop/src/features/pro/ProSurface.tsx) to see the durable operations UX.
+2. Open [`packages/contracts/src/operations.ts`](./packages/contracts/src/operations.ts) and [`packages/runtime/src/server.test.ts`](./packages/runtime/src/server.test.ts) to inspect the state model and runtime proof.
+3. Run the local path:
+
+```bash
+npm install
+npm run dev
+npm run check
+```
+
+4. If this maps to a budgeted workflow, go straight to [PAID_PILOT.md](./PAID_PILOT.md) or [open a paid-pilot request](https://github.com/junior2wnw/klava-bot/issues/new?template=paid_pilot.md).
 
 Core idea:
 

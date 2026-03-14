@@ -1,0 +1,100 @@
+<svg width="1440" height="900" viewBox="0 0 1440 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1440" height="900" fill="#F4EFE6" />
+  <circle cx="1218" cy="126" r="238" fill="#9FD8C9" fill-opacity="0.2" />
+  <circle cx="164" cy="104" r="210" fill="#DE5B2F" fill-opacity="0.16" />
+  <rect x="72" y="72" width="1296" height="756" rx="34" fill="#FFFAF2" stroke="#201B16" stroke-opacity="0.12" />
+  <rect x="108" y="108" width="1224" height="84" rx="24" fill="#FFF8EF" stroke="#201B16" stroke-opacity="0.08" />
+  <rect x="136" y="130" width="40" height="40" rx="14" fill="#DE5B2F" />
+  <text x="149" y="156" fill="white" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="22" font-weight="700">K</text>
+  <text x="194" y="148" fill="#151515" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="700">Klava Bot</text>
+  <text x="194" y="170" fill="#4B463F" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" letter-spacing="1.4">LOCAL DESKTOP OPERATOR</text>
+  <rect x="902" y="128" width="92" height="42" rx="21" fill="#F2EBE0" />
+  <text x="927" y="154" fill="#151515" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16" font-weight="600">7 tasks</text>
+  <rect x="1008" y="128" width="170" height="42" rx="21" fill="#E8F6F0" />
+  <text x="1037" y="154" fill="#0C5C45" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16" font-weight="600">Runtime healthy</text>
+  <rect x="1192" y="128" width="112" height="42" rx="21" fill="#FFF0E8" />
+  <text x="1218" y="154" fill="#B14620" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16" font-weight="600">Windows</text>
+
+  <rect x="108" y="222" width="272" height="560" rx="28" fill="white" stroke="#201B16" stroke-opacity="0.08" />
+  <text x="138" y="258" fill="#4B463F" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" letter-spacing="1.2">TASK RAIL</text>
+  <rect x="138" y="284" width="212" height="44" rx="18" fill="#F6EFE4" />
+  <text x="208" y="311" fill="#151515" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="700">+ New task</text>
+  <rect x="138" y="352" width="212" height="96" rx="20" fill="#13212A" />
+  <text x="162" y="382" fill="#9FD8C9" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="12" letter-spacing="1.1">SELECTED</text>
+  <text x="162" y="410" fill="white" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18" font-weight="700">Repo audit runbook</text>
+  <text x="162" y="436" fill="#C8D6DC" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14">Task, chat, operations, approvals</text>
+  <rect x="138" y="466" width="212" height="82" rx="18" fill="#FFF8EF" stroke="#201B16" stroke-opacity="0.08" />
+  <text x="162" y="498" fill="#151515" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16" font-weight="700">Driver rollback drill</text>
+  <text x="162" y="522" fill="#4B463F" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14">awaiting approval</text>
+  <rect x="138" y="566" width="212" height="82" rx="18" fill="#FFF8EF" stroke="#201B16" stroke-opacity="0.08" />
+  <text x="162" y="598" fill="#151515" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16" font-weight="700">Support bundle export</text>
+  <text x="162" y="622" fill="#4B463F" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14">guard balanced</text>
+  <rect x="138" y="666" width="212" height="82" rx="18" fill="#FFF8EF" stroke="#201B16" stroke-opacity="0.08" />
+  <text x="162" y="698" fill="#151515" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16" font-weight="700">Provider onboarding</text>
+  <text x="162" y="722" fill="#4B463F" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14">healthy, secret configured</text>
+
+  <rect x="404" y="222" width="606" height="560" rx="28" fill="white" stroke="#201B16" stroke-opacity="0.08" />
+  <text x="438" y="258" fill="#4B463F" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" letter-spacing="1.2">PRO SURFACE</text>
+  <rect x="438" y="282" width="110" height="36" rx="18" fill="#FFF0E8" />
+  <text x="473" y="304" fill="#B14620" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="700">Pro</text>
+  <rect x="562" y="282" width="110" height="36" rx="18" fill="#F3EEE5" />
+  <text x="593" y="304" fill="#4B463F" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600">Chat</text>
+  <rect x="686" y="282" width="128" height="36" rx="18" fill="#F3EEE5" />
+  <text x="717" y="304" fill="#4B463F" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600">Terminal</text>
+
+  <rect x="438" y="340" width="538" height="136" rx="24" fill="#FFF8EF" stroke="#201B16" stroke-opacity="0.08" />
+  <text x="468" y="374" fill="#151515" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="28" font-weight="700">Repo audit runbook</text>
+  <text x="468" y="402" fill="#4B463F" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16">Durable multi-step local work with notes, commands, approvals, and history.</text>
+  <rect x="790" y="364" width="152" height="38" rx="19" fill="#E8F6F0" />
+  <text x="826" y="388" fill="#0C5C45" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="700">running</text>
+  <text x="468" y="440" fill="#4B463F" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" letter-spacing="1.1">GOAL</text>
+  <text x="468" y="462" fill="#151515" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="600">Inspect the repo state and verify the local engineering surface.</text>
+
+  <rect x="438" y="500" width="538" height="76" rx="20" fill="#F9F6F0" />
+  <circle cx="470" cy="538" r="12" fill="#9FD8C9" />
+  <text x="496" y="528" fill="#151515" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16" font-weight="700">1. Document operator intent</text>
+  <text x="496" y="550" fill="#4B463F" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14">Completed note step</text>
+  <rect x="850" y="518" width="96" height="32" rx="16" fill="#E8F6F0" />
+  <text x="875" y="539" fill="#0C5C45" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="700">succeeded</text>
+
+  <rect x="438" y="590" width="538" height="76" rx="20" fill="#F9F6F0" />
+  <circle cx="470" cy="628" r="12" fill="#9FD8C9" />
+  <text x="496" y="618" fill="#151515" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16" font-weight="700">2. Capture git state</text>
+  <text x="496" y="640" fill="#4B463F" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="14">git status</text>
+  <rect x="850" y="608" width="96" height="32" rx="16" fill="#E8F6F0" />
+  <text x="875" y="629" fill="#0C5C45" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="700">succeeded</text>
+
+  <rect x="438" y="680" width="538" height="76" rx="20" fill="#FFF4E8" />
+  <circle cx="470" cy="718" r="12" fill="#DE5B2F" />
+  <text x="496" y="708" fill="#151515" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16" font-weight="700">3. Run repository checks</text>
+  <text x="496" y="730" fill="#4B463F" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="14">npm run check</text>
+  <rect x="806" y="698" width="140" height="32" rx="16" fill="#FFF0E8" />
+  <text x="828" y="719" fill="#B14620" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="700">awaiting approval</text>
+
+  <rect x="1034" y="222" width="298" height="560" rx="28" fill="#13212A" />
+  <text x="1066" y="258" fill="#F8B198" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" letter-spacing="1.2">CONTEXT PANE</text>
+  <rect x="1066" y="286" width="234" height="114" rx="22" fill="#1B303B" />
+  <text x="1090" y="318" fill="white" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="22" font-weight="700">Approval queue</text>
+  <text x="1090" y="348" fill="#C8D6DC" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15">1 pending approval for a guarded terminal step.</text>
+  <rect x="1090" y="364" width="92" height="30" rx="15" fill="#FFF0E8" />
+  <text x="1119" y="384" fill="#B14620" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="700">pending</text>
+
+  <rect x="1066" y="420" width="234" height="118" rx="22" fill="#1B303B" />
+  <text x="1090" y="452" fill="white" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="22" font-weight="700">Diagnostics</text>
+  <text x="1090" y="482" fill="#C8D6DC" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15">Runtime health, provider state, and exportable support bundles.</text>
+  <rect x="1090" y="498" width="160" height="30" rx="15" fill="#233E49" />
+  <text x="1122" y="518" fill="#9FD8C9" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="700">support bundle ready</text>
+
+  <rect x="1066" y="558" width="234" height="164" rx="22" fill="#1B303B" />
+  <text x="1090" y="590" fill="white" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="22" font-weight="700">Why it matters</text>
+  <text x="1090" y="624" fill="#C8D6DC" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15">
+    <tspan x="1090" dy="0">One task log.</tspan>
+    <tspan x="1090" dy="24">One approval model.</tspan>
+    <tspan x="1090" dy="24">One surface for local machine work.</tspan>
+    <tspan x="1090" dy="24">Not just chat plus shell snippets.</tspan>
+  </text>
+
+  <text x="108" y="856" fill="#4B463F" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="14" letter-spacing="1.2">
+    SIMPLIFIED PRODUCT PREVIEW GENERATED FROM THE TASK RAIL, PRO SURFACE, APPROVAL, AND DIAGNOSTICS FLOWS SHIPPED IN THIS REPO.
+  </text>
+</svg>
