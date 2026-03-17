@@ -46,16 +46,25 @@ import { GroqService } from "./groq-service";
 import { LocalAiService } from "./local-ai-service";
 import {
   buildLanguageInstruction,
-  detectModelCommandIntent,
   buildTranslationInstruction,
+  detectModelCommandIntent,
   detectPreferredAssistantLanguage,
+  detectTextLanguage,
   detectTranslationIntent,
-  localizeStructuredComputerText,
   normalizeLanguageName,
   type SupportedLanguage,
-} from "./language";
+} from "./operator-language";
+import { localizeStructuredComputerText } from "./language";
 import { RuntimeLogger } from "./logging";
 import { OpenAIService } from "./openai-service";
+import {
+  buildApprovalResolvedStatus,
+  buildAwaitingApprovalStatus,
+  buildBlockedCommandStatus,
+  buildCommandFinishedStatus,
+  buildAgentPlanningStatus,
+  describeTerminalAction,
+} from "./operator-messages";
 import { OpenRouterService } from "./openrouter-service";
 import {
   defaultApiBaseUrlForProvider,
@@ -81,6 +90,7 @@ type ExecutionBinding = {
   agentRunId?: string;
   agentToolCallId?: string;
   agentToolKind?: string;
+  language?: SupportedLanguage;
 };
 
 type TerminalExecutionResult =
@@ -143,6 +153,38 @@ function createMessage(
     createdAt: nowIso(),
     meta,
   };
+}
+
+function statusMeta(
+  statusState: NonNullable<TaskMessage["meta"]["statusState"]>,
+  meta: TaskMessage["meta"] = {},
+): TaskMessage["meta"] {
+  return {
+    ...meta,
+    presentation: "status",
+    statusState,
+  };
+}
+
+function artifactMeta(meta: TaskMessage["meta"] = {}): TaskMessage["meta"] {
+  return {
+    ...meta,
+    presentation: "artifact",
+  };
+}
+
+function messageMatchesPreferredLanguage(content: string, language: SupportedLanguage) {
+  const detected = detectTextLanguage(content);
+  if (!detected) {
+    return true;
+  }
+
+  return detected === language;
+}
+
+function readRequestLanguage(request: { headers: Record<string, unknown> }) {
+  const raw = request.headers["x-klava-ui-language"];
+  return raw === "ru" || raw === "en" ? raw : null;
 }
 
 function createTerminalEntry(
@@ -344,6 +386,16 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
       createdAt: nowIso(),
       meta: {},
     };
+  }
+
+  function providerTranscriptMessages(task: TaskDetail) {
+    return task.messages.filter((message) => {
+      if (message.meta.presentation === "artifact" || message.meta.presentation === "status") {
+        return false;
+      }
+
+      return message.role === "user" || message.role === "assistant";
+    });
   }
 
   function withLanguageSystemMessage(taskId: string, messages: TaskMessage[], language: SupportedLanguage) {
@@ -1149,7 +1201,45 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
       defaultModelForProvider(activeProvider.provider, activeProvider.provider === "local" ? activeProvider.localRuntime : "ollama");
 
     try {
-      const completion = await completeProviderRequest(activeProvider, secret, withLanguageSystemMessage(task.id, task.messages, language));
+      let completion = await completeProviderRequest(
+        activeProvider,
+        secret,
+        withLanguageSystemMessage(task.id, providerTranscriptMessages(task), language),
+      );
+      if (!messageMatchesPreferredLanguage(completion, language)) {
+        try {
+          const rewriteMessages: TaskMessage[] = [
+            createSyntheticSystemMessage(task.id, buildLanguageInstruction(language)),
+            {
+              id: crypto.randomUUID(),
+              taskId: task.id,
+              role: "assistant",
+              content: completion,
+              createdAt: nowIso(),
+              meta: {},
+            },
+            {
+              id: crypto.randomUUID(),
+              taskId: task.id,
+              role: "user",
+              content:
+                language === "ru"
+                  ? "Перепиши предыдущее сообщение на русском языке. Сохрани факты, структуру, списки, пути, версии и смысл. Не добавляй новую информацию."
+                  : "Rewrite the previous message in English. Preserve the facts, structure, lists, paths, versions, and meaning. Do not add new information.",
+              createdAt: nowIso(),
+              meta: {},
+            },
+          ];
+          const rewritten = await completeProviderRequest(activeProvider, secret, rewriteMessages);
+          if (messageMatchesPreferredLanguage(rewritten, language)) {
+            completion = rewritten;
+          }
+        } catch (rewriteError) {
+          await runtimeLog.log(
+            `Provider language rewrite failed for task ${task.id}. ${rewriteError instanceof Error ? rewriteError.message : String(rewriteError)}`,
+          );
+        }
+      }
       await store.addMessage(task.id, createMessage(task.id, "assistant", completion), "succeeded");
       return { completed: true as const };
     } catch (error) {
@@ -1381,7 +1471,12 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
     }
   }
 
-  async function continueAgentRun(taskId: string, agentRunId: string, resumeReason: string | null) {
+  async function continueAgentRun(
+    taskId: string,
+    agentRunId: string,
+    resumeReason: string | null,
+    preferredLanguageOverride?: SupportedLanguage | null,
+  ) {
     const task = store.getTask(taskId);
     if (!task) {
       throw new Error("Task not found.");
@@ -1400,7 +1495,12 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
     }
 
     const resolved = await resolveActiveChatProvider();
-    const preferredLanguage = detectPreferredAssistantLanguage(task.messages, resumeReason ?? "");
+    const preferredLanguage = preferredLanguageOverride ?? detectPreferredAssistantLanguage(task.messages, resumeReason ?? "");
+    await store.addMessage(
+      taskId,
+      createMessage(taskId, "assistant", buildAgentPlanningStatus(preferredLanguage), statusMeta("running", { agentRunId: agentRunId })),
+      "running",
+    );
     const outcome = await runAgentLoop(
       {
         taskId,
@@ -1494,15 +1594,26 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
       return null;
     }
 
+    const responseLanguage = detectPreferredAssistantLanguage(resolved.task.messages);
+
     await store.addMessage(
       resolved.task.id,
-      createMessage(resolved.task.id, "assistant", `Approval granted for \`${resolved.approval.command}\`.`),
+      createMessage(
+        resolved.task.id,
+        "assistant",
+        buildApprovalResolvedStatus(resolved.approval.command, true, responseLanguage),
+        statusMeta("running"),
+      ),
       "running",
     );
 
     const latestTask = store.getTask(resolved.task.id);
     if (latestTask) {
-      const execution = await executeTerminal(latestTask, resolved.approval.command, true);
+      const execution = await executeTerminal(latestTask, resolved.approval.command, true, {
+        language: responseLanguage,
+        agentRunId: resolved.approval.meta.agentRunId ?? undefined,
+        agentToolCallId: resolved.approval.meta.agentToolCallId ?? undefined,
+      });
 
       if (resolved.approval.meta.operationId && resolved.approval.meta.operationStepId) {
         await store.updateOperation(
@@ -1573,9 +1684,16 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
       return null;
     }
 
+    const responseLanguage = detectPreferredAssistantLanguage(resolved.task.messages);
+
     await store.addMessage(
       resolved.task.id,
-      createMessage(resolved.task.id, "assistant", `Approval rejected. I did not run \`${resolved.approval.command}\`.`),
+      createMessage(
+        resolved.task.id,
+        "assistant",
+        buildApprovalResolvedStatus(resolved.approval.command, false, responseLanguage),
+        statusMeta("info"),
+      ),
       "idle",
     );
 
@@ -1638,6 +1756,7 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
     allowGuardBypass = false,
     binding?: ExecutionBinding,
   ): Promise<TerminalExecutionResult> {
+    const responseLanguage = binding?.language ?? detectPreferredAssistantLanguage(task.messages);
     const bindingMeta = {
       agentRunId: binding?.agentRunId ?? null,
       agentToolCallId: binding?.agentToolCallId ?? null,
@@ -1654,7 +1773,12 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
       );
       await store.addMessage(
         task.id,
-        createMessage(task.id, "assistant", `I blocked that command: ${assessment.reason}.`, bindingMeta),
+        createMessage(
+          task.id,
+          "assistant",
+          buildBlockedCommandStatus(assessment.reason, responseLanguage),
+          statusMeta("failed", { ...bindingMeta, terminalEntryId: terminalEntry.id }),
+        ),
         "failed",
       );
       return {
@@ -1702,8 +1826,13 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
           createMessage(
             task.id,
             "assistant",
-            `Approval required before I run \`${command}\`. Impact: ${assessment.reason}.`,
-            { ...bindingMeta, terminalCommand: command, pendingApprovalId: approval.id },
+            buildAwaitingApprovalStatus(command, assessment.reason, responseLanguage),
+            statusMeta("awaiting_approval", {
+              ...bindingMeta,
+              terminalCommand: command,
+              pendingApprovalId: approval.id,
+              terminalEntryId: terminalEntry.id,
+            }),
           ),
           "awaiting_approval",
         );
@@ -1715,7 +1844,16 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
       }
     }
 
-    await store.addMessage(task.id, createMessage(task.id, "tool", `Running terminal command: ${command}`, bindingMeta), "running");
+    await store.addMessage(
+      task.id,
+      createMessage(
+        task.id,
+        "assistant",
+        describeTerminalAction(command, responseLanguage),
+        statusMeta("running", bindingMeta),
+      ),
+      "running",
+    );
     const result = await runCommand(command);
     const terminalEntry = createTerminalEntry(
       task.id,
@@ -1733,11 +1871,19 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
       task.id,
       createMessage(
         task.id,
+        "tool",
+        result.output,
+        artifactMeta({ ...bindingMeta, terminalCommand: command, terminalEntryId: terminalEntry.id }),
+      ),
+      result.exitCode === 0 ? "succeeded" : "failed",
+    );
+    await store.addMessage(
+      task.id,
+      createMessage(
+        task.id,
         "assistant",
-        result.exitCode === 0
-          ? `Command finished.\n\n${result.output}`
-          : `Command failed with exit code ${result.exitCode}.\n\n${result.output}`,
-        bindingMeta,
+        buildCommandFinishedStatus(command, result.exitCode === 0, responseLanguage),
+        statusMeta(result.exitCode === 0 ? "succeeded" : "failed", { ...bindingMeta, terminalEntryId: terminalEntry.id }),
       ),
       result.exitCode === 0 ? "succeeded" : "failed",
     );
@@ -1748,27 +1894,40 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
     };
   }
 
-  async function createOperation(task: TaskDetail, body: CreateOperationRequest) {
+  async function createOperation(
+    task: TaskDetail,
+    body: CreateOperationRequest,
+    preferredLanguageOverride?: SupportedLanguage | null,
+  ) {
     const activeOperation = getActiveOperation(task);
     if (activeOperation) {
       throw new Error(`Task already has an active operation: ${activeOperation.title}.`);
     }
 
     const operation = createOperationRun(body);
+    const responseLanguage =
+      preferredLanguageOverride ??
+      detectPreferredAssistantLanguage(task.messages, [body.title, body.goal, body.summary ?? ""].join("\n"));
     await store.addOperation(task.id, operation, "idle");
     await store.addMessage(
       task.id,
       createMessage(
         task.id,
         "assistant",
-        `Operation "${operation.title}" created with ${operation.steps.length} steps. Open Pro and continue step by step.`,
+        responseLanguage === "ru"
+          ? `Операция «${operation.title}» создана. В ней ${operation.steps.length} шагов. Откройте Pro и продолжайте пошагово.`
+          : `Operation "${operation.title}" created with ${operation.steps.length} steps. Open Pro and continue step by step.`,
       ),
       "idle",
     );
     return buildSnapshot(task.id);
   }
 
-  async function advanceOperation(taskId: string, operationId: string) {
+  async function advanceOperation(
+    taskId: string,
+    operationId: string,
+    preferredLanguageOverride?: SupportedLanguage | null,
+  ) {
     const task = store.getTask(taskId);
     if (!task) {
       throw new Error("Task not found");
@@ -1782,6 +1941,8 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
     if (operation.status === "awaiting_approval") {
       throw new Error("Operation is waiting for an approval before it can continue.");
     }
+
+    const responseLanguage = preferredLanguageOverride ?? detectPreferredAssistantLanguage(task.messages, operation.title);
 
     const nextStep = getNextPendingStep(operation);
     if (!nextStep) {
@@ -1828,8 +1989,12 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
           taskId,
           "assistant",
           liveStep.detail
-            ? `Operation step: ${liveStep.title}\n\n${liveStep.detail}`
-            : `Operation step: ${liveStep.title}`,
+            ? responseLanguage === "ru"
+              ? `Шаг операции: ${liveStep.title}\n\n${liveStep.detail}`
+              : `Operation step: ${liveStep.title}\n\n${liveStep.detail}`
+            : responseLanguage === "ru"
+              ? `Шаг операции: ${liveStep.title}`
+              : `Operation step: ${liveStep.title}`,
         ),
         "running",
       );
@@ -1855,6 +2020,7 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
     const execution = await executeTerminal(liveTask, liveStep.command ?? "", false, {
       operationId,
       stepId: liveStep.id,
+      language: responseLanguage,
     });
 
     await store.updateOperation(
@@ -1940,7 +2106,11 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
       await store.setGuardMode(task.id, nextMode);
       await store.addMessage(
         task.id,
-        createMessage(task.id, "assistant", `Guard mode set to ${nextMode}.`),
+        createMessage(
+          task.id,
+          "assistant",
+          responseLanguage === "ru" ? `Режим защиты переключён на ${nextMode}.` : `Guard mode set to ${nextMode}.`,
+        ),
         "idle",
       );
       return buildSnapshot(task.id);
@@ -1951,7 +2121,9 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
       if (!command) {
         return buildSnapshot(task.id);
       }
-      await executeTerminal(currentTask, command);
+      await executeTerminal(currentTask, command, false, {
+        language: responseLanguage,
+      });
       return buildSnapshot(task.id);
     }
 
@@ -1963,7 +2135,8 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
           createMessage(
             task.id,
             "assistant",
-            `Approval shortcut received in chat. Proceeding with \`${latestPendingApproval.command}\`.`,
+            buildApprovalResolvedStatus(latestPendingApproval.command, true, responseLanguage),
+            statusMeta("running", { pendingApprovalId: latestPendingApproval.id, terminalCommand: latestPendingApproval.command }),
           ),
           "running",
         );
@@ -1977,7 +2150,8 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
           createMessage(
             task.id,
             "assistant",
-            `Approval shortcut received in chat. I will not run \`${latestPendingApproval.command}\`.`,
+            buildApprovalResolvedStatus(latestPendingApproval.command, false, responseLanguage),
+            statusMeta("info", { pendingApprovalId: latestPendingApproval.id, terminalCommand: latestPendingApproval.command }),
           ),
           "idle",
         );
@@ -2117,8 +2291,13 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
         createMessage(
           task.id,
           "assistant",
-          `A guarded command is still waiting for approval: \`${latestPendingApproval.command}\`. Use Approve/Reject in the task or reply with a short confirmation like \`yes\` or \`no\`.`,
-          { pendingApprovalId: latestPendingApproval.id, terminalCommand: latestPendingApproval.command },
+          responseLanguage === "ru"
+            ? `Команда всё ещё ждёт подтверждения: \`${latestPendingApproval.command}\`. Можно нажать Approve/Reject или просто ответить коротко: \`да\` / \`нет\`.`
+            : `A guarded command is still waiting for approval: \`${latestPendingApproval.command}\`. Use Approve/Reject in the task or reply with a short confirmation like \`yes\` or \`no\`.`,
+          statusMeta("awaiting_approval", {
+            pendingApprovalId: latestPendingApproval.id,
+            terminalCommand: latestPendingApproval.command,
+          }),
         ),
         "awaiting_approval",
       );
@@ -2152,7 +2331,7 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
         computerSkill: computerAction.skill,
         computerIntent: computerAction.intent,
       };
-      await store.addMessage(task.id, createMessage(task.id, "tool", localizedToolMessage, meta), "running");
+      await store.addMessage(task.id, createMessage(task.id, "tool", localizedToolMessage, artifactMeta(meta)), "running");
 
       if (computerAction.kind === "answer") {
         await store.addMessage(
@@ -2163,8 +2342,14 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
         return buildSnapshot(task.id);
       }
 
-      await store.addMessage(task.id, createMessage(task.id, "assistant", localizedAssistantMessage, meta), "running");
-      await executeTerminal(currentTask, computerAction.command);
+      await store.addMessage(
+        task.id,
+        createMessage(task.id, "assistant", localizedAssistantMessage, statusMeta("running", meta)),
+        "running",
+      );
+      await executeTerminal(currentTask, computerAction.command, false, {
+        language: responseLanguage,
+      });
       return buildSnapshot(task.id);
     }
 
@@ -2394,7 +2579,7 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
 
   server.post("/api/tasks", async (request) => {
     const body = createTaskRequestSchema.parse(request.body ?? {});
-    const task = await store.createTask(body.title);
+    const task = await store.createTask(body.title, readRequestLanguage(request) ?? "en");
     return buildSnapshot(task.id);
   });
 
@@ -2429,7 +2614,9 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
     }
 
     const body = executeTerminalRequestSchema.parse(request.body) as ExecuteTerminalRequest;
-    await executeTerminal(task, body.command);
+    await executeTerminal(task, body.command, false, {
+      language: readRequestLanguage(request) ?? detectPreferredAssistantLanguage(task.messages),
+    });
     return buildSnapshot(task.id);
   });
 
@@ -2443,7 +2630,15 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
 
     const body = setGuardModeRequestSchema.parse(request.body);
     await store.setGuardMode(task.id, body.mode);
-    await store.addMessage(task.id, createMessage(task.id, "assistant", `Guard mode set to ${body.mode}.`));
+    const responseLanguage = readRequestLanguage(request) ?? detectPreferredAssistantLanguage(task.messages);
+    await store.addMessage(
+      task.id,
+      createMessage(
+        task.id,
+        "assistant",
+        responseLanguage === "ru" ? `Режим защиты переключён на ${body.mode}.` : `Guard mode set to ${body.mode}.`,
+      ),
+    );
     return buildSnapshot(task.id);
   });
 
@@ -2457,7 +2652,7 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
 
     try {
       const body = createOperationRequestSchema.parse(request.body) as CreateOperationRequest;
-      return await createOperation(task, body);
+      return await createOperation(task, body, readRequestLanguage(request));
     } catch (error) {
       reply.code(400);
       return {
@@ -2475,7 +2670,7 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
     }
 
     try {
-      return await advanceOperation(params.taskId, params.operationId);
+      return await advanceOperation(params.taskId, params.operationId, readRequestLanguage(request));
     } catch (error) {
       reply.code(400);
       return {
@@ -2493,7 +2688,12 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
     }
 
     try {
-      await continueAgentRun(params.taskId, params.agentRunId, "operator requested another pass from the Pro surface");
+      await continueAgentRun(
+        params.taskId,
+        params.agentRunId,
+        "operator requested another pass from the Pro surface",
+        readRequestLanguage(request),
+      );
       return buildSnapshot(params.taskId);
     } catch (error) {
       reply.code(400);

@@ -3,12 +3,7 @@ import { Button, ShellRegion } from "@klava/ui";
 import { ChatSurface } from "../features/chat/ChatSurface";
 import { ProSurface } from "../features/pro/ProSurface";
 import { TerminalSurface } from "../features/terminal/TerminalSurface";
-
-const surfaceOptions: Array<{ id: SurfaceMode; label: string }> = [
-  { id: "chat", label: "Chat" },
-  { id: "terminal", label: "Terminal" },
-  { id: "pro", label: "Pro" },
-];
+import { useAppI18n } from "../i18n/AppI18n";
 
 export function MainSurface({
   busy,
@@ -37,9 +32,16 @@ export function MainSurface({
   onAdvanceOperation: (operationId: string) => Promise<void>;
   onContinueAgent: (agentRunId: string) => Promise<void>;
 }) {
+  const { t } = useAppI18n();
+  const surfaceOptions: Array<{ id: SurfaceMode; label: string }> = [
+    { id: "chat", label: t("Chat", "Чат") },
+    { id: "terminal", label: t("Terminal", "Терминал") },
+    { id: "pro", label: "Pro" },
+  ];
+
   return (
     <ShellRegion
-      title={task?.title ?? "Main Surface"}
+      title={task?.title ?? t("Main Surface", "Основная панель")}
       actions={
         <div className="surface-tabs">
           {surfaceOptions.map((option) => (
@@ -56,7 +58,7 @@ export function MainSurface({
       }
     >
       {!task ? (
-        <div className="empty-state">No task selected.</div>
+        <div className="empty-state">{t("No task selected.", "Задача не выбрана.")}</div>
       ) : surfaceMode === "terminal" ? (
         <TerminalSurface busy={busy} task={task} onRunCommand={onRunTerminal} onSetGuardMode={onSetGuardMode} />
       ) : surfaceMode === "pro" ? (

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { GuardMode, TaskDetail } from "@klava/contracts";
 import { Button, PanelCard, Stack, StatusPill, TextField } from "@klava/ui";
+import { useAppI18n } from "../../i18n/AppI18n";
 
 const guardModes: GuardMode[] = ["strict", "balanced", "off"];
 
@@ -23,6 +24,7 @@ export function TerminalSurface({
   onRunCommand: (command: string) => Promise<void>;
   onSetGuardMode: (mode: GuardMode) => Promise<void>;
 }) {
+  const { formatDateTime, t } = useAppI18n();
   const [command, setCommand] = useState("");
 
   async function handleRun() {
@@ -37,7 +39,7 @@ export function TerminalSurface({
 
   return (
     <div className="surface-stack">
-      <PanelCard title="Guard mode" subtitle="Strict blocks guarded commands. Balanced creates approvals. Off runs guarded commands directly.">
+      <PanelCard title={t("Guard mode", "Режим защиты")} subtitle={t("Strict blocks guarded commands. Balanced creates approvals. Off runs guarded commands directly.", "Strict блокирует защищённые команды. Balanced создаёт подтверждения. Off запускает защищённые команды сразу.")}>
         <div className="guard-actions">
           {guardModes.map((mode) => (
             <Button
@@ -53,16 +55,16 @@ export function TerminalSurface({
         </div>
       </PanelCard>
 
-      <PanelCard title="Command" subtitle="Task-local terminal history stays attached to this task.">
+      <PanelCard title={t("Command", "Команда")} subtitle={t("Task-local terminal history stays attached to this task.", "Локальная история терминала хранится внутри этой задачи.")}>
         <div className="composer">
           <TextField
             value={command}
             onChange={setCommand}
-            placeholder="pwd, dir, Get-ChildItem, git status, winget install ... "
+            placeholder={t("pwd, dir, Get-ChildItem, git status, winget install ... ", "pwd, dir, Get-ChildItem, git status, winget install ... ")}
           />
           <div className="composer__actions">
             <Button onClick={() => void handleRun()} disabled={busy || !command.trim()}>
-              {busy ? "Working..." : "Run"}
+              {busy ? t("Working...", "Работаю...") : t("Run", "Запустить")}
             </Button>
           </div>
         </div>
@@ -77,8 +79,21 @@ export function TerminalSurface({
               <PanelCard
                 key={entry.id}
                 title={<code>{entry.command}</code>}
-                subtitle={new Date(entry.createdAt).toLocaleString()}
-                actions={<StatusPill tone={entryTone(entry.status)} value={entry.status.replace("_", " ")} />}
+                subtitle={formatDateTime(entry.createdAt)}
+                actions={
+                  <StatusPill
+                    tone={entryTone(entry.status)}
+                    value={
+                      entry.status === "completed"
+                        ? t("completed", "завершено")
+                        : entry.status === "failed"
+                          ? t("failed", "ошибка")
+                          : entry.status === "blocked"
+                            ? t("blocked", "заблокировано")
+                            : t("pending approval", "ждёт подтверждения")
+                    }
+                  />
+                }
               >
                 <pre className="terminal-output">{entry.output}</pre>
               </PanelCard>

@@ -26,6 +26,8 @@ type RuntimeState = {
   tasks: TaskDetail[];
 };
 
+type TaskLanguage = "en" | "ru";
+
 export type AppPaths = {
   rootDir: string;
   statePath: string;
@@ -68,6 +70,23 @@ export function getAppPaths(options: AppPathOptions = {}): AppPaths {
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+function isPreviewableMessage(message: TaskMessage) {
+  const presentation = message.meta.presentation;
+  if (presentation === "artifact") {
+    return false;
+  }
+
+  if (message.role === "tool") {
+    return presentation === "status";
+  }
+
+  if (message.role === "system") {
+    return presentation === "status";
+  }
+
+  return true;
 }
 
 function uniqueModelIds(models: string[]) {
@@ -366,23 +385,32 @@ function normalizeTask(task?: Partial<TaskDetail> | null): TaskDetail {
   };
 }
 
-export function createTaskTemplate(title?: string): TaskDetail {
+export function createTaskTemplate(title?: string, language: TaskLanguage = "en"): TaskDetail {
   const timestamp = nowIso();
   const id = crypto.randomUUID();
+  const defaultTitle =
+    language === "ru"
+      ? `Задача ${new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}`
+      : `Task ${new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`;
 
   const welcomeMessage: TaskMessage = {
     id: crypto.randomUUID(),
     taskId: id,
     role: "system",
     content:
-      "Task ready. Ask Klava anything, use /terminal <command>, $ <command>, or change guard mode with guard strict|balanced|off.",
+      language === "ru"
+        ? "Задача готова. Спросите Клаву о чём угодно, используйте /terminal <команда>, $ <команда> или переключайте режим защиты через guard strict|balanced|off."
+        : "Task ready. Ask Klava anything, use /terminal <command>, $ <command>, or change guard mode with guard strict|balanced|off.",
     createdAt: timestamp,
-    meta: {},
+    meta: {
+      presentation: "status",
+      statusState: "info",
+    },
   };
 
   return {
     id,
-    title: title?.trim() || `Task ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
+    title: title?.trim() || defaultTitle,
     status: "idle",
     guardMode: "balanced",
     createdAt: timestamp,
@@ -479,7 +507,7 @@ export class RuntimeStore {
 
   private recalculateDerivedFields() {
     this.state.tasks = this.state.tasks.map((task) => {
-      const lastMessage = task.messages.at(-1);
+      const lastMessage = [...task.messages].reverse().find((message) => isPreviewableMessage(message)) ?? null;
       const pendingApprovalCount = task.approvals.filter((approval) => approval.status === "pending").length;
       return {
         ...task,
@@ -556,8 +584,8 @@ export class RuntimeStore {
     await this.flush();
   }
 
-  async createTask(title?: string) {
-    const task = createTaskTemplate(title);
+  async createTask(title?: string, language: TaskLanguage = "en") {
+    const task = createTaskTemplate(title, language);
     this.state.tasks.unshift(task);
     this.state.selectedTaskId = task.id;
     await this.flush();

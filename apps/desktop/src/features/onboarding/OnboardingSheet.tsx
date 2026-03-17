@@ -8,6 +8,8 @@ import type {
   ProviderSettings,
 } from "@klava/contracts";
 import { Button, PanelCard, Stack, TextField } from "@klava/ui";
+import { useAppI18n } from "../../i18n/AppI18n";
+import { LanguageSelector } from "../../i18n/LanguageSelector";
 import {
   DEFAULT_LOCAL_ENDPOINTS,
   PROVIDER_CARD_ORDER,
@@ -21,14 +23,33 @@ type SecretProviderId = "openai" | "gemini" | "groq" | "openrouter";
 
 const SECRET_PROVIDERS: SecretProviderId[] = ["gemini", "openrouter", "groq", "openai"];
 
-function gpuSummary(machineProfile: MachineProfile | null) {
+function gpuSummary(
+  machineProfile: MachineProfile | null,
+  t: (english: string, russian: string) => string,
+) {
   if (!machineProfile?.gpus.length) {
-    return "No GPU detected";
+    return t("No GPU detected", "GPU не обнаружен");
   }
 
   return machineProfile.gpus
     .map((gpu) => `${gpu.name}${gpu.memoryGb ? ` (${gpu.memoryGb.toFixed(1)} GB)` : ""}`)
     .join(", ");
+}
+
+function runtimeVerdictLabel(
+  verdict: LocalRuntimeAdvice["verdict"] | null | undefined,
+  t: (english: string, russian: string) => string,
+) {
+  switch (verdict) {
+    case "recommended":
+      return t("recommended", "рекомендуется");
+    case "workable":
+      return t("workable", "рабочий вариант");
+    case "not_recommended":
+      return t("not recommended", "не рекомендуется");
+    default:
+      return t("unknown", "неизвестно");
+  }
 }
 
 export function OnboardingSheet({
@@ -48,6 +69,7 @@ export function OnboardingSheet({
   onDismiss: (() => void) | null;
   onSubmit: (payload: OnboardingValidateRequest) => void;
 }) {
+  const { language, t } = useAppI18n();
   const [selectedProvider, setSelectedProvider] = useState<ProviderId>("gemini");
   const [secrets, setSecrets] = useState<Record<SecretProviderId, string>>({
     gemini: "",
@@ -84,12 +106,12 @@ export function OnboardingSheet({
   }, [localRuntime]);
 
   const guide = useMemo(
-    () => getProviderGuide(selectedProvider, { localRuntime, localRuntimeAdvice, machineProfile }),
-    [selectedProvider, localRuntime, localRuntimeAdvice, machineProfile],
+    () => getProviderGuide(selectedProvider, { localRuntime, localRuntimeAdvice, machineProfile, language }),
+    [language, localRuntime, localRuntimeAdvice, machineProfile, selectedProvider],
   );
   const localAdviceOption = localRuntimeAdvice?.options.find((option) => option.runtime === localRuntime) ?? null;
   const providerReady = isProviderReady(currentProvider);
-  const providerLabel = getProviderLabel(currentProvider);
+  const providerLabel = getProviderLabel(currentProvider, { language });
 
   function setSecret(providerId: SecretProviderId, value: string) {
     setSecrets((current) => ({
@@ -122,14 +144,20 @@ export function OnboardingSheet({
   return (
     <div className="onboarding-backdrop">
       <PanelCard
-        title="Choose provider"
-        subtitle="Klava can now connect to Gemini, Groq, OpenRouter, OpenAI, or a local Ollama/vLLM server. The provider picker stays available later from the bottom dock."
+        title={t("Choose provider", "Выберите провайдера")}
+        subtitle={t(
+          "Klava can now connect to Gemini, Groq, OpenRouter, OpenAI, or a local Ollama/vLLM server. The provider picker stays available later from the bottom dock.",
+          "Klava умеет подключаться к Gemini, Groq, OpenRouter, OpenAI или локальному серверу Ollama/vLLM. Выбор провайдера останется доступен позже и из нижней панели.",
+        )}
         actions={
-          onDismiss ? (
-            <Button variant="ghost" onClick={onDismiss} style={{ height: 30 }}>
-              Close
-            </Button>
-          ) : null
+          <div className="app-header__actions no-drag">
+            <LanguageSelector compact />
+            {onDismiss ? (
+              <Button variant="ghost" onClick={onDismiss} style={{ height: 30 }}>
+                {t("Close", "Закрыть")}
+              </Button>
+            ) : null}
+          </div>
         }
         style={{
           width: "min(960px, calc(100vw - 32px))",
@@ -147,8 +175,8 @@ export function OnboardingSheet({
                 onClick={() => setSelectedProvider(providerId)}
                 type="button"
               >
-                <strong>{getProviderLabel(providerId, localRuntime)}</strong>
-                <p>{getProviderChoiceSummary(providerId)}</p>
+                <strong>{getProviderLabel(providerId, { localRuntime, language })}</strong>
+                <p>{getProviderChoiceSummary(providerId, language)}</p>
               </button>
             ))}
           </div>
@@ -157,11 +185,18 @@ export function OnboardingSheet({
             <div className="provider-guide__main">
               <div className="onboarding-status">
                 {guide.chips.map((chip) => (
-                  <span key={chip} className={chip === "Recommended here" ? "status-chip status-chip--accent" : "status-chip"}>
-                    {chip}
+                  <span
+                    key={`${guide.title}-${chip.label}`}
+                    className={chip.tone === "accent" ? "status-chip status-chip--accent" : "status-chip"}
+                  >
+                    {chip.label}
                   </span>
                 ))}
-                {providerReady ? <span className="status-chip status-chip--accent">{providerLabel} already connected</span> : null}
+                {providerReady ? (
+                  <span className="status-chip status-chip--accent">
+                    {t(`${providerLabel} already connected`, `${providerLabel} уже подключён`)}
+                  </span>
+                ) : null}
               </div>
 
               <div className="onboarding-note">
@@ -174,24 +209,24 @@ export function OnboardingSheet({
                 <>
                   <div className="machine-panel">
                     <div className="machine-panel__head">
-                      <strong>Local hardware analysis</strong>
+                      <strong>{t("Local hardware analysis", "Анализ локального железа")}</strong>
                       <span className="status-chip status-chip--accent">
-                        {localRuntimeAdvice?.verdict ?? "unknown"}
+                        {runtimeVerdictLabel(localRuntimeAdvice?.verdict, t)}
                       </span>
                     </div>
-                    <p>{localRuntimeAdvice?.summary ?? "Hardware analysis is not available yet."}</p>
+                    <p>{localRuntimeAdvice?.summary ?? t("Hardware analysis is not available yet.", "Анализ железа пока недоступен.")}</p>
                     <div className="machine-facts">
                       <div className="machine-facts__item">
                         <span>RAM</span>
-                        <strong>{machineProfile ? `${machineProfile.memoryGb.toFixed(1)} GB` : "unknown"}</strong>
+                        <strong>{machineProfile ? `${machineProfile.memoryGb.toFixed(1)} GB` : t("unknown", "неизвестно")}</strong>
                       </div>
                       <div className="machine-facts__item">
                         <span>CPU</span>
-                        <strong>{machineProfile?.cpuModel ?? "unknown"}</strong>
+                        <strong>{machineProfile?.cpuModel ?? t("unknown", "неизвестно")}</strong>
                       </div>
                       <div className="machine-facts__item">
                         <span>GPU</span>
-                        <strong>{gpuSummary(machineProfile)}</strong>
+                        <strong>{gpuSummary(machineProfile, t)}</strong>
                       </div>
                     </div>
                   </div>
@@ -207,19 +242,26 @@ export function OnboardingSheet({
                           className={active ? "runtime-choice runtime-choice--active" : "runtime-choice"}
                           onClick={() => setLocalRuntime(runtime)}
                         >
-                          <strong>{getProviderLabel("local", runtime)}</strong>
-                          <p>{option?.summary ?? "No recommendation available yet."}</p>
-                          <span>{option?.recommended ? "Recommended here" : "Advanced path"}</span>
+                          <strong>{getProviderLabel("local", { localRuntime: runtime, language })}</strong>
+                          <p>{option?.summary ?? t("No recommendation available yet.", "Рекомендация пока недоступна.")}</p>
+                          <span>
+                            {option?.recommended
+                              ? t("Recommended here", "Рекомендуется для этой машины")
+                              : t("Advanced path", "Продвинутый путь")}
+                          </span>
                         </button>
                       );
                     })}
                   </div>
 
                   <label className="field-block">
-                    <span>Endpoint</span>
+                    <span>{t("Endpoint", "Endpoint")}</span>
                     <TextField value={localApiBaseUrl} onChange={setLocalApiBaseUrl} spellCheck={false} />
                     <span className="field-hint">
-                      Default endpoint for {getProviderLabel("local", localRuntime)} is {DEFAULT_LOCAL_ENDPOINTS[localRuntime]}.
+                      {t(
+                        `Default endpoint for ${getProviderLabel("local", { localRuntime, language })} is ${DEFAULT_LOCAL_ENDPOINTS[localRuntime]}.`,
+                        `Endpoint по умолчанию для ${getProviderLabel("local", { localRuntime, language })}: ${DEFAULT_LOCAL_ENDPOINTS[localRuntime]}.`,
+                      )}
                     </span>
                   </label>
 
@@ -234,13 +276,16 @@ export function OnboardingSheet({
                       placeholder={guide.secretPlaceholder}
                     />
                     <span className="field-hint">
-                      Leave this blank unless your local proxy or vLLM server explicitly requires Bearer authentication.
+                      {t(
+                        "Leave this blank unless your local proxy or vLLM server explicitly requires Bearer authentication.",
+                        "Оставьте поле пустым, если ваш локальный прокси или vLLM-сервер явно не требует Bearer-аутентификацию.",
+                      )}
                     </span>
                   </label>
 
                   {localAdviceOption?.modelRecommendation ? (
                     <div className="onboarding-note">
-                      <strong>Recommended model</strong>
+                      <strong>{t("Recommended model", "Рекомендуемая модель")}</strong>
                       <p>{localAdviceOption.modelRecommendation.modelId}</p>
                       <p>{localAdviceOption.modelRecommendation.rationale}</p>
                     </div>
@@ -248,10 +293,12 @@ export function OnboardingSheet({
                 </>
               ) : selectedProvider === "gonka" ? (
                 <div className="onboarding-note onboarding-note--warning">
-                  <strong>GONKA is paused for now</strong>
+                  <strong>{t("GONKA is paused for now", "GONKA сейчас на паузе")}</strong>
                   <p>
-                    This path stays visible in Klava, but the live provider route remains intentionally disabled until the
-                    provider-side issue tracked on GitHub is resolved.
+                    {t(
+                      "This path stays visible in Klava, but the live provider route remains intentionally disabled until the provider-side issue tracked on GitHub is resolved.",
+                      "Этот путь остаётся видимым в Klava, но live-маршрут провайдера намеренно отключён, пока не будет решена проблема, отслеживаемая на GitHub.",
+                    )}
                   </p>
                 </div>
               ) : (
@@ -266,7 +313,10 @@ export function OnboardingSheet({
                     placeholder={guide.secretPlaceholder}
                   />
                   <span className="field-hint">
-                    Leave this blank if you already connected {guide.title} on this machine and want Klava to reuse the saved key from the local encrypted vault.
+                    {t(
+                      `Leave this blank if you already connected ${guide.title} on this machine and want Klava to reuse the saved key from the local encrypted vault.`,
+                      `Оставьте поле пустым, если ${guide.title} уже подключён на этой машине и вы хотите, чтобы Klava использовала ключ из локального зашифрованного хранилища.`,
+                    )}
                   </span>
                 </label>
               )}
@@ -276,7 +326,7 @@ export function OnboardingSheet({
               <div className="composer__actions">
                 {selectedProvider === "gonka" ? (
                   <Button variant="secondary" onClick={() => setSelectedProvider("gemini")} style={{ height: 34 }}>
-                    Use Gemini now
+                    {t("Use Gemini now", "Использовать Gemini сейчас")}
                   </Button>
                 ) : (
                   <Button
@@ -284,7 +334,7 @@ export function OnboardingSheet({
                     disabled={busy || (selectedProvider === "local" && localApiBaseUrl.trim().length === 0)}
                     style={{ height: 34 }}
                   >
-                    {busy ? "Connecting..." : guide.actionLabel}
+                    {busy ? t("Connecting...", "Подключаю...") : guide.actionLabel}
                   </Button>
                 )}
               </div>
@@ -292,7 +342,7 @@ export function OnboardingSheet({
 
             <div className="provider-guide__side">
               <div className="onboarding-note">
-                <strong>Exact setup steps</strong>
+                <strong>{t("Exact setup steps", "Точные шаги настройки")}</strong>
               </div>
               <div className="provider-guide__list">
                 {guide.steps.map((step, index) => (

@@ -1,6 +1,23 @@
 import type { HealthResponse, LocalRuntimeAdvice, MachineProfile, ProviderSettings } from "@klava/contracts";
 import { Button, PanelCard } from "@klava/ui";
+import { useAppI18n } from "../../i18n/AppI18n";
 import { getProviderLabel, isProviderReady } from "../providers/providerMeta";
+
+function verdictLabel(
+  verdict: LocalRuntimeAdvice["verdict"] | null | undefined,
+  t: (english: string, russian: string) => string,
+) {
+  switch (verdict) {
+    case "recommended":
+      return t("recommended", "рекомендуется");
+    case "workable":
+      return t("workable", "рабочий вариант");
+    case "not_recommended":
+      return t("not recommended", "не рекомендуется");
+    default:
+      return t("not available", "недоступно");
+  }
+}
 
 export function DiagnosticsPanel({
   health,
@@ -15,132 +32,139 @@ export function DiagnosticsPanel({
   onExportSupportBundle: () => void;
   provider: ProviderSettings | null;
 }) {
+  const { formatDateTime, language, t } = useAppI18n();
   const providerReady = isProviderReady(provider);
-  const providerLabel = getProviderLabel(provider);
+  const providerLabel = getProviderLabel(provider, { language });
   const gpuSummary =
-    machineProfile?.gpus.length ? machineProfile.gpus.map((gpu) => gpu.name).join(", ") : "no GPU detected";
+    machineProfile?.gpus.length ? machineProfile.gpus.map((gpu) => gpu.name).join(", ") : t("no GPU detected", "GPU не обнаружен");
 
   return (
     <PanelCard
-      title="Diagnostics"
-      subtitle="Fast facts for support and debugging."
+      title={t("Diagnostics", "Диагностика")}
+      subtitle={t("Fast facts for support and debugging.", "Быстрые факты для поддержки и отладки.")}
       actions={
         <Button variant="secondary" onClick={onExportSupportBundle} style={{ height: 34 }}>
-          Export bundle
+          {t("Export bundle", "Экспортировать bundle")}
         </Button>
       }
     >
       <div className="detail-line">
-        <span>Connection</span>
+        <span>{t("Connection", "Подключение")}</span>
         <strong className="detail-line__value">
-          {providerReady ? "validated and ready" : provider?.provider === "gonka" ? "paused" : "not configured"}
+          {providerReady
+            ? t("validated and ready", "проверено и готово")
+            : provider?.provider === "gonka"
+              ? t("paused", "на паузе")
+              : t("not configured", "не настроено")}
         </strong>
       </div>
       <div className="detail-line">
-        <span>Provider</span>
+        <span>{t("Provider", "Провайдер")}</span>
         <strong className="detail-line__value">{providerLabel}</strong>
       </div>
       <div className="detail-line">
-        <span>Model policy</span>
+        <span>{t("Model policy", "Политика модели")}</span>
         <strong className="detail-line__value">
           {provider && provider.provider !== "gonka"
             ? provider.selectionMode === "manual"
-              ? `manual ${providerLabel} selection`
-              : `auto selected from ${providerLabel}`
+              ? t(`manual ${providerLabel} selection`, `ручной выбор ${providerLabel}`)
+              : t(`auto selected from ${providerLabel}`, `автовыбор из ${providerLabel}`)
             : provider?.provider === "gonka"
-              ? "paused Gonka path"
-              : "not configured"}
+              ? t("paused Gonka path", "путь Gonka на паузе")
+              : t("not configured", "не настроено")}
         </strong>
       </div>
       <div className="detail-line">
-        <span>Current model</span>
-        <strong className="detail-line__value">{provider?.model ?? "not configured"}</strong>
+        <span>{t("Current model", "Текущая модель")}</span>
+        <strong className="detail-line__value">{provider?.model ?? t("not configured", "не настроено")}</strong>
       </div>
       <div className="detail-line">
-        <span>Available models</span>
+        <span>{t("Available models", "Доступные модели")}</span>
         <strong className="detail-line__value">
-          {provider?.availableModels?.length ? `${provider.availableModels.length}` : "unknown"}
+          {provider?.availableModels?.length ? `${provider.availableModels.length}` : t("unknown", "неизвестно")}
         </strong>
       </div>
       <div className="detail-line">
-        <span>Endpoint</span>
+        <span>{t("Endpoint", "Endpoint")}</span>
         <strong className="detail-line__value">
-          {provider?.provider === "gonka" ? "n/a for GONKA" : provider?.apiBaseUrl ?? "not configured"}
+          {provider?.provider === "gonka" ? t("n/a for GONKA", "н/д для GONKA") : provider?.apiBaseUrl ?? t("not configured", "не настроено")}
         </strong>
       </div>
       <div className="detail-line">
-        <span>Local runtime</span>
+        <span>{t("Local runtime", "Локальный runtime")}</span>
         <strong className="detail-line__value">
-          {provider?.provider === "local" ? provider.localRuntime : "n/a"}
+          {provider?.provider === "local" ? provider.localRuntime : t("n/a", "н/д")}
         </strong>
       </div>
       <div className="detail-line">
-        <span>Requester</span>
+        <span>{t("Requester", "Requester")}</span>
         <strong className="detail-line__value">
-          {provider?.provider === "gonka" ? provider.requesterAddress ?? "not configured" : "n/a"}
+          {provider?.provider === "gonka" ? provider.requesterAddress ?? t("not configured", "не настроено") : t("n/a", "н/д")}
         </strong>
       </div>
       <div className="detail-line">
-        <span>Balance</span>
+        <span>{t("Balance", "Баланс")}</span>
         <strong className="detail-line__value">
-          {provider?.provider === "gonka" && provider.balance ? `${provider.balance.displayAmount} ${provider.balance.displayDenom}` : "n/a"}
+          {provider?.provider === "gonka" && provider.balance
+            ? `${provider.balance.displayAmount} ${provider.balance.displayDenom}`
+            : t("n/a", "н/д")}
         </strong>
       </div>
       <div className="detail-line">
-        <span>Atomic balance</span>
+        <span>{t("Atomic balance", "Атомарный баланс")}</span>
         <strong className="detail-line__value">
-          {provider?.provider === "gonka" && provider.balance ? `${provider.balance.amount} ${provider.balance.denom}` : "n/a"}
+          {provider?.provider === "gonka" && provider.balance
+            ? `${provider.balance.amount} ${provider.balance.denom}`
+            : t("n/a", "н/д")}
         </strong>
       </div>
       <div className="detail-line">
-        <span>Last validation</span>
+        <span>{t("Last validation", "Последняя проверка")}</span>
         <strong className="detail-line__value">
-          {provider?.validatedAt ? new Date(provider.validatedAt).toLocaleString() : "never"}
+          {provider?.validatedAt ? formatDateTime(provider.validatedAt) : t("never", "никогда")}
         </strong>
       </div>
       <div className="detail-line">
-        <span>Balance checked</span>
+        <span>{t("Balance checked", "Проверка баланса")}</span>
         <strong className="detail-line__value">
-          {provider?.balance?.asOf ? new Date(provider.balance.asOf).toLocaleString() : "never"}
+          {provider?.balance?.asOf ? formatDateTime(provider.balance.asOf) : t("never", "никогда")}
         </strong>
       </div>
       <div className="detail-line">
-        <span>Last refresh</span>
+        <span>{t("Last refresh", "Последнее обновление")}</span>
         <strong className="detail-line__value">
-          {provider?.modelRefreshedAt ? new Date(provider.modelRefreshedAt).toLocaleString() : "never"}
+          {provider?.modelRefreshedAt ? formatDateTime(provider.modelRefreshedAt) : t("never", "никогда")}
         </strong>
       </div>
       <div className="detail-line">
-        <span>Support logs</span>
-        <strong className="detail-line__value">included in bundle export</strong>
+        <span>{t("Support logs", "Логи поддержки")}</span>
+        <strong className="detail-line__value">{t("included in bundle export", "входят в экспорт bundle")}</strong>
       </div>
       <div className="detail-line">
-        <span>Machine</span>
+        <span>{t("Machine", "Машина")}</span>
         <strong className="detail-line__value">
-          {machineProfile ? `${machineProfile.platformLabel}, ${machineProfile.memoryGb.toFixed(1)} GB RAM` : "unknown"}
+          {machineProfile ? `${machineProfile.platformLabel}, ${machineProfile.memoryGb.toFixed(1)} GB RAM` : t("unknown", "неизвестно")}
         </strong>
       </div>
       <div className="detail-line">
-        <span>CPU</span>
-        <strong className="detail-line__value">{machineProfile?.cpuModel ?? "unknown"}</strong>
+        <span>{t("CPU", "CPU")}</span>
+        <strong className="detail-line__value">{machineProfile?.cpuModel ?? t("unknown", "неизвестно")}</strong>
       </div>
       <div className="detail-line">
-        <span>GPU</span>
+        <span>{t("GPU", "GPU")}</span>
         <strong className="detail-line__value">{gpuSummary}</strong>
       </div>
       <div className="detail-line">
-        <span>Local advice</span>
-        <strong className="detail-line__value">{localRuntimeAdvice?.summary ?? "not available"}</strong>
+        <span>{t("Local advice", "Локальная рекомендация")}</span>
+        <strong className="detail-line__value">{localRuntimeAdvice?.summary ?? t("not available", "недоступно")}</strong>
       </div>
       <div className="detail-line">
-        <span>Preferred local</span>
-        <strong className="detail-line__value">
-          {localRuntimeAdvice?.recommendedRuntime ?? localRuntimeAdvice?.cloudFallbackProvider ?? "not available"}
-        </strong>
+        <span>{t("Preferred local", "Предпочтительный локальный вариант")}</span>
+        <strong className="detail-line__value">{verdictLabel(localRuntimeAdvice?.verdict, t)}</strong>
       </div>
       <div className="detail-line">
-        <span>Uptime</span>
-        <strong className="detail-line__value">{health ? `${Math.round(health.uptimeMs / 1000)}s` : "unknown"}</strong>
+        <span>{t("Uptime", "Uptime")}</span>
+        <strong className="detail-line__value">{health ? `${Math.round(health.uptimeMs / 1000)}s` : t("unknown", "неизвестно")}</strong>
       </div>
     </PanelCard>
   );

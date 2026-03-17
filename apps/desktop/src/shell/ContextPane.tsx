@@ -1,6 +1,7 @@
-import type { ApprovalRequest, HealthResponse, ProviderSettings, TaskDetail } from "@klava/contracts";
+import type { HealthResponse, TaskDetail } from "@klava/contracts";
 import { PanelCard, ShellRegion, Stack, StatusPill } from "@klava/ui";
 import type { PropsWithChildren } from "react";
+import { useAppI18n } from "../i18n/AppI18n";
 import { ApprovalQueue } from "../features/security/ApprovalQueue";
 
 export function ContextPane({
@@ -15,28 +16,39 @@ export function ContextPane({
   onApprove: (approvalId: string) => void;
   onReject: (approvalId: string) => void;
 }>) {
+  const { t } = useAppI18n();
+  const statusLabel =
+    task?.status === "awaiting_approval"
+      ? t("awaiting approval", "ждёт подтверждения")
+      : task?.status === "running"
+        ? t("running", "в работе")
+        : task?.status === "succeeded"
+          ? t("succeeded", "завершена")
+          : task?.status === "failed"
+            ? t("failed", "ошибка")
+            : t("idle", "ожидает");
   return (
-    <ShellRegion title="Context Pane">
+    <ShellRegion title={t("Context Pane", "Контекст")}>
       <Stack gap={12}>
         {task ? (
-          <PanelCard title="Task state" subtitle={`Guard ${task.guardMode}`}>
+          <PanelCard title={t("Task state", "Состояние задачи")} subtitle={`${t("Guard", "Защита")} ${task.guardMode}`}>
             <div className="detail-line">
-              <span>Status</span>
+              <span>{t("Status", "Статус")}</span>
               <StatusPill
                 tone={task.status === "failed" ? "danger" : task.status === "succeeded" ? "success" : "accent"}
-                value={task.status.replace("_", " ")}
+                value={statusLabel}
               />
             </div>
             <div className="detail-line">
-              <span>Messages</span>
+              <span>{t("Messages", "Сообщения")}</span>
               <strong>{task.messages.length}</strong>
             </div>
             <div className="detail-line">
-              <span>Terminal runs</span>
+              <span>{t("Terminal runs", "Запуски терминала")}</span>
               <strong>{task.terminalEntries.length}</strong>
             </div>
             <div className="detail-line">
-              <span>Operations</span>
+              <span>{t("Operations", "Операции")}</span>
               <strong>{task.operations.length}</strong>
             </div>
           </PanelCard>
@@ -47,13 +59,13 @@ export function ContextPane({
         {children}
 
         {health ? (
-          <PanelCard title="Runtime" subtitle={health.providerConfigured ? "Provider connected" : "Needs onboarding"}>
+          <PanelCard title="Runtime" subtitle={health.providerConfigured ? t("Provider connected", "Провайдер подключён") : t("Needs onboarding", "Нужна настройка")}>
             <div className="detail-line">
-              <span>Version</span>
+              <span>{t("Version", "Версия")}</span>
               <strong>{health.runtimeVersion}</strong>
             </div>
             <div className="detail-line">
-              <span>Storage</span>
+              <span>{t("Storage", "Хранилище")}</span>
               <span className="detail-line__value">{health.storagePath}</span>
             </div>
           </PanelCard>

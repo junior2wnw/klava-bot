@@ -34,6 +34,12 @@ export type TaskSummary = z.infer<typeof taskSummarySchema>;
 export const messageRoleSchema = z.enum(["system", "user", "assistant", "tool"]);
 export type MessageRole = z.infer<typeof messageRoleSchema>;
 
+export const taskMessagePresentationSchema = z.enum(["message", "status", "artifact"]);
+export type TaskMessagePresentation = z.infer<typeof taskMessagePresentationSchema>;
+
+export const taskMessageStatusStateSchema = z.enum(["info", "running", "awaiting_approval", "succeeded", "failed"]);
+export type TaskMessageStatusState = z.infer<typeof taskMessageStatusStateSchema>;
+
 export const taskMessageSchema = z.object({
   id: z.string(),
   taskId: z.string(),
@@ -49,6 +55,9 @@ export const taskMessageSchema = z.object({
       agentRunId: z.string().nullable().optional(),
       agentToolCallId: z.string().nullable().optional(),
       agentToolKind: z.string().nullable().optional(),
+      presentation: taskMessagePresentationSchema.optional(),
+      statusState: taskMessageStatusStateSchema.nullable().optional(),
+      terminalEntryId: z.string().nullable().optional(),
     })
     .default({}),
 });

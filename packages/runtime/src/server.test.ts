@@ -1853,6 +1853,140 @@ test("agent runs auto-resume after approval and keep the tool call linked to the
   }
 });
 
+test("terminal execution keeps raw output as an internal artifact instead of dumping it into chat", async () => {
+  await withTempAppPaths(async (paths) => {
+    const runtime = await createKlavaRuntime({ paths });
+
+    try {
+      const createTaskResponse = await runtime.server.inject({
+        method: "POST",
+        url: "/api/tasks",
+        payload: {
+          title: "Terminal artifact routing",
+        },
+      });
+
+      assert.equal(createTaskResponse.statusCode, 200);
+      const taskId = createTaskResponse.json().selectedTask.id as string;
+
+      const response = await runtime.server.inject({
+        method: "POST",
+        url: `/api/tasks/${taskId}/terminal`,
+        payload: {
+          command: "node -e \"console.log('artifact-only output')\"",
+        },
+      });
+
+      assert.equal(response.statusCode, 200);
+      const snapshot = response.json();
+      const messages = snapshot.selectedTask.messages as Array<{
+        role: string;
+        content: string;
+        meta: { presentation?: string | null };
+      }>;
+      const artifactMessage = messages.find(
+        (message) => message.role === "tool" && message.meta.presentation === "artifact" && /artifact-only output/i.test(message.content),
+      );
+      const visibleAssistantMessage = [...messages]
+        .reverse()
+        .find((message) => message.role === "assistant" && message.meta.presentation !== "artifact");
+
+      assert.ok(artifactMessage);
+      assert.ok(visibleAssistantMessage);
+      assert.doesNotMatch(visibleAssistantMessage.content, /artifact-only output/i);
+      assert.match(snapshot.selectedTask.terminalEntries[0].output, /artifact-only output/i);
+    } finally {
+      await runtime.stop();
+    }
+  });
+});
+
+test("agent mode repairs operator-facing json into russian when the provider drifts into english", async () => {
+  const originalValidate = OpenAIService.prototype.validate;
+  const originalComplete = OpenAIService.prototype.complete;
+  let callCount = 0;
+
+  OpenAIService.prototype.validate = async function validate(secret: string) {
+    assert.equal(secret, "sk-agent-language-repair");
+    return {
+      model: "gpt-5.2",
+      models: ["gpt-5.2"],
+    };
+  };
+
+  OpenAIService.prototype.complete = async function complete({ messages }) {
+    callCount += 1;
+    const joined = messages.map((message) => `${message.role}:${message.content}`).join("\n");
+
+    if (callCount === 1) {
+      assert.match(joined, /Preferred reply language: Russian/i);
+      return JSON.stringify({
+        kind: "final",
+        summary: "Checked the package manifest",
+        message: "I checked the package manifest and everything looks correct.",
+        plan: [
+          { title: "Read the manifest", status: "completed" },
+          { title: "Report the result", status: "completed" },
+        ],
+      });
+    }
+
+    return JSON.stringify({
+      kind: "final",
+      summary: "Проверила манифест пакета",
+      message: "Я проверила манифест пакета, всё выглядит корректно.",
+      plan: [
+        { title: "Прочитать манифест", status: "completed" },
+        { title: "Сообщить результат", status: "completed" },
+      ],
+    });
+  };
+
+  try {
+    await withTempAppPaths(async (paths) => {
+      const runtime = await createKlavaRuntime({ paths });
+
+      try {
+        const onboardingResponse = await runtime.server.inject({
+          method: "POST",
+          url: "/api/onboarding/validate",
+          payload: {
+            provider: "openai",
+            secret: "sk-agent-language-repair",
+          },
+        });
+
+        assert.equal(onboardingResponse.statusCode, 200);
+
+        const workspaceResponse = await runtime.server.inject({
+          method: "GET",
+          url: "/api/workspace",
+        });
+        const taskId = workspaceResponse.json().selectedTask.id as string;
+
+        const response = await runtime.server.inject({
+          method: "POST",
+          url: `/api/tasks/${taskId}/messages`,
+          payload: {
+            content: "check package.json and reply in russian",
+          },
+        });
+
+        assert.equal(response.statusCode, 200);
+        const snapshot = response.json();
+        assert.equal(snapshot.selectedTask.agentRuns[0].status, "succeeded");
+        assert.equal(callCount, 2);
+        assert.notEqual(snapshot.selectedTask.messages.at(-1).content, "I checked the package manifest and everything looks correct.");
+      } finally {
+        await runtime.stop();
+      }
+    });
+  } finally {
+    OpenAIService.prototype.validate = originalValidate;
+    OpenAIService.prototype.complete = originalComplete;
+  }
+});
+
 test("unsafe piracy goals are blocked before the provider can execute an agent pass", async () => {
   const originalValidate = OpenAIService.prototype.validate;
   const originalComplete = OpenAIService.prototype.complete;

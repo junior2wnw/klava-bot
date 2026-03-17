@@ -1,5 +1,6 @@
 import type { TaskSummary } from "@klava/contracts";
 import { Button, ShellRegion, Stack } from "@klava/ui";
+import { useAppI18n } from "../i18n/AppI18n";
 import { TaskSummaryCard } from "../features/tasks/TaskSummaryCard";
 
 export function TaskRail({
@@ -15,12 +16,13 @@ export function TaskRail({
   onCreateTask: () => void;
   onSelectTask: (taskId: string) => void;
 }) {
+  const { t } = useAppI18n();
   return (
     <ShellRegion
-      title="Task Rail"
+      title={t("Task Rail", "Список задач")}
       actions={
         <Button onClick={onCreateTask} disabled={busy} style={{ height: 36 }}>
-          New task
+          {t("New task", "Новая задача")}
         </Button>
       }
     >

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { TaskMessage } from "@klava/contracts";
-import { detectModelCommandIntent, detectTranslationIntent } from "./language";
+import { detectModelCommandIntent, detectPreferredAssistantLanguage, detectTranslationIntent } from "./operator-language";
 
 function message(role: TaskMessage["role"], content: string): TaskMessage {
   return {
@@ -45,4 +45,28 @@ test("natural-language model switch requests are parsed deterministically", () =
   assert.deepEqual(detectModelCommandIntent("покажи модели"), {
     kind: "list",
   });
+});
+
+test("preferred assistant language stays russian for mixed russian input with english technical terms", () => {
+  const language = detectPreferredAssistantLanguage(
+    [
+      message("user", "вчера ты отвечал нормально"),
+      message("assistant", "Хорошо, продолжаем."),
+    ],
+    "установи Chrome и проверь package.json",
+  );
+
+  assert.equal(language, "ru");
+});
+
+test("preferred assistant language respects an explicit language request from the latest user message", () => {
+  const language = detectPreferredAssistantLanguage(
+    [
+      message("user", "check package.json and reply in russian"),
+      message("assistant", "Sure, continuing."),
+    ],
+    "initial operator request",
+  );
+
+  assert.equal(language, "ru");
 });

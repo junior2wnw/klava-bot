@@ -13,7 +13,8 @@ import type {
 import { buildKlavaAgentPrompt } from "../assistant-prompt";
 import type { ComputerOperator } from "../computer-operator";
 import type { RuntimeLogger } from "../logging";
-import type { SupportedLanguage } from "../language";
+import { buildLanguageInstruction, detectTextLanguage, type SupportedLanguage } from "../operator-language";
+import { buildAgentToolStartStatus } from "../operator-messages";
 import { buildBlockedObjectiveMessage, assessAgentObjective } from "./safety";
 import { parseAgentDecision } from "./parser";
 import { readTextFileSnippet, searchWorkspaceText } from "./tools";
@@ -23,6 +24,7 @@ export type AgentExecutionBinding = {
   agentRunId: string;
   agentToolCallId: string;
   agentToolKind: string;
+  language?: SupportedLanguage;
 };
 
 export type AgentTerminalExecutionResult =
@@ -100,6 +102,32 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+function statusMeta(runId: string, statusState: NonNullable<TaskMessage["meta"]["statusState"]>): TaskMessage["meta"] {
+  return {
+    agentRunId: runId,
+    presentation: "status",
+    statusState,
+  };
+}
+
+function toolArtifactMeta(runId: string, toolCallId: string, toolKind: string): TaskMessage["meta"] {
+  return {
+    agentRunId: runId,
+    agentToolCallId: toolCallId,
+    agentToolKind: toolKind,
+    presentation: "artifact",
+  };
+}
+
+function clipForPrompt(value: string | null | undefined, maxChars = 600) {
+  if (!value?.trim()) {
+    return "(none)";
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > maxChars ? `${trimmed.slice(0, maxChars)}…` : trimmed;
+}
+
 function toTaskStatus(status: AgentRunStatus): TaskStatus {
   switch (status) {
     case "awaiting_approval":
@@ -120,6 +148,7 @@ function toTaskStatus(status: AgentRunStatus): TaskStatus {
 function summarizeRecentTranscript(task: TaskDetail, runId: string) {
   return task.messages
     .filter((message) => message.role === "user" || message.role === "assistant")
+    .filter((message) => message.meta.presentation !== "status" && message.meta.presentation !== "artifact")
     .filter((message) => message.meta.agentRunId !== runId)
     .slice(-6)
     .map((message) => `${message.role.toUpperCase()}: ${message.content}`)
@@ -140,11 +169,11 @@ function summarizeToolCalls(toolCalls: AgentToolCall[]) {
   }
 
   return toolCalls
-    .slice(0, 8)
+    .slice(0, 4)
     .reverse()
     .map((call, index) => {
-      const input = call.input ? `input=${call.input}` : "input=(none)";
-      const output = call.outputPreview ? `output=${call.outputPreview}` : "output=(none)";
+      const input = `input=${clipForPrompt(call.input)}`;
+      const output = `output=${clipForPrompt(call.outputPreview)}`;
       return `${index + 1}. ${call.kind} [${call.status}] ${call.summary}; ${input}; ${output}`;
     })
     .join("\n");
@@ -192,6 +221,14 @@ function buildAgentMessages(
       taskId: run.taskId,
       role: "system",
       content: `Runtime context:\n${runtimeContext}`,
+      createdAt: nowIso(),
+      meta: {},
+    },
+    {
+      id: crypto.randomUUID(),
+      taskId: run.taskId,
+      role: "system",
+      content: buildLanguageInstruction(bindings.preferredLanguage),
       createdAt: nowIso(),
       meta: {},
     },
@@ -246,11 +283,40 @@ function truncatePreview(value: string | null | undefined, maxChars = 2_000) {
   return value.length > maxChars ? `${value.slice(0, maxChars)}\n\n[output truncated]` : value;
 }
 
+function decisionMatchesPreferredLanguage(decision: AgentDecision, preferredLanguage: SupportedLanguage) {
+  const operatorFacingFields = [
+    decision.summary,
+    decision.message,
+    ...decision.plan.flatMap((item) => [item.title, item.detail ?? ""]),
+  ]
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+
+  let aligned = 0;
+  let mismatched = 0;
+
+  for (const field of operatorFacingFields) {
+    const detected = detectTextLanguage(field);
+    if (!detected) {
+      continue;
+    }
+
+    if (detected === preferredLanguage) {
+      aligned += 1;
+    } else {
+      mismatched += 1;
+    }
+  }
+
+  return mismatched === 0 || aligned >= mismatched;
+}
+
 async function parseDecisionWithRepair(bindings: AgentOrchestratorBindings, messages: TaskMessage[]) {
   let raw = await bindings.complete(messages);
+  let decision: AgentDecision;
 
   try {
-    return parseAgentDecision(raw);
+    decision = parseAgentDecision(raw);
   } catch (error) {
     await bindings.logger.log(
       `Agent JSON parse failed on the first attempt for task ${bindings.taskId}. ${error instanceof Error ? error.message : String(error)}`,
@@ -274,8 +340,37 @@ async function parseDecisionWithRepair(bindings: AgentOrchestratorBindings, mess
     ];
 
     raw = await bindings.complete(repairPrompt);
-    return parseAgentDecision(raw);
+    decision = parseAgentDecision(raw);
   }
+
+  if (decisionMatchesPreferredLanguage(decision, bindings.preferredLanguage)) {
+    return decision;
+  }
+
+  await bindings.logger.log(
+    `Agent response language drift detected for task ${bindings.taskId}; requesting a localized rewrite in ${bindings.preferredLanguage}.`,
+  );
+
+  const languageRepairPrompt: TaskMessage[] = [
+    ...messages,
+    {
+      id: crypto.randomUUID(),
+      taskId: bindings.taskId,
+      role: "user",
+      content: [
+        `Rewrite the same JSON object in ${bindings.preferredLanguage === "ru" ? "Russian" : "English"}.`,
+        "Keep `kind` and every `tool` field exactly the same.",
+        "Rewrite only operator-facing text fields: `summary`, `message`, `plan[].title`, and `plan[].detail`.",
+        "Return one valid JSON object only.",
+        `Current JSON:\n${raw}`,
+      ].join("\n\n"),
+      createdAt: nowIso(),
+      meta: {},
+    },
+  ];
+
+  raw = await bindings.complete(languageRepairPrompt);
+  return parseAgentDecision(raw);
 }
 
 async function recordToolCall(
@@ -322,14 +417,15 @@ async function handleComputerTool(
   bindings: AgentOrchestratorBindings,
 ): Promise<ToolObservation> {
   const toolCallId = crypto.randomUUID();
+  await bindings.addAssistantMessage(
+    buildAgentToolStartStatus(decision.tool, bindings.preferredLanguage),
+    statusMeta(run.id, "running"),
+    "running",
+  );
   const result = await bindings.computerOperator.handle(decision.tool.instruction, {
     language: bindings.preferredLanguage,
   });
-  const toolMeta = {
-    agentRunId: run.id,
-    agentToolCallId: toolCallId,
-    agentToolKind: decision.tool.name,
-  } satisfies TaskMessage["meta"];
+  const toolMeta = toolArtifactMeta(run.id, toolCallId, decision.tool.name);
 
   if (result.kind === "not_handled") {
     const outputPreview = "The local computer intent layer could not map that instruction to a deterministic local action.";
@@ -385,6 +481,7 @@ async function handleComputerTool(
     agentRunId: run.id,
     agentToolCallId: toolCallId,
     agentToolKind: decision.tool.name,
+    language: bindings.preferredLanguage,
   });
 
   if (shellResult.kind === "awaiting_approval") {
@@ -448,10 +545,16 @@ async function handleShellTool(
   }
 
   const toolCallId = crypto.randomUUID();
+  await bindings.addAssistantMessage(
+    buildAgentToolStartStatus(decision.tool, bindings.preferredLanguage),
+    statusMeta(run.id, "running"),
+    "running",
+  );
   const shellResult = await bindings.executeTerminal(task, decision.tool.command, {
     agentRunId: run.id,
     agentToolCallId: toolCallId,
     agentToolKind: decision.tool.name,
+    language: bindings.preferredLanguage,
   });
 
   if (shellResult.kind === "awaiting_approval") {
@@ -509,14 +612,15 @@ async function handleFilesystemReadTool(
   bindings: AgentOrchestratorBindings,
 ): Promise<ToolObservation> {
   const toolCallId = crypto.randomUUID();
+  await bindings.addAssistantMessage(
+    buildAgentToolStartStatus(decision.tool, bindings.preferredLanguage),
+    statusMeta(run.id, "running"),
+    "running",
+  );
   const result = await readTextFileSnippet(decision.tool.path, bindings.cwd, decision.tool.maxLines, bindings.logger);
   await bindings.addToolMessage(
     result.outputPreview,
-    {
-      agentRunId: run.id,
-      agentToolCallId: toolCallId,
-      agentToolKind: decision.tool.name,
-    },
+    toolArtifactMeta(run.id, toolCallId, decision.tool.name),
     "running",
   );
   await recordToolCall(bindings, {
@@ -545,6 +649,11 @@ async function handleFilesystemSearchTool(
   bindings: AgentOrchestratorBindings,
 ): Promise<ToolObservation> {
   const toolCallId = crypto.randomUUID();
+  await bindings.addAssistantMessage(
+    buildAgentToolStartStatus(decision.tool, bindings.preferredLanguage),
+    statusMeta(run.id, "running"),
+    "running",
+  );
   const result = await searchWorkspaceText(
     decision.tool.pattern,
     decision.tool.path,
@@ -554,11 +663,7 @@ async function handleFilesystemSearchTool(
   );
   await bindings.addToolMessage(
     result.outputPreview,
-    {
-      agentRunId: run.id,
-      agentToolCallId: toolCallId,
-      agentToolKind: decision.tool.name,
-    },
+    toolArtifactMeta(run.id, toolCallId, decision.tool.name),
     "running",
   );
   await recordToolCall(bindings, {

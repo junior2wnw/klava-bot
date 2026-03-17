@@ -5,6 +5,7 @@ import type {
   ProviderId,
   ProviderSettings,
 } from "@klava/contracts";
+import type { AppLanguage } from "../../i18n/AppI18n";
 
 export const DEFAULT_LOCAL_ENDPOINTS: Record<LocalRuntime, string> = {
   ollama: "http://127.0.0.1:11434/v1",
@@ -20,10 +21,15 @@ export type GuideStep = {
   code?: string;
 };
 
+export type GuideChip = {
+  label: string;
+  tone?: "accent" | "default";
+};
+
 export type ProviderGuide = {
   title: string;
   summary: string;
-  chips: string[];
+  chips: GuideChip[];
   actionLabel: string;
   secretLabel?: string;
   secretPlaceholder?: string;
@@ -31,9 +37,13 @@ export type ProviderGuide = {
   steps: GuideStep[];
 };
 
-function formatGpuSummary(machineProfile: MachineProfile | null) {
+function copy(language: AppLanguage, english: string, russian: string) {
+  return language === "ru" ? russian : english;
+}
+
+function formatGpuSummary(machineProfile: MachineProfile | null, language: AppLanguage) {
   if (!machineProfile?.gpus.length) {
-    return "No GPU detected";
+    return copy(language, "No GPU detected", "GPU не обнаружен");
   }
 
   return machineProfile.gpus
@@ -41,10 +51,17 @@ function formatGpuSummary(machineProfile: MachineProfile | null) {
     .join(", ");
 }
 
-export function getProviderLabel(provider: ProviderSettings | ProviderId | null, localRuntime: LocalRuntime = "ollama") {
+export function getProviderLabel(
+  provider: ProviderSettings | ProviderId | null,
+  options: {
+    localRuntime?: LocalRuntime;
+    language?: AppLanguage;
+  } = {},
+) {
   const providerId = typeof provider === "string" ? provider : provider?.provider;
+  const language = options.language ?? "en";
   const runtime =
-    typeof provider === "object" && provider?.provider === "local" ? provider.localRuntime : localRuntime;
+    typeof provider === "object" && provider?.provider === "local" ? provider.localRuntime : options.localRuntime ?? "ollama";
 
   switch (providerId) {
     case "openai":
@@ -56,11 +73,13 @@ export function getProviderLabel(provider: ProviderSettings | ProviderId | null,
     case "openrouter":
       return "OpenRouter";
     case "local":
-      return runtime === "vllm" ? "Local vLLM" : "Local Ollama";
+      return runtime === "vllm"
+        ? copy(language, "Local vLLM", "Локальный vLLM")
+        : copy(language, "Local Ollama", "Локальный Ollama");
     case "gonka":
       return "GONKA";
     default:
-      return "Provider";
+      return copy(language, "Provider", "Провайдер");
   }
 }
 
@@ -68,21 +87,45 @@ export function isProviderReady(provider: ProviderSettings | null) {
   return Boolean(provider && provider.provider !== "gonka" && provider.secretConfigured);
 }
 
-export function getProviderChoiceSummary(providerId: ProviderId) {
+export function getProviderChoiceSummary(providerId: ProviderId, language: AppLanguage = "en") {
   switch (providerId) {
     case "gemini":
-      return "Best free start: fast setup through Google AI Studio and live Gemini model discovery.";
+      return copy(
+        language,
+        "Best free start: fast setup through Google AI Studio and live Gemini model discovery.",
+        "Лучший бесплатный старт: быстрая настройка через Google AI Studio и загрузка актуальных моделей Gemini.",
+      );
     case "openrouter":
-      return "Free-model router with an OpenAI-style API and dynamic access to new `:free` models.";
+      return copy(
+        language,
+        "Free-model router with an OpenAI-style API and dynamic access to new `:free` models.",
+        "Роутер бесплатных моделей с OpenAI-совместимым API и динамическим доступом к новым моделям `:free`.",
+      );
     case "groq":
-      return "Very fast smoke-test path for short prompts and latency-sensitive checks.";
+      return copy(
+        language,
+        "Very fast smoke-test path for short prompts and latency-sensitive checks.",
+        "Очень быстрый путь для smoke-тестов, коротких запросов и проверок, чувствительных к задержке.",
+      );
     case "openai":
-      return "Full paid OpenAI path with live validation and dynamic model loading.";
+      return copy(
+        language,
+        "Full paid OpenAI path with live validation and dynamic model loading.",
+        "Полноценный платный путь OpenAI с живой валидацией ключа и динамической загрузкой моделей.",
+      );
     case "local":
-      return "No external API required. Connect Ollama or a local vLLM OpenAI-compatible server.";
+      return copy(
+        language,
+        "No external API required. Connect Ollama or a local vLLM OpenAI-compatible server.",
+        "Без внешнего API. Подключите Ollama или локальный OpenAI-совместимый сервер vLLM.",
+      );
     case "gonka":
     default:
-      return "Prepared in Klava, but intentionally paused until the provider-side GitHub issues are resolved.";
+      return copy(
+        language,
+        "Prepared in Klava, but intentionally paused until the provider-side GitHub issues are resolved.",
+        "Путь подготовлен в Klava, но намеренно приостановлен до решения проблем на стороне провайдера.",
+      );
   }
 }
 
@@ -92,34 +135,60 @@ export function getProviderGuide(
     localRuntime,
     localRuntimeAdvice,
     machineProfile,
+    language = "en",
   }: {
     localRuntime: LocalRuntime;
     localRuntimeAdvice: LocalRuntimeAdvice | null;
     machineProfile: MachineProfile | null;
+    language?: AppLanguage;
   },
 ): ProviderGuide {
   if (providerId === "gemini") {
     return {
       title: "Google Gemini",
-      summary: "Fastest free start for most people. Klava validates the key live and pulls the current Gemini chat model list.",
-      chips: ["Free tier", "AI Studio key", "Live model list"],
-      actionLabel: "Connect Gemini",
-      secretLabel: "Gemini API key",
+      summary: copy(
+        language,
+        "Fastest free start for most people. Klava validates the key live and pulls the current Gemini chat model list.",
+        "Самый быстрый бесплатный старт для большинства пользователей. Klava проверяет ключ вживую и загружает актуальный список чат-моделей Gemini.",
+      ),
+      chips: [
+        { label: copy(language, "Free tier", "Бесплатный тариф") },
+        { label: copy(language, "AI Studio key", "Ключ AI Studio") },
+        { label: copy(language, "Live model list", "Актуальный список моделей") },
+      ],
+      actionLabel: copy(language, "Connect Gemini", "Подключить Gemini"),
+      secretLabel: copy(language, "Gemini API key", "API-ключ Gemini"),
       secretPlaceholder: "AIza...",
-      hint: "Open Google AI Studio, create an API key, paste it here, and Klava will load the currently available Gemini chat models.",
+      hint: copy(
+        language,
+        "Open Google AI Studio, create an API key, paste it here, and Klava will load the currently available Gemini chat models.",
+        "Откройте Google AI Studio, создайте API-ключ, вставьте его сюда, и Klava загрузит доступные сейчас чат-модели Gemini.",
+      ),
       steps: [
         {
-          title: "Open Google AI Studio",
-          detail: "Go to the API key page while signed in with the Google account you want to use for Gemini API access.",
+          title: copy(language, "Open Google AI Studio", "Откройте Google AI Studio"),
+          detail: copy(
+            language,
+            "Go to the API key page while signed in with the Google account you want to use for Gemini API access.",
+            "Откройте страницу API-ключей, войдя под Google-аккаунтом, который хотите использовать для Gemini API.",
+          ),
           href: "https://aistudio.google.com/app/apikey",
         },
         {
-          title: "Create a key",
-          detail: "Click Create API key. If Google asks for a project, pick the suggested project or create a new one in the same dialog.",
+          title: copy(language, "Create a key", "Создайте ключ"),
+          detail: copy(
+            language,
+            "Click Create API key. If Google asks for a project, pick the suggested project or create a new one in the same dialog.",
+            "Нажмите Create API key. Если Google попросит выбрать проект, используйте предложенный или создайте новый прямо в том же диалоге.",
+          ),
         },
         {
-          title: "Copy the key into Klava",
-          detail: "Paste the key here. Klava will validate it live, fetch the current Gemini models, and open the full app immediately after validation succeeds.",
+          title: copy(language, "Copy the key into Klava", "Вставьте ключ в Klava"),
+          detail: copy(
+            language,
+            "Paste the key here. Klava will validate it live, fetch the current Gemini models, and open the full app immediately after validation succeeds.",
+            "Вставьте ключ сюда. Klava проверит его вживую, получит текущие модели Gemini и сразу откроет полный интерфейс после успешной валидации.",
+          ),
         },
       ],
     };
@@ -128,25 +197,45 @@ export function getProviderGuide(
   if (providerId === "groq") {
     return {
       title: "Groq",
-      summary: "Useful for fast smoke tests and latency checks. Klava uses Groq's OpenAI-compatible API and live model listing.",
-      chips: ["Fast responses", "Free-tier start", "OpenAI-compatible"],
-      actionLabel: "Connect Groq",
-      secretLabel: "Groq API key",
+      summary: copy(
+        language,
+        "Useful for fast smoke tests and latency checks. Klava uses Groq's OpenAI-compatible API and live model listing.",
+        "Подходит для быстрых smoke-тестов и проверок задержки. Klava использует OpenAI-совместимый API Groq и актуальный список моделей.",
+      ),
+      chips: [
+        { label: copy(language, "Fast responses", "Быстрые ответы") },
+        { label: copy(language, "Free-tier start", "Бесплатный старт") },
+        { label: copy(language, "OpenAI-compatible", "OpenAI-совместимый") },
+      ],
+      actionLabel: copy(language, "Connect Groq", "Подключить Groq"),
+      secretLabel: copy(language, "Groq API key", "API-ключ Groq"),
       secretPlaceholder: "gsk_...",
-      hint: "Create a Groq API key in the console, paste it here, and Klava will validate the key and load the current Groq models.",
+      hint: copy(
+        language,
+        "Create a Groq API key in the console, paste it here, and Klava will validate the key and load the current Groq models.",
+        "Создайте API-ключ Groq в консоли, вставьте его сюда, и Klava проверит ключ и загрузит текущие модели Groq.",
+      ),
       steps: [
         {
-          title: "Open Groq console",
-          detail: "Sign in to the Groq console and open the keys page.",
+          title: copy(language, "Open Groq console", "Откройте консоль Groq"),
+          detail: copy(language, "Sign in to the Groq console and open the keys page.", "Войдите в консоль Groq и откройте страницу ключей."),
           href: "https://console.groq.com/keys",
         },
         {
-          title: "Generate an API key",
-          detail: "Create a new key, give it a label you will recognize later, and copy it immediately because Groq shows the full secret only once.",
+          title: copy(language, "Generate an API key", "Создайте API-ключ"),
+          detail: copy(
+            language,
+            "Create a new key, give it a label you will recognize later, and copy it immediately because Groq shows the full secret only once.",
+            "Создайте новый ключ, дайте ему понятное имя и сразу сохраните его: Groq показывает полный секрет только один раз.",
+          ),
         },
         {
-          title: "Paste the key into Klava",
-          detail: "Klava validates the key against the live Groq API, loads the model list, and lets you switch models later from the bottom dock.",
+          title: copy(language, "Paste the key into Klava", "Вставьте ключ в Klava"),
+          detail: copy(
+            language,
+            "Klava validates the key against the live Groq API, loads the model list, and lets you switch models later from the bottom dock.",
+            "Klava проверит ключ через live API Groq, загрузит список моделей и позволит потом переключать их через нижнюю панель.",
+          ),
         },
       ],
     };
@@ -155,25 +244,45 @@ export function getProviderGuide(
   if (providerId === "openrouter") {
     return {
       title: "OpenRouter",
-      summary: "Best option when you want a single OpenAI-like API with access to many free models and automatic router aliases.",
-      chips: ["Free models", "OpenAI-compatible", "Router aliases"],
-      actionLabel: "Connect OpenRouter",
-      secretLabel: "OpenRouter API key",
+      summary: copy(
+        language,
+        "Best option when you want a single OpenAI-like API with access to many free models and automatic router aliases.",
+        "Лучший вариант, если нужен единый OpenAI-подобный API с доступом ко многим бесплатным моделям и автоматическим router alias.",
+      ),
+      chips: [
+        { label: copy(language, "Free models", "Бесплатные модели") },
+        { label: copy(language, "OpenAI-compatible", "OpenAI-совместимый") },
+        { label: copy(language, "Router aliases", "Router aliases") },
+      ],
+      actionLabel: copy(language, "Connect OpenRouter", "Подключить OpenRouter"),
+      secretLabel: copy(language, "OpenRouter API key", "API-ключ OpenRouter"),
       secretPlaceholder: "sk-or-...",
-      hint: "OpenRouter works well when you want to test many free models quickly without changing Klava's chat flow.",
+      hint: copy(
+        language,
+        "OpenRouter works well when you want to test many free models quickly without changing Klava's chat flow.",
+        "OpenRouter удобен, когда нужно быстро проверять много бесплатных моделей, не меняя чат-поток Klava.",
+      ),
       steps: [
         {
-          title: "Open the OpenRouter keys page",
-          detail: "Sign in and create an API key from your OpenRouter account.",
+          title: copy(language, "Open the OpenRouter keys page", "Откройте страницу ключей OpenRouter"),
+          detail: copy(language, "Sign in and create an API key from your OpenRouter account.", "Войдите в OpenRouter и создайте API-ключ в своём аккаунте."),
           href: "https://openrouter.ai/keys",
         },
         {
-          title: "Leave free routing available",
-          detail: "Klava can use router aliases such as `openrouter/free` and any live `:free` models returned by the API. You do not need to hardcode a model before connecting.",
+          title: copy(language, "Leave free routing available", "Оставьте свободную маршрутизацию включённой"),
+          detail: copy(
+            language,
+            "Klava can use router aliases such as `openrouter/free` and any live `:free` models returned by the API. You do not need to hardcode a model before connecting.",
+            "Klava умеет использовать router alias вроде `openrouter/free` и любые актуальные модели `:free`, которые вернёт API. Жёстко задавать модель заранее не требуется.",
+          ),
         },
         {
-          title: "Paste the key into Klava",
-          detail: "Klava validates the key, fetches the current OpenRouter models, and makes the free router path available from the model selector.",
+          title: copy(language, "Paste the key into Klava", "Вставьте ключ в Klava"),
+          detail: copy(
+            language,
+            "Klava validates the key, fetches the current OpenRouter models, and makes the free router path available from the model selector.",
+            "Klava проверит ключ, загрузит текущие модели OpenRouter и откроет free-router путь через выбор модели.",
+          ),
         },
       ],
     };
@@ -182,25 +291,45 @@ export function getProviderGuide(
   if (providerId === "openai") {
     return {
       title: "OpenAI",
-      summary: "Paid OpenAI path with live validation and dynamic model listing. Use this when you want the direct OpenAI API.",
-      chips: ["Paid API", "Live validation", "Dynamic models"],
-      actionLabel: "Connect OpenAI",
-      secretLabel: "OpenAI API key",
+      summary: copy(
+        language,
+        "Paid OpenAI path with live validation and dynamic model listing. Use this when you want the direct OpenAI API.",
+        "Платный путь OpenAI с живой валидацией и динамическим списком моделей. Используйте, если нужен прямой API OpenAI.",
+      ),
+      chips: [
+        { label: copy(language, "Paid API", "Платный API") },
+        { label: copy(language, "Live validation", "Живая валидация") },
+        { label: copy(language, "Dynamic models", "Динамические модели") },
+      ],
+      actionLabel: copy(language, "Connect OpenAI", "Подключить OpenAI"),
+      secretLabel: copy(language, "OpenAI API key", "API-ключ OpenAI"),
       secretPlaceholder: "sk-...",
-      hint: "Paste a working OpenAI API key. Klava validates it live, loads the current chat models, and lets you switch models later.",
+      hint: copy(
+        language,
+        "Paste a working OpenAI API key. Klava validates it live, loads the current chat models, and lets you switch models later.",
+        "Вставьте рабочий API-ключ OpenAI. Klava проверит его вживую, загрузит текущие чат-модели и позволит переключать их позже.",
+      ),
       steps: [
         {
-          title: "Open the OpenAI API keys page",
-          detail: "Sign in to the OpenAI platform and create a new secret key.",
+          title: copy(language, "Open the OpenAI API keys page", "Откройте страницу API-ключей OpenAI"),
+          detail: copy(language, "Sign in to the OpenAI platform and create a new secret key.", "Войдите в платформу OpenAI и создайте новый secret key."),
           href: "https://platform.openai.com/api-keys",
         },
         {
-          title: "Copy the key immediately",
-          detail: "OpenAI shows the full secret only when it is created. Save it now and paste it into Klava.",
+          title: copy(language, "Copy the key immediately", "Сразу сохраните ключ"),
+          detail: copy(
+            language,
+            "OpenAI shows the full secret only when it is created. Save it now and paste it into Klava.",
+            "OpenAI показывает полный секрет только в момент создания. Сохраните его сразу и вставьте в Klava.",
+          ),
         },
         {
-          title: "Let Klava validate the key",
-          detail: "Klava verifies the key with a live request, loads the currently available OpenAI models, and opens the full app after validation succeeds.",
+          title: copy(language, "Let Klava validate the key", "Дайте Klava проверить ключ"),
+          detail: copy(
+            language,
+            "Klava verifies the key with a live request, loads the currently available OpenAI models, and opens the full app after validation succeeds.",
+            "Klava проверит ключ живым запросом, загрузит доступные сейчас модели OpenAI и откроет полный интерфейс после успешной проверки.",
+          ),
         },
       ],
     };
@@ -209,34 +338,71 @@ export function getProviderGuide(
   if (providerId === "local") {
     const adviceOption = localRuntimeAdvice?.options.find((option) => option.runtime === localRuntime) ?? null;
     const machineFacts = machineProfile
-      ? `${machineProfile.platformLabel}, ${machineProfile.memoryGb.toFixed(1)} GB RAM, CPU: ${machineProfile.cpuModel ?? "unknown"}, GPU: ${formatGpuSummary(machineProfile)}.`
-      : "Klava could not read the local hardware profile yet, so the recommendation is best-effort.";
+      ? copy(
+          language,
+          `${machineProfile.platformLabel}, ${machineProfile.memoryGb.toFixed(1)} GB RAM, CPU: ${machineProfile.cpuModel ?? "unknown"}, GPU: ${formatGpuSummary(machineProfile, language)}.`,
+          `${machineProfile.platformLabel}, ${machineProfile.memoryGb.toFixed(1)} ГБ RAM, CPU: ${machineProfile.cpuModel ?? "неизвестно"}, GPU: ${formatGpuSummary(machineProfile, language)}.`,
+        )
+      : copy(
+          language,
+          "Klava could not read the local hardware profile yet, so the recommendation is best-effort.",
+          "Klava пока не смогла прочитать профиль локального железа, поэтому рекомендация дана в best-effort режиме.",
+        );
 
     if (localRuntime === "ollama") {
       return {
-        title: "Local Ollama",
-        summary: "Best default local path. Ollama is easier to install and usually the right first choice on Windows.",
-        chips: ["No external API", "OpenAI-compatible", adviceOption?.recommended ? "Recommended here" : "Works locally"],
-        actionLabel: "Connect Ollama",
-        secretLabel: "Optional local API key",
-        secretPlaceholder: "leave blank unless your proxy requires Bearer auth",
-        hint: `${machineFacts} Klava will connect to the local Ollama OpenAI-compatible endpoint at ${DEFAULT_LOCAL_ENDPOINTS.ollama} by default.`,
+        title: copy(language, "Local Ollama", "Локальный Ollama"),
+        summary: copy(
+          language,
+          "Best default local path. Ollama is easier to install and usually the right first choice on Windows.",
+          "Лучший локальный путь по умолчанию. Ollama проще установить и обычно это правильный первый выбор на Windows.",
+        ),
+        chips: [
+          { label: copy(language, "No external API", "Без внешнего API") },
+          { label: copy(language, "OpenAI-compatible", "OpenAI-совместимый") },
+          {
+            label: adviceOption?.recommended
+              ? copy(language, "Recommended here", "Рекомендуется для этой машины")
+              : copy(language, "Works locally", "Работает локально"),
+            tone: adviceOption?.recommended ? "accent" : "default",
+          },
+        ],
+        actionLabel: copy(language, "Connect Ollama", "Подключить Ollama"),
+        secretLabel: copy(language, "Optional local API key", "Необязательный локальный API-ключ"),
+        secretPlaceholder: copy(
+          language,
+          "leave blank unless your proxy requires Bearer auth",
+          "оставьте пустым, если прокси не требует Bearer auth",
+        ),
+        hint: copy(
+          language,
+          `${machineFacts} Klava will connect to the local Ollama OpenAI-compatible endpoint at ${DEFAULT_LOCAL_ENDPOINTS.ollama} by default.`,
+          `${machineFacts} По умолчанию Klava подключается к локальному OpenAI-совместимому endpoint Ollama по адресу ${DEFAULT_LOCAL_ENDPOINTS.ollama}.`,
+        ),
         steps: [
           {
-            title: "Install Ollama",
-            detail: "Download and install the Ollama desktop build for your OS.",
+            title: copy(language, "Install Ollama", "Установите Ollama"),
+            detail: copy(language, "Download and install the Ollama desktop build for your OS.", "Скачайте и установите сборку Ollama для вашей ОС."),
             href: "https://ollama.com/download",
           },
           {
-            title: "Pull the recommended model",
+            title: copy(language, "Pull the recommended model", "Скачайте рекомендованную модель"),
             detail:
               adviceOption?.modelRecommendation?.summary ??
-              "Start with a smaller instruct model if this is your first local setup.",
+              copy(
+                language,
+                "Start with a smaller instruct model if this is your first local setup.",
+                "Если это ваша первая локальная настройка, начните с небольшой instruct-модели.",
+              ),
             code: adviceOption?.modelRecommendation?.installCommand ?? "ollama pull llama3.2:3b",
           },
           {
-            title: "Make sure the local API is up",
-            detail: "If Klava cannot reach Ollama, open a terminal and run `ollama serve`, then reconnect.",
+            title: copy(language, "Make sure the local API is up", "Убедитесь, что локальный API запущен"),
+            detail: copy(
+              language,
+              "If Klava cannot reach Ollama, open a terminal and run `ollama serve`, then reconnect.",
+              "Если Klava не может достучаться до Ollama, откройте терминал, выполните `ollama serve` и попробуйте подключиться заново.",
+            ),
             code: "ollama serve",
           },
         ],
@@ -244,29 +410,58 @@ export function getProviderGuide(
     }
 
     return {
-      title: "Local vLLM",
-      summary: "Advanced path for a dedicated local OpenAI-compatible inference server. Best on Linux/WSL with a stronger GPU.",
-      chips: ["Advanced local server", "OpenAI-compatible", adviceOption?.recommended ? "Recommended here" : "Advanced only"],
-      actionLabel: "Connect vLLM",
-      secretLabel: "Optional server API key",
-      secretPlaceholder: "token-... or leave blank if auth is disabled",
-      hint: `${machineFacts} Klava expects an OpenAI-compatible vLLM server at ${DEFAULT_LOCAL_ENDPOINTS.vllm} by default.`,
+      title: copy(language, "Local vLLM", "Локальный vLLM"),
+      summary: copy(
+        language,
+        "Advanced path for a dedicated local OpenAI-compatible inference server. Best on Linux/WSL with a stronger GPU.",
+        "Продвинутый путь для выделенного локального OpenAI-совместимого inference-сервера. Лучше всего подходит для Linux/WSL и более сильной GPU.",
+      ),
+      chips: [
+        { label: copy(language, "Advanced local server", "Продвинутый локальный сервер") },
+        { label: copy(language, "OpenAI-compatible", "OpenAI-совместимый") },
+        {
+          label: adviceOption?.recommended
+            ? copy(language, "Recommended here", "Рекомендуется для этой машины")
+            : copy(language, "Advanced only", "Только для продвинутой настройки"),
+          tone: adviceOption?.recommended ? "accent" : "default",
+        },
+      ],
+      actionLabel: copy(language, "Connect vLLM", "Подключить vLLM"),
+      secretLabel: copy(language, "Optional server API key", "Необязательный API-ключ сервера"),
+      secretPlaceholder: copy(language, "token-... or leave blank if auth is disabled", "token-... или оставьте пустым, если авторизация отключена"),
+      hint: copy(
+        language,
+        `${machineFacts} Klava expects an OpenAI-compatible vLLM server at ${DEFAULT_LOCAL_ENDPOINTS.vllm} by default.`,
+        `${machineFacts} По умолчанию Klava ожидает OpenAI-совместимый сервер vLLM по адресу ${DEFAULT_LOCAL_ENDPOINTS.vllm}.`,
+      ),
       steps: [
         {
-          title: "Use Linux or WSL if you are on Windows",
-          detail: "vLLM is primarily documented for Linux/CUDA. On Windows, the practical route is usually WSL2 or a Linux machine.",
+          title: copy(language, "Use Linux or WSL if you are on Windows", "Если вы на Windows, используйте Linux или WSL"),
+          detail: copy(
+            language,
+            "vLLM is primarily documented for Linux/CUDA. On Windows, the practical route is usually WSL2 or a Linux machine.",
+            "vLLM в основном документирован для Linux/CUDA. На Windows практичный путь обычно лежит через WSL2 или отдельную Linux-машину.",
+          ),
           href: "https://docs.vllm.ai/en/latest/",
         },
         {
-          title: "Install vLLM",
-          detail: "Inside that Linux or WSL environment, install vLLM with Python and GPU support that matches your machine.",
+          title: copy(language, "Install vLLM", "Установите vLLM"),
+          detail: copy(
+            language,
+            "Inside that Linux or WSL environment, install vLLM with Python and GPU support that matches your machine.",
+            "Внутри Linux или WSL-среды установите vLLM с Python и GPU-поддержкой, подходящей под вашу машину.",
+          ),
           code: "pip install vllm",
         },
         {
-          title: "Start the OpenAI-compatible server",
+          title: copy(language, "Start the OpenAI-compatible server", "Запустите OpenAI-совместимый сервер"),
           detail:
             adviceOption?.modelRecommendation?.summary ??
-            "Run the server with the model you actually want Klava to use.",
+            copy(
+              language,
+              "Run the server with the model you actually want Klava to use.",
+              "Запустите сервер с той моделью, которую Klava действительно должна использовать.",
+            ),
           code:
             adviceOption?.modelRecommendation?.installCommand ??
             "python -m vllm.entrypoints.openai.api_server --model meta-llama/Llama-3.1-8B-Instruct --host 127.0.0.1 --port 8000",
@@ -277,18 +472,38 @@ export function getProviderGuide(
 
   return {
     title: "GONKA",
-    summary: "This provider path is intentionally paused. Klava keeps the UI visible but blocks live onboarding until the provider-side issue is resolved.",
-    chips: ["Paused", "Tracked on GitHub", "Not available today"],
-    actionLabel: "Use another provider",
-    hint: "Pick Gemini, OpenRouter, Groq, OpenAI, or Local to work in the app right now.",
+    summary: copy(
+      language,
+      "This provider path is intentionally paused. Klava keeps the UI visible but blocks live onboarding until the provider-side issue is resolved.",
+      "Этот путь провайдера намеренно приостановлен. Klava оставляет UI видимым, но блокирует live-onboarding до решения проблемы на стороне провайдера.",
+    ),
+    chips: [
+      { label: copy(language, "Paused", "Пауза") },
+      { label: copy(language, "Tracked on GitHub", "Отслеживается на GitHub") },
+      { label: copy(language, "Not available today", "Сейчас недоступно") },
+    ],
+    actionLabel: copy(language, "Use another provider", "Выбрать другой провайдер"),
+    hint: copy(
+      language,
+      "Pick Gemini, OpenRouter, Groq, OpenAI, or Local to work in the app right now.",
+      "Чтобы работать в приложении прямо сейчас, выберите Gemini, OpenRouter, Groq, OpenAI или Local.",
+    ),
     steps: [
       {
-        title: "Current state",
-        detail: "Klava's GONKA onboarding and UI path are prepared, but the live provider route remains paused in this build.",
+        title: copy(language, "Current state", "Текущее состояние"),
+        detail: copy(
+          language,
+          "Klava's GONKA onboarding and UI path are prepared, but the live provider route remains paused in this build.",
+          "Onboarding и UI-путь GONKA в Klava подготовлены, но в этой сборке live-маршрут провайдера остаётся на паузе.",
+        ),
       },
       {
-        title: "Use a working provider now",
-        detail: "Switch to one of the live providers above if you need a working app immediately.",
+        title: copy(language, "Use a working provider now", "Используйте рабочий провайдер сейчас"),
+        detail: copy(
+          language,
+          "Switch to one of the live providers above if you need a working app immediately.",
+          "Переключитесь на одного из рабочих провайдеров выше, если приложение нужно прямо сейчас.",
+        ),
       },
     ],
   };

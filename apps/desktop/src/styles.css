@@ -244,6 +244,29 @@ pre {
   flex-wrap: wrap;
 }
 
+.app-language {
+  display: inline-grid;
+  gap: 4px;
+  min-width: 150px;
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(237, 227, 215, 0.56);
+}
+
+.app-language--compact {
+  min-width: 132px;
+}
+
+.app-language__select {
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 245, 235, 0.08);
+  background: rgba(255, 245, 235, 0.04);
+  color: rgba(237, 227, 215, 0.86);
+  padding: 0 10px;
+  font-size: 12px;
+}
+
 .app-badge {
   display: inline-flex;
   align-items: center;
@@ -443,6 +466,16 @@ pre {
   color: rgba(237, 227, 215, 0.75);
 }
 
+.message-content--status {
+  color: rgba(237, 227, 215, 0.84);
+}
+
+.message-status-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
 .message-tag {
   display: inline-flex;
   align-items: center;
@@ -459,6 +492,51 @@ pre {
   display: grid;
   gap: 8px;
   margin-top: 10px;
+}
+
+.activity-card {
+  display: grid;
+  gap: 12px;
+}
+
+.activity-card__summary {
+  white-space: pre-wrap;
+  color: rgba(237, 227, 215, 0.84);
+  line-height: 1.6;
+}
+
+.activity-plan {
+  display: grid;
+  gap: 8px;
+}
+
+.activity-plan__item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 245, 235, 0.04);
+  background: rgba(255, 245, 235, 0.02);
+}
+
+.activity-plan__copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.activity-plan__copy strong {
+  color: rgba(237, 227, 215, 0.82);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.activity-plan__copy span {
+  color: rgba(237, 227, 215, 0.38);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 /* ── Composer ── */
@@ -886,6 +964,31 @@ pre {
 .status-chip--accent {
   background: rgba(196, 112, 74, 0.10);
   color: rgba(196, 112, 74, 0.70);
+}
+
+.status-chip--info {
+  background: rgba(255, 245, 235, 0.04);
+  color: rgba(237, 227, 215, 0.52);
+}
+
+.status-chip--running {
+  background: rgba(196, 112, 74, 0.12);
+  color: rgba(232, 164, 129, 0.92);
+}
+
+.status-chip--awaiting_approval {
+  background: rgba(212, 160, 74, 0.10);
+  color: #d4a04a;
+}
+
+.status-chip--succeeded {
+  background: rgba(125, 186, 106, 0.10);
+  color: #8ed67a;
+}
+
+.status-chip--failed {
+  background: rgba(199, 95, 95, 0.10);
+  color: #d97a7a;
 }
 
 .onboarding-note {

@@ -8,10 +8,11 @@ function getRuntimeBaseUrl() {
 
 export async function requestJson<T>(path: string, init?: RequestInit) {
   const response = await fetch(`${getRuntimeBaseUrl()}${path}`, {
+    ...init,
     headers: {
       "content-type": "application/json",
+      ...(init?.headers ?? {}),
     },
-    ...init,
   });
 
   const payload = (await response.json()) as T | RuntimeError;
