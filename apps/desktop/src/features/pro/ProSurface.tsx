@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import type { AgentRun, CreateOperationRequest, OperationRun, TaskDetail } from "@klava/contracts";
 import { Button, PanelCard, Stack, StatusPill, TextField } from "@klava/ui";
 import { useAppI18n } from "../../i18n/AppI18n";
+import { getProviderLabel } from "../providers/providerMeta";
 
 function operationTone(status: OperationRun["status"]) {
   return status === "succeeded"
@@ -109,17 +110,34 @@ function toolCallStatusLabel(
   }
 }
 
+function toolCallKindLabel(
+  kind: TaskDetail["agentRuns"][number]["toolCalls"][number]["kind"],
+  t: (english: string, russian: string) => string,
+) {
+  switch (kind) {
+    case "filesystem.read":
+      return t("File read", "Чтение файла");
+    case "filesystem.search":
+      return t("File search", "Поиск по файлам");
+    case "computer.inspect":
+      return t("Computer inspection", "Проверка компьютера");
+    case "shell.command":
+    default:
+      return t("Shell command", "Команда shell");
+  }
+}
+
 function buildOperationTemplates(t: (english: string, russian: string) => string): CreateOperationRequest[] {
   return [
     {
-      title: t("Repo audit runbook", "Runbook аудита репозитория"),
+      title: t("Repo audit runbook", "Сценарий проверки репозитория"),
       goal: t(
         "Inspect the current repo state and verify the local engineering surface.",
-        "Проверить текущее состояние репозитория и валидировать локальную инженерную поверхность.",
+        "Проверить текущее состояние репозитория и убедиться, что локальная рабочая среда готова к дальнейшей работе.",
       ),
       summary: t(
         "A safe multi-step operation for proving that Klava can execute and track a real local workflow.",
-        "Безопасная многошаговая операция, которая показывает, что Klava умеет выполнять и отслеживать реальный локальный workflow.",
+        "Безопасный многошаговый сценарий, который показывает, что Klava умеет вести реальную локальную работу шаг за шагом.",
       ),
       steps: [
         {
@@ -131,7 +149,7 @@ function buildOperationTemplates(t: (english: string, russian: string) => string
           command: null,
         },
         {
-          title: t("Capture git state", "Снять состояние git"),
+          title: t("Capture git state", "Зафиксировать состояние git"),
           detail: t(
             "Check whether the workspace is clean before deeper work begins.",
             "Проверить, чисто ли рабочее дерево, прежде чем переходить к более глубокой работе.",
@@ -139,10 +157,10 @@ function buildOperationTemplates(t: (english: string, russian: string) => string
           command: "git status",
         },
         {
-          title: t("Capture runtime versions", "Зафиксировать версии runtime"),
+          title: t("Capture runtime versions", "Зафиксировать версии окружения"),
           detail: t(
             "Verify the local Node runtime is available before build or migration work.",
-            "Проверить, что локальный Node runtime доступен до сборки или миграций.",
+            "Проверить, что локальный Node.js доступен до сборки или миграций.",
           ),
           command: "node -v",
         },
@@ -157,37 +175,37 @@ function buildOperationTemplates(t: (english: string, russian: string) => string
       ],
     },
     {
-      title: t("Long-task proof runbook", "Runbook для длинной задачи"),
+      title: t("Long-task proof runbook", "Сценарий длинной операции"),
       goal: t(
         "Show that Klava can hold a multi-step machine task as an explicit operation instead of a one-shot reply.",
-        "Показать, что Klava умеет вести многошаговую машинную задачу как явную операцию, а не как одноразовый ответ.",
+        "Показать, что Klava умеет вести многошаговую машинную задачу как явную операцию, а не отвечать одним сообщением.",
       ),
       summary: t(
         "Focuses on durable progress, operator notes, and terminal execution in one task transcript.",
-        "Фокус на устойчивом прогрессе, заметках оператора и выполнении команд внутри одного task transcript.",
+        "Показывает устойчивый прогресс, заметки оператора и выполнение команд внутри одной задачи.",
       ),
       steps: [
         {
           title: t("Record the target outcome", "Зафиксировать целевое состояние"),
-          detail: t(
-            "Describe the end state before touching the machine so the operation stays reviewable.",
-            "Описать конечное состояние до работы с машиной, чтобы операцию можно было нормально ревьюить.",
-          ),
+        detail: t(
+          "Describe the end state before touching the machine so the operation stays reviewable.",
+          "Описать конечное состояние до работы с машиной, чтобы ход операции потом было легко проверить.",
+        ),
           command: null,
         },
         {
-          title: t("Inventory the repo surface", "Инвентаризировать поверхность репозитория"),
+          title: t("Inventory the repo surface", "Собрать карту репозитория"),
           detail: t(
             "Gather the top-level file map that will inform the next step.",
-            "Собрать верхнеуровневую карту файлов, которая поможет на следующем шаге.",
+            "Собрать верхнеуровневую карту файлов и папок, чтобы следующий шаг опирался на реальную структуру проекта.",
           ),
           command: "git ls-files",
         },
         {
-          title: t("Capture package manifest", "Зафиксировать package manifest"),
+          title: t("Capture package manifest", "Зафиксировать package.json"),
           detail: t(
             "Keep the package-level reality in the same task before making deeper changes.",
-            "Сохранить фактическое состояние package-уровня в той же задаче до более глубоких изменений.",
+            "Сохранить ключевые данные из package.json в этой же задаче до более глубоких изменений.",
           ),
           command: "node -e \"console.log(require('./package.json').name)\"",
         },
@@ -219,7 +237,7 @@ function parseCustomSteps(
       return {
         title: titlePart,
         detail: commandPart
-          ? t("Custom terminal step supplied by the operator.", "Пользовательский terminal-шаг от оператора.")
+          ? t("Custom terminal step supplied by the operator.", "Пользовательский шаг с командой от оператора.")
           : t("Operator note step.", "Шаг-заметка оператора."),
         command: commandPart || null,
       };
@@ -244,19 +262,19 @@ export function ProSurface({
   const [customGoal, setCustomGoal] = useState(() =>
     t(
       "Drive a real local workflow through explicit steps, commands, and approvals.",
-      "Провести реальный локальный workflow через явные шаги, команды и подтверждения.",
+      "Провести реальную локальную задачу через явные шаги, команды и подтверждения.",
     ),
   );
   const [customSummary, setCustomSummary] = useState(() =>
     t(
       "Each line becomes a step. Use `Title :: command` for terminal steps or just `Title` for note steps.",
-      "Каждая строка становится шагом. Используйте `Заголовок :: команда` для terminal-шагов или просто `Заголовок` для заметок.",
+      "Каждая строка превращается в шаг. Используйте `Заголовок :: команда` для шагов с командой или просто `Заголовок` для заметок.",
     ),
   );
   const [customSteps, setCustomSteps] = useState(() =>
     t(
       "Document rollback path\nCapture repo state :: git status\nCheck Node runtime :: node -v\nRun verification :: npm run check",
-      "Зафиксировать путь отката\nСнять состояние репозитория :: git status\nПроверить Node runtime :: node -v\nЗапустить проверку :: npm run check",
+      "Зафиксировать путь отката\nСнять состояние репозитория :: git status\nПроверить Node.js :: node -v\nЗапустить проверку :: npm run check",
     ),
   );
   const [localError, setLocalError] = useState<string | null>(null);
@@ -290,7 +308,7 @@ export function ProSurface({
   async function handleCreateCustom() {
     const steps = parseCustomSteps(customSteps, t);
     if (!customTitle.trim() || !customGoal.trim()) {
-      setLocalError(t("Title and goal are required.", "Нужны title и goal."));
+      setLocalError(t("Title and goal are required.", "Нужно указать название и цель."));
       return;
     }
     if (!steps.length) {
@@ -310,15 +328,15 @@ export function ProSurface({
   return (
     <div className="surface-stack">
       <PanelCard
-        title={t("Agent Layer", "Слой агента")}
+        title={t("Agent Layer", "Агент")}
         subtitle={t(
           "Persistent provider-agnostic planning with shell, filesystem, computer diagnostics, approvals, and resumable passes.",
-          "Постоянное provider-agnostic планирование с shell, файловой системой, диагностикой компьютера, подтверждениями и возобновляемыми проходами.",
+          "Агент ведёт план, работает с shell и файлами, просит подтверждения и умеет продолжать ту же задачу позже.",
         )}
       >
         <div className="operation-facts">
-          <span>{t(`${task.agentRuns.length} total agent runs`, `Всего agent runs: ${task.agentRuns.length}`)}</span>
-          <span>{activeAgentRun ? t("1 active agent run", "1 активный agent run") : t("No active agent run", "Активных agent runs нет")}</span>
+          <span>{t(`${task.agentRuns.length} total agent runs`, `Всего запусков агента: ${task.agentRuns.length}`)}</span>
+          <span>{activeAgentRun ? t("1 active agent run", "Есть активный запуск") : t("No active agent run", "Активных запусков нет")}</span>
           <span>
             {t(
               `${task.approvals.filter((approval) => approval.status === "pending").length} pending approvals`,
@@ -349,7 +367,7 @@ export function ProSurface({
               <span>{t("Provider", "Провайдер")}</span>
               <strong>
                 {activeAgentRun.provider
-                  ? `${activeAgentRun.provider}${activeAgentRun.model ? ` / ${activeAgentRun.model}` : ""}`
+                  ? `${getProviderLabel(activeAgentRun.provider, { language })}${activeAgentRun.model ? ` / ${activeAgentRun.model}` : ""}`
                   : t("n/a", "н/д")}
               </strong>
             </div>
@@ -364,7 +382,7 @@ export function ProSurface({
                       <strong>
                         {index + 1}. {item.title}
                       </strong>
-                      <p>{item.detail ?? t("Agent plan item.", "Элемент плана агента.")}</p>
+                      <p>{item.detail ?? t("Agent plan item.", "Шаг плана агента.")}</p>
                     </div>
                     <StatusPill tone={agentTone(item.status === "completed" ? "succeeded" : item.status === "running" ? "running" : item.status === "failed" ? "failed" : item.status === "blocked" ? "blocked" : "needs_input")} value={planStatusLabel(item.status, t)} />
                   </div>
@@ -379,7 +397,7 @@ export function ProSurface({
                 <div className="operation-step" key={toolCall.id}>
                   <div className="operation-step__head">
                     <div>
-                      <strong>{toolCall.kind}</strong>
+                      <strong>{toolCallKindLabel(toolCall.kind, t)}</strong>
                       <p>{toolCall.summary}</p>
                     </div>
                     <StatusPill tone={agentTone(toolCall.status === "completed" ? "succeeded" : toolCall.status === "failed" ? "failed" : toolCall.status === "blocked" ? "blocked" : "awaiting_approval")} value={toolCallStatusLabel(toolCall.status, t)} />
@@ -395,7 +413,7 @@ export function ProSurface({
               <span className="field-hint">
                 {t(
                   "This agent run is paused on a guarded command approval.",
-                  "Этот agent run остановлен на подтверждении защищённой команды.",
+                  "Этот запуск агента остановлен и ждёт подтверждения защищённой команды.",
                 )}
               </span>
             ) : activeAgentRun.status === "needs_input" ? (
@@ -417,17 +435,17 @@ export function ProSurface({
               }
               style={{ height: 34 }}
             >
-              {busy ? t("Working...", "Работаю...") : t("Continue agent", "Продолжить агента")}
+              {busy ? t("Working...", "Работаю...") : t("Continue agent", "Продолжить запуск")}
             </Button>
           </div>
         </PanelCard>
       ) : null}
 
       <PanelCard
-        title={t("Operations Layer", "Слой операций")}
+        title={t("Operations Layer", "Операции")}
         subtitle={t(
           "Durable multi-step local work with explicit progress, commands, and approvals.",
-          "Устойчивая многошаговая локальная работа с явным прогрессом, командами и подтверждениями.",
+          "Многошаговая локальная работа с явным прогрессом, командами и подтверждениями.",
         )}
       >
         <div className="operation-facts">
@@ -483,7 +501,7 @@ export function ProSurface({
               <span className="field-hint">
                 {t(
                   "Approval is required in Context Pane before this operation can continue.",
-                  "Для продолжения этой операции требуется подтверждение в Context Pane.",
+                  "Для продолжения этой операции нужно подтверждение в панели контекста.",
                 )}
               </span>
             ) : null}
@@ -504,7 +522,7 @@ export function ProSurface({
       ) : (
         <PanelCard
           title={t("Start from a template", "Начать с шаблона")}
-          subtitle={t("Use a real operation instead of a vague chat prompt.", "Используйте реальную операцию вместо расплывчатого chat prompt.")}
+          subtitle={t("Use a real operation instead of a vague chat prompt.", "Лучше запускать явную операцию, чем писать расплывчатый запрос в чат.")}
         >
           <div className="operation-template-grid">
             {operationTemplates.map((template) => (
@@ -525,7 +543,7 @@ export function ProSurface({
 
       <PanelCard
         title={t("Custom operation", "Пользовательская операция")}
-        subtitle={t("One line per step. Use `Title :: command` for terminal steps.", "Одна строка на шаг. Используйте `Заголовок :: команда` для terminal-шагов.")}
+        subtitle={t("One line per step. Use `Title :: command` for terminal steps.", "Одна строка — один шаг. Используйте `Заголовок :: команда` для шагов с командой.")}
       >
         <div className="surface-stack">
           <label className="field-block">
@@ -538,12 +556,12 @@ export function ProSurface({
           </label>
           <label className="field-block">
             <span>{t("Summary", "Описание")}</span>
-            <TextField value={customSummary} onChange={setCustomSummary} placeholder={t("Short public description of the runbook", "Короткое публичное описание runbook")} />
+            <TextField value={customSummary} onChange={setCustomSummary} placeholder={t("Short public description of the runbook", "Коротко опишите смысл операции")} />
           </label>
           <label className="field-block">
             <span>{t("Steps", "Шаги")}</span>
             <TextField multiline rows={7} value={customSteps} onChange={setCustomSteps} />
-            <span className="field-hint">{t("Lines without `::` become reviewable note steps.", "Строки без `::` превращаются в reviewable note steps.")}</span>
+            <span className="field-hint">{t("Lines without `::` become reviewable note steps.", "Строки без `::` сохраняются как заметки и не выполняются в терминале.")}</span>
           </label>
           {localError ? <div className="field-hint field-hint--danger">{localError}</div> : null}
           <div className="composer__actions">
@@ -560,7 +578,7 @@ export function ProSurface({
       {recentAgentRuns.length ? (
         <PanelCard
           title={t("Agent history", "История агента")}
-          subtitle={t("Every autonomous run stays attached to the task with plan and tool history.", "Каждый автономный запуск сохраняется в задаче вместе с планом и историей инструментов.")}
+          subtitle={t("Every autonomous run stays attached to the task with plan and tool history.", "Каждый автономный запуск сохраняется в задаче вместе с планом и историей вызовов инструментов.")}
         >
           <Stack gap={10}>
             {recentAgentRuns.map((run) => (
@@ -575,7 +593,7 @@ export function ProSurface({
                 <span className="field-hint">
                   {t(
                     `${run.toolCalls.length} tool calls, iteration ${run.iteration}/${run.maxIterations}`,
-                    `Tool calls: ${run.toolCalls.length}, итерация ${run.iteration}/${run.maxIterations}`,
+                    `Вызовов инструментов: ${run.toolCalls.length}, итерация ${run.iteration}/${run.maxIterations}`,
                   )}
                 </span>
               </div>

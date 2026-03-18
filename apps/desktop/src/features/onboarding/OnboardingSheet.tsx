@@ -32,7 +32,7 @@ function gpuSummary(
   }
 
   return machineProfile.gpus
-    .map((gpu) => `${gpu.name}${gpu.memoryGb ? ` (${gpu.memoryGb.toFixed(1)} GB)` : ""}`)
+    .map((gpu) => `${gpu.name}${gpu.memoryGb ? ` (${gpu.memoryGb.toFixed(1)} ${t("GB", "ГБ")})` : ""}`)
     .join(", ");
 }
 
@@ -44,7 +44,7 @@ function runtimeVerdictLabel(
     case "recommended":
       return t("recommended", "рекомендуется");
     case "workable":
-      return t("workable", "рабочий вариант");
+      return t("workable", "можно использовать");
     case "not_recommended":
       return t("not recommended", "не рекомендуется");
     default:
@@ -147,7 +147,7 @@ export function OnboardingSheet({
         title={t("Choose provider", "Выберите провайдера")}
         subtitle={t(
           "Klava can now connect to Gemini, Groq, OpenRouter, OpenAI, or a local Ollama/vLLM server. The provider picker stays available later from the bottom dock.",
-          "Klava умеет подключаться к Gemini, Groq, OpenRouter, OpenAI или локальному серверу Ollama/vLLM. Выбор провайдера останется доступен позже и из нижней панели.",
+          "Klava может работать с Gemini, Groq, OpenRouter, OpenAI и локальными серверами Ollama/vLLM. Позже провайдера можно будет сменить через нижнюю панель.",
         )}
         actions={
           <div className="app-header__actions no-drag">
@@ -209,16 +209,16 @@ export function OnboardingSheet({
                 <>
                   <div className="machine-panel">
                     <div className="machine-panel__head">
-                      <strong>{t("Local hardware analysis", "Анализ локального железа")}</strong>
+                      <strong>{t("Local hardware analysis", "Анализ локальной машины")}</strong>
                       <span className="status-chip status-chip--accent">
                         {runtimeVerdictLabel(localRuntimeAdvice?.verdict, t)}
                       </span>
                     </div>
-                    <p>{localRuntimeAdvice?.summary ?? t("Hardware analysis is not available yet.", "Анализ железа пока недоступен.")}</p>
+                    <p>{localRuntimeAdvice?.summary ?? t("Hardware analysis is not available yet.", "Параметры машины пока не удалось определить.")}</p>
                     <div className="machine-facts">
                       <div className="machine-facts__item">
                         <span>RAM</span>
-                        <strong>{machineProfile ? `${machineProfile.memoryGb.toFixed(1)} GB` : t("unknown", "неизвестно")}</strong>
+                        <strong>{machineProfile ? `${machineProfile.memoryGb.toFixed(1)} ${t("GB", "ГБ")}` : t("unknown", "неизвестно")}</strong>
                       </div>
                       <div className="machine-facts__item">
                         <span>CPU</span>
@@ -246,8 +246,10 @@ export function OnboardingSheet({
                           <p>{option?.summary ?? t("No recommendation available yet.", "Рекомендация пока недоступна.")}</p>
                           <span>
                             {option?.recommended
-                              ? t("Recommended here", "Рекомендуется для этой машины")
-                              : t("Advanced path", "Продвинутый путь")}
+                              ? t("Recommended here", "Оптимальный вариант")
+                              : runtime === "vllm"
+                                ? t("Advanced path", "Для продвинутой настройки")
+                                : t("Workable path", "Можно использовать")}
                           </span>
                         </button>
                       );
@@ -255,12 +257,12 @@ export function OnboardingSheet({
                   </div>
 
                   <label className="field-block">
-                    <span>{t("Endpoint", "Endpoint")}</span>
+                    <span>{t("Endpoint", "API-адрес")}</span>
                     <TextField value={localApiBaseUrl} onChange={setLocalApiBaseUrl} spellCheck={false} />
                     <span className="field-hint">
                       {t(
                         `Default endpoint for ${getProviderLabel("local", { localRuntime, language })} is ${DEFAULT_LOCAL_ENDPOINTS[localRuntime]}.`,
-                        `Endpoint по умолчанию для ${getProviderLabel("local", { localRuntime, language })}: ${DEFAULT_LOCAL_ENDPOINTS[localRuntime]}.`,
+                        `Адрес по умолчанию для ${getProviderLabel("local", { localRuntime, language })}: ${DEFAULT_LOCAL_ENDPOINTS[localRuntime]}.`,
                       )}
                     </span>
                   </label>
@@ -278,7 +280,7 @@ export function OnboardingSheet({
                     <span className="field-hint">
                       {t(
                         "Leave this blank unless your local proxy or vLLM server explicitly requires Bearer authentication.",
-                        "Оставьте поле пустым, если ваш локальный прокси или vLLM-сервер явно не требует Bearer-аутентификацию.",
+                        "Оставьте поле пустым, если ваш локальный прокси или vLLM-сервер не требует Bearer-аутентификации.",
                       )}
                     </span>
                   </label>
@@ -297,7 +299,7 @@ export function OnboardingSheet({
                   <p>
                     {t(
                       "This path stays visible in Klava, but the live provider route remains intentionally disabled until the provider-side issue tracked on GitHub is resolved.",
-                      "Этот путь остаётся видимым в Klava, но live-маршрут провайдера намеренно отключён, пока не будет решена проблема, отслеживаемая на GitHub.",
+                      "Этот маршрут остаётся в интерфейсе Klava, но само подключение к провайдеру временно отключено, пока не будет решена проблема на его стороне.",
                     )}
                   </p>
                 </div>
@@ -315,7 +317,7 @@ export function OnboardingSheet({
                   <span className="field-hint">
                     {t(
                       `Leave this blank if you already connected ${guide.title} on this machine and want Klava to reuse the saved key from the local encrypted vault.`,
-                      `Оставьте поле пустым, если ${guide.title} уже подключён на этой машине и вы хотите, чтобы Klava использовала ключ из локального зашифрованного хранилища.`,
+                      `Оставьте поле пустым, если вы уже подключали ${guide.title} на этой машине и хотите, чтобы Klava взяла сохранённый ключ из локального зашифрованного хранилища.`,
                     )}
                   </span>
                 </label>
@@ -342,7 +344,7 @@ export function OnboardingSheet({
 
             <div className="provider-guide__side">
               <div className="onboarding-note">
-                <strong>{t("Exact setup steps", "Точные шаги настройки")}</strong>
+                <strong>{t("Exact setup steps", "Пошаговая настройка")}</strong>
               </div>
               <div className="provider-guide__list">
                 {guide.steps.map((step, index) => (

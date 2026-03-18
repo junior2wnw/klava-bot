@@ -6,10 +6,11 @@ export function LanguageSelector({
   compact?: boolean;
 }) {
   const { preference, setPreference, t } = useAppI18n();
+  const label = compact ? t("Language", "Язык") : t("Interface language", "Язык интерфейса");
 
   return (
     <label className={compact ? "app-language app-language--compact" : "app-language"}>
-      <span>{t("App language", "Язык приложения")}</span>
+      <span>{label}</span>
       <select
         className="app-language__select"
         value={preference}

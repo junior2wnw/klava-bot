@@ -1,7 +1,7 @@
 import type { ProviderSettings } from "@klava/contracts";
 import { Button } from "@klava/ui";
 import { useAppI18n } from "../../i18n/AppI18n";
-import { getProviderLabel, isProviderReady } from "./providerMeta";
+import { getProviderLabel, getSelectionModeLabel, isProviderReady } from "./providerMeta";
 
 function formatModelCount(count: number, language: "en" | "ru") {
   if (language === "ru") {
@@ -35,26 +35,27 @@ export function ProviderModelDock({
   const providerReady = isProviderReady(provider);
   const availableModels = provider?.availableModels?.length ? provider.availableModels : provider?.model ? [provider.model] : [];
   const providerLabel = getProviderLabel(provider, { language });
+  const selectionModeLabel = getSelectionModeLabel(provider?.selectionMode, language);
   const modelCountLabel = formatModelCount(availableModels.length, language);
   const providerSummary =
     providerReady && provider
       ? provider.provider === "local"
         ? t(
-            `Selection mode: ${provider.selectionMode}. ${modelCountLabel} available from ${provider.apiBaseUrl}.`,
-            `Режим выбора: ${provider.selectionMode}. Доступно ${modelCountLabel} по адресу ${provider.apiBaseUrl}.`,
+            `Model selection: ${selectionModeLabel}. ${modelCountLabel} available from ${provider.apiBaseUrl}.`,
+            `Режим выбора: ${selectionModeLabel}. Клава видит ${modelCountLabel} на локальном сервере ${provider.apiBaseUrl}.`,
           )
         : t(
-            `Selection mode: ${provider.selectionMode}. ${modelCountLabel} available from the live provider list.`,
-            `Режим выбора: ${provider.selectionMode}. Доступно ${modelCountLabel} из live-списка провайдера.`,
+            `Model selection: ${selectionModeLabel}. ${modelCountLabel} available from the provider list.`,
+            `Режим выбора: ${selectionModeLabel}. Сейчас доступно ${modelCountLabel} от ${providerLabel}.`,
           )
       : provider?.provider === "gonka"
         ? t(
             "GONKA stays visible here, but the current desktop path is paused until the provider-side issue is resolved.",
-            "GONKA остаётся видимым здесь, но текущий desktop-путь приостановлен до решения проблемы на стороне провайдера.",
+            "GONKA остаётся видимой в интерфейсе, но маршрут подключения в настольной версии приостановлен до решения проблемы на стороне провайдера.",
           )
         : t(
             "Connect a provider to load the live model list and use the working chat path.",
-            "Подключите провайдера, чтобы загрузить live-список моделей и использовать рабочий чат-путь.",
+            "Подключите провайдера, чтобы загрузить список моделей и полноценно работать через чат.",
           );
 
   return (
@@ -64,20 +65,22 @@ export function ProviderModelDock({
           <span className="app-badge">{providerLabel}</span>
           <span className={providerReady ? "app-badge app-badge--success" : "app-badge"}>
             {providerReady
-              ? t("Ready for chat", "Готов к чату")
+              ? t("Ready for chat", "Чат готов")
               : provider?.provider === "gonka"
-                ? t("Paused", "Пауза")
+                ? t("Paused", "На паузе")
                 : t("Setup required", "Нужна настройка")}
           </span>
           {provider?.model ? <span className="app-badge app-badge--accent">{provider.model}</span> : null}
-          {provider?.selectionMode ? <span className="app-badge">{provider.selectionMode}</span> : null}
-          {provider?.provider === "local" ? <span className="app-badge">{provider.localRuntime}</span> : null}
+          {provider?.selectionMode ? (
+            <span className="app-badge">{getSelectionModeLabel(provider.selectionMode, language, { capitalized: true })}</span>
+          ) : null}
+          {provider?.provider === "local" ? <span className="app-badge">{provider.localRuntime === "ollama" ? "Ollama" : "vLLM"}</span> : null}
         </div>
         <span className="field-hint">
           {providerSummary}{" "}
           {t(
             "Use `/models`, `/model auto`, or `/model <name>` directly in chat if you want to switch models without the footer selector.",
-            "Используйте `/models`, `/model auto` или `/model <name>` прямо в чате, если хотите переключать модели без нижнего селектора.",
+            "Модели можно переключать и прямо из чата: посмотреть список через `/models`, вернуть автовыбор через `/model auto` или зафиксировать модель командой `/model <name>`.",
           )}
         </span>
       </div>
@@ -101,7 +104,7 @@ export function ProviderModelDock({
         </label>
 
         <Button variant="secondary" onClick={() => void onRefreshModels()} disabled={!providerReady || busy} style={{ height: 34 }}>
-          {t("Refresh models", "Обновить модели")}
+          {t("Refresh models", "Обновить список")}
         </Button>
         <Button
           variant="secondary"
@@ -109,10 +112,10 @@ export function ProviderModelDock({
           disabled={!providerReady || busy || provider?.selectionMode !== "manual"}
           style={{ height: 34 }}
         >
-          {t("Use auto", "Включить авто")}
+          {t("Use auto", "Автовыбор")}
         </Button>
         <Button variant="secondary" onClick={onOpenProviderSetup} disabled={busy} style={{ height: 34 }}>
-          {t("Provider setup", "Настройка провайдера")}
+          {t("Provider setup", "Настроить провайдера")}
         </Button>
         <Button
           variant="danger"

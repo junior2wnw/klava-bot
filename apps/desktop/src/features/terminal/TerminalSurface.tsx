@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { GuardMode, TaskDetail } from "@klava/contracts";
 import { Button, PanelCard, Stack, StatusPill, TextField } from "@klava/ui";
 import { useAppI18n } from "../../i18n/AppI18n";
+import { getGuardModeLabel } from "../security/guardModeLabels";
 
 const guardModes: GuardMode[] = ["strict", "balanced", "off"];
 
@@ -39,7 +40,13 @@ export function TerminalSurface({
 
   return (
     <div className="surface-stack">
-      <PanelCard title={t("Guard mode", "Режим защиты")} subtitle={t("Strict blocks guarded commands. Balanced creates approvals. Off runs guarded commands directly.", "Strict блокирует защищённые команды. Balanced создаёт подтверждения. Off запускает защищённые команды сразу.")}>
+      <PanelCard
+        title={t("Guard mode", "Режим защиты команд")}
+        subtitle={t(
+          "Strict blocks guarded commands. Balanced creates approvals. Off runs guarded commands directly.",
+          "Строгий режим блокирует защищённые команды. Режим с подтверждением спрашивает разрешение. Без защиты команды запускаются сразу.",
+        )}
+      >
         <div className="guard-actions">
           {guardModes.map((mode) => (
             <Button
@@ -49,22 +56,25 @@ export function TerminalSurface({
               disabled={busy}
               style={{ height: 34 }}
             >
-              {mode}
+              {getGuardModeLabel(mode, t)}
             </Button>
           ))}
         </div>
       </PanelCard>
 
-      <PanelCard title={t("Command", "Команда")} subtitle={t("Task-local terminal history stays attached to this task.", "Локальная история терминала хранится внутри этой задачи.")}>
+      <PanelCard title={t("Command", "Команда")} subtitle={t("Task-local terminal history stays attached to this task.", "История команд хранится внутри этой задачи.")}>
         <div className="composer">
           <TextField
             value={command}
             onChange={setCommand}
-            placeholder={t("pwd, dir, Get-ChildItem, git status, winget install ... ", "pwd, dir, Get-ChildItem, git status, winget install ... ")}
+            placeholder={t(
+              "Examples: pwd, dir, Get-ChildItem, git status, winget install ...",
+              "Например: pwd, dir, Get-ChildItem, git status, winget install ...",
+            )}
           />
           <div className="composer__actions">
             <Button onClick={() => void handleRun()} disabled={busy || !command.trim()}>
-              {busy ? t("Working...", "Работаю...") : t("Run", "Запустить")}
+              {busy ? t("Working...", "Выполняю...") : t("Run", "Выполнить")}
             </Button>
           </div>
         </div>

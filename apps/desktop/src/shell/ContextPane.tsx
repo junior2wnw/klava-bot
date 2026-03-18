@@ -3,6 +3,7 @@ import { PanelCard, ShellRegion, Stack, StatusPill } from "@klava/ui";
 import type { PropsWithChildren } from "react";
 import { useAppI18n } from "../i18n/AppI18n";
 import { ApprovalQueue } from "../features/security/ApprovalQueue";
+import { getGuardModeLabel } from "../features/security/guardModeLabels";
 
 export function ContextPane({
   children,
@@ -19,7 +20,7 @@ export function ContextPane({
   const { t } = useAppI18n();
   const statusLabel =
     task?.status === "awaiting_approval"
-      ? t("awaiting approval", "ждёт подтверждения")
+      ? t("awaiting approval", "нужно подтверждение")
       : task?.status === "running"
         ? t("running", "в работе")
         : task?.status === "succeeded"
@@ -28,10 +29,13 @@ export function ContextPane({
             ? t("failed", "ошибка")
             : t("idle", "ожидает");
   return (
-    <ShellRegion title={t("Context Pane", "Контекст")}>
+    <ShellRegion title={t("Context Pane", "Контекст задачи")}>
       <Stack gap={12}>
         {task ? (
-          <PanelCard title={t("Task state", "Состояние задачи")} subtitle={`${t("Guard", "Защита")} ${task.guardMode}`}>
+          <PanelCard
+            title={t("Task state", "Состояние задачи")}
+            subtitle={`${t("Guard mode", "Режим защиты команд")}: ${getGuardModeLabel(task.guardMode, t, { includeKeyword: true })}`}
+          >
             <div className="detail-line">
               <span>{t("Status", "Статус")}</span>
               <StatusPill
@@ -59,7 +63,10 @@ export function ContextPane({
         {children}
 
         {health ? (
-          <PanelCard title="Runtime" subtitle={health.providerConfigured ? t("Provider connected", "Провайдер подключён") : t("Needs onboarding", "Нужна настройка")}>
+          <PanelCard
+            title={t("Local service", "Локальная служба")}
+            subtitle={health.providerConfigured ? t("Provider connected", "Провайдер подключён") : t("Setup required", "Нужна настройка")}
+          >
             <div className="detail-line">
               <span>{t("Version", "Версия")}</span>
               <strong>{health.runtimeVersion}</strong>

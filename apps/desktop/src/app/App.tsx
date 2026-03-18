@@ -38,7 +38,7 @@ export function App() {
   const providerReady = isProviderReady(provider);
   const runtimeUnavailable = !loading && !snapshot;
   const showGlobalError = Boolean(error) && providerReady && Boolean(snapshot);
-  const providerLabel = getProviderLabel(provider, { language });
+  const providerLabel = provider ? getProviderLabel(provider, { language }) : t("No provider", "Провайдер не выбран");
 
   function withLanguage(init?: RequestInit): RequestInit {
     return {
@@ -66,7 +66,11 @@ export function App() {
       });
     } catch (requestError) {
       if (!options.silent) {
-        setError(requestError instanceof Error ? requestError.message : t("Runtime unavailable", "Runtime недоступен"));
+        setError(
+          requestError instanceof Error
+            ? requestError.message
+            : t("Local service unavailable", "Локальная служба недоступна"),
+        );
       }
     } finally {
       if (!options.silent) {
@@ -123,7 +127,7 @@ export function App() {
         setSnapshot(data);
       });
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : t("Request failed", "Запрос завершился ошибкой"));
+      setError(requestError instanceof Error ? requestError.message : t("Request failed", "Не удалось выполнить запрос"));
     } finally {
       setBusy(false);
     }
@@ -168,7 +172,7 @@ export function App() {
       URL.revokeObjectURL(url);
     } catch (requestError) {
       setError(
-        requestError instanceof Error ? requestError.message : t("Support bundle export failed", "Не удалось выгрузить support bundle"),
+        requestError instanceof Error ? requestError.message : t("Support bundle export failed", "Не удалось выгрузить пакет диагностики"),
       );
     }
   }
@@ -191,7 +195,7 @@ export function App() {
   }
 
   if (loading && !snapshot) {
-    return <div className="app-loading">{t("Booting Klava runtime...", "Запускаю runtime Klava...")}</div>;
+    return <div className="app-loading">{t("Booting Klava local service...", "Запускаю локальную службу Klava...")}</div>;
   }
 
   if (runtimeUnavailable) {
@@ -200,10 +204,10 @@ export function App() {
         <div className="app-shell__glow" />
         <div className="app-fatal">
           <PanelCard
-            title={t("Runtime unavailable", "Runtime недоступен")}
+            title={t("Local service unavailable", "Локальная служба недоступна")}
             subtitle={t(
-              "Klava could not reach the local runtime yet. Retry after the embedded runtime finishes booting or after the desktop process recovers.",
-              "Klava пока не может достучаться до локального runtime. Повторите попытку после завершения запуска встроенного runtime или восстановления desktop-процесса.",
+              "Klava could not reach the local service yet. Retry after the embedded service finishes booting or after the desktop app recovers.",
+              "Klava пока не может подключиться к локальной службе. Повторите попытку после запуска встроенной службы или восстановления приложения.",
             )}
             style={{
               width: "min(560px, calc(100vw - 32px))",
@@ -213,19 +217,19 @@ export function App() {
             }}
           >
             <div className="onboarding-status">
-              <span className="status-chip">{t("Embedded runtime", "Встроенный runtime")}</span>
-              <span className="status-chip">{t("Local HTTP bridge", "Локальный HTTP bridge")}</span>
-              <span className="status-chip">{t("Desktop process recovery", "Восстановление desktop-процесса")}</span>
+              <span className="status-chip">{t("Embedded service", "Встроенная служба")}</span>
+              <span className="status-chip">{t("Local HTTP bridge", "Локальный API-мост")}</span>
+              <span className="status-chip">{t("App recovery", "Восстановление приложения")}</span>
             </div>
             {error ? (
               <div className="app-banner">
-                <strong>{t("Problem:", "Проблема:")}</strong> {error}
+                <strong>{t("Error:", "Ошибка:")}</strong> {error}
               </div>
             ) : null}
             <div className="composer__actions">
               <LanguageSelector compact />
               <Button onClick={() => void refresh()} disabled={loading} style={{ height: 34 }}>
-                {loading ? t("Retrying...", "Повторяю...") : t("Retry runtime", "Повторить запуск runtime")}
+                {loading ? t("Retrying...", "Повторяю...") : t("Retry service", "Повторить запуск службы")}
               </Button>
             </div>
           </PanelCard>
@@ -243,37 +247,38 @@ export function App() {
             <span>K</span>
           </div>
           <div className="app-header__copy">
-            <span className="eyebrow">{t("Local Desktop Operator", "Локальный desktop-оператор")}</span>
+            <span className="eyebrow">{t("Local Desktop Agent", "Локальный агент")}</span>
             <h1>Klava Bot</h1>
             <p className="app-header__subtitle">
               {t(
-                "Tasks, approvals, terminal control, and runtime health in one local surface.",
-                "Задачи, подтверждения, терминал и состояние runtime в одном локальном интерфейсе.",
+                "Tasks, approvals, terminal control, and local service health in one surface.",
+                "Задачи, подтверждения, терминал и состояние локальной службы в одном интерфейсе.",
               )}
             </p>
           </div>
         </div>
         <div className="app-header__side">
           <div className="app-header__focus">
-            <span className="app-header__label">{t("Focused task", "Текущая задача")}</span>
-            <strong>{selectedTask?.title ?? t("No active task selected", "Активная задача не выбрана")}</strong>
+            <span className="app-header__label">{t("Active task", "Активная задача")}</span>
+            <strong>{selectedTask?.title ?? t("No task selected", "Задача не выбрана")}</strong>
             <p>
               {selectedTask?.lastMessagePreview ??
-                t("Create a task or pick one from the rail to start working.", "Создайте задачу или выберите существующую слева, чтобы начать работу.")}
+                t("Create a task or pick one from the rail to start working.", "Создайте задачу или выберите её слева, чтобы начать работу.")}
             </p>
           </div>
           <div className="app-header__actions no-drag">
             <LanguageSelector compact />
             <span className="app-badge">{taskCountLabel}</span>
             <span className={snapshot?.health.ok ? "app-badge app-badge--success" : "app-badge app-badge--danger"}>
-              {snapshot?.health.ok ? t("Runtime healthy", "Runtime работает") : t("Runtime unavailable", "Runtime недоступен")}
+              {snapshot?.health.ok ? t("Service healthy", "Служба работает") : t("Service unavailable", "Служба недоступна")}
             </span>
+            <span className="app-badge">{providerLabel}</span>
             <span className={providerReady ? "app-badge app-badge--accent" : "app-badge"}>
               {providerReady
-                ? t(`${providerLabel} connected`, `${providerLabel} подключён`)
+                ? t("Connected", "Подключён")
                 : provider?.provider === "gonka"
-                  ? t("GONKA paused", "GONKA приостановлен")
-                  : t("Needs onboarding", "Нужна настройка")}
+                  ? t("Paused", "На паузе")
+                  : t("Setup required", "Нужна настройка")}
             </span>
             <span className="app-badge">{platformLabel}</span>
             <Button
@@ -290,7 +295,7 @@ export function App() {
 
       {showGlobalError ? (
         <div className="app-banner">
-          <strong>{t("Problem:", "Проблема:")}</strong> {error}
+          <strong>{t("Error:", "Ошибка:")}</strong> {error}
         </div>
       ) : null}
 

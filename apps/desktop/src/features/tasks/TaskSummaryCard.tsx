@@ -1,6 +1,7 @@
 import type { TaskSummary } from "@klava/contracts";
 import { PanelCard, StatusPill, tokens } from "@klava/ui";
 import { useAppI18n } from "../../i18n/AppI18n";
+import { getGuardModeLabel } from "../security/guardModeLabels";
 
 function taskTone(status: TaskSummary["status"]) {
   switch (status) {
@@ -27,7 +28,7 @@ export function TaskSummaryCard({
   const { t } = useAppI18n();
   const statusLabel =
     task.status === "awaiting_approval"
-      ? t("awaiting approval", "ждёт подтверждения")
+      ? t("awaiting approval", "нужно подтверждение")
       : task.status === "running"
         ? t("running", "в работе")
         : task.status === "succeeded"
@@ -46,7 +47,7 @@ export function TaskSummaryCard({
       }}
     >
       <div className="task-card__meta">
-        <span>{t("Guard", "Защита")} {task.guardMode}</span>
+        <span>{t("Guard", "Защита")}: {getGuardModeLabel(task.guardMode, t)}</span>
         <span>
           {task.pendingApprovalCount} {t("pending approvals", "ожидающих подтверждений")}
         </span>
