@@ -10,39 +10,42 @@
 
 Languages: **English** | [README.ru](./README.ru.md)
 
-Klava is a local-first desktop agent for people who need an AI to work on the actual machine, not just answer inside a chat box.
+![Actual Klava desktop screenshot](./docs/assets/klava-desktop-screenshot.png)
 
-It combines a local runtime, secret storage, approvals, and task history so chat, shell work, and machine changes can be handled in one place.
+Klava is a local-first desktop agent for workstation repair, repo and provider migrations, guarded terminal work, and audited machine changes on Windows and macOS.
+
+It combines a local runtime, secret storage, approvals, durable task history, semantic retrieval, execution journal, and restart-safe recovery so chat, shell work, and machine changes stay in one reviewable surface.
+
+The screenshot above is captured from the real app with seeded safe demo data. It is not an illustration and does not include private conversations.
 
 Quick links:
 
 - [Public site](https://junior2wnw.github.io/klava-bot/)
-- [Paid pilot page](https://junior2wnw.github.io/klava-bot/pilot.html)
 - [Latest release](https://github.com/junior2wnw/klava-bot/releases/latest)
+- [Russian README](./README.ru.md)
+- [Operations model](./packages/contracts/src/operations.ts)
+- [Runtime proof](./packages/runtime/src/server.test.ts)
+- [Security docs](./docs/04_SECURITY_AND_PRIVILEGED_EXECUTION.md)
+- [Paid pilot page](https://junior2wnw.github.io/klava-bot/pilot.html)
 - [Design partner program](./DESIGN_PARTNERS.md)
-- [Paid pilot offer](./PAID_PILOT.md)
-- [Enterprise route](./ENTERPRISE_ROUTE.md)
-- [Account map](./ACCOUNT_MAP.md)
-- [Apply as a design partner](https://github.com/junior2wnw/klava-bot/issues/new?template=design_partner.md)
-- [Open a paid pilot request](https://github.com/junior2wnw/klava-bot/issues/new?template=paid_pilot.md)
-- [Task intake](https://github.com/junior2wnw/machine-work-index/issues/new?template=case_note.md)
-- [Field note 01](https://junior2wnw.github.io/klava-bot/field-note-01.html)
-- [Launch copy](./LAUNCH_POST.md)
-- [Field notes](./FIELD_NOTES.md)
 
-## Product surface
+## Why open this repo
 
-![Klava desktop surface preview](./docs/assets/klava-desktop-preview.svg)
-
-Preview above is a simplified map of the shipped task rail, Pro operations surface, approvals, and diagnostics flow in this repo.
+- real desktop shell instead of a browser-only wrapper;
+- explicit approvals and guarded terminal flow for risky actions;
+- durable task transcript, support bundles, execution journal, and restart-safe resume;
+- automatic context compression and semantic retrieval over task history and tool outputs;
+- typed operations model instead of free-form privileged prompting;
+- Windows and macOS builds, public CI, and explicit OpenClaw lineage.
 
 ## Fast evaluation path
 
 If you only have a few minutes, use this order:
 
-1. Open [`apps/desktop/src/features/pro/ProSurface.tsx`](./apps/desktop/src/features/pro/ProSurface.tsx) to see the durable operations UX.
-2. Open [`packages/contracts/src/operations.ts`](./packages/contracts/src/operations.ts) and [`packages/runtime/src/server.test.ts`](./packages/runtime/src/server.test.ts) to inspect the state model and runtime proof.
-3. Run the local path:
+1. Download the [latest release](https://github.com/junior2wnw/klava-bot/releases/latest) or open the [public site](https://junior2wnw.github.io/klava-bot/).
+2. Inspect [`apps/desktop/src/features/chat/ChatSurface.tsx`](./apps/desktop/src/features/chat/ChatSurface.tsx), [`apps/desktop/src/features/pro/ProSurface.tsx`](./apps/desktop/src/features/pro/ProSurface.tsx), [`packages/runtime/src/semantic-retrieval.ts`](./packages/runtime/src/semantic-retrieval.ts), and [`packages/runtime/src/execution-journal.ts`](./packages/runtime/src/execution-journal.ts).
+3. Open [`packages/contracts/src/operations.ts`](./packages/contracts/src/operations.ts) and [`packages/runtime/src/server.test.ts`](./packages/runtime/src/server.test.ts) to inspect the state model and runtime proof.
+4. Run the local path:
 
 ```bash
 npm install
@@ -50,20 +53,18 @@ npm run dev
 npm run check
 ```
 
-4. If this maps to a budgeted workflow, go straight to [PAID_PILOT.md](./PAID_PILOT.md) or [open a paid-pilot request](https://github.com/junior2wnw/klava-bot/issues/new?template=paid_pilot.md).
+5. If this maps to a budgeted workflow, go straight to [PAID_PILOT.md](./PAID_PILOT.md) or [open a paid-pilot request](https://github.com/junior2wnw/klava-bot/issues/new?template=paid_pilot.md).
 
 Core idea:
 
 > one desktop app, one task log, one approval model, one tool that can inspect the machine, make approved changes, and record what happened.
 
-## Notes and intake
+## Where it fits
 
-Two quieter public surfaces now exist for people who prefer artifacts over slogans:
-
-- `Field note 01`: GitHub's 2FA notice became a forcing function to make the repository easier to evaluate at a glance. Supporting notes live in [FIELD_NOTES.md](./FIELD_NOTES.md).
-- `Open task intake`: difficult local-machine workflows now have a separate intake surface in [`machine-work-index`](https://github.com/junior2wnw/machine-work-index) instead of being buried inside product copy.
-
-These are not substitutes for evidence. The evidence still has to come from the shipped runtime, operations layer, approval flow, and task history in the repo.
+- workstation repair and recovery flows that need rollback hints before risky changes;
+- repo, backend, or provider migrations that touch configs, credentials, validation, and follow-up checks;
+- internal IT and platform workflows that need explicit approvals and machine-attached receipts;
+- consultant or support loops that currently live across chat logs, terminal history, notes, and memory.
 
 This repository is published as a standalone product repository, with its upstream lineage documented explicitly:
 
@@ -74,29 +75,17 @@ This repository is published as a standalone product repository, with its upstre
 - Public landing page (RU): [junior2wnw.github.io/klava-bot/ru/](https://junior2wnw.github.io/klava-bot/ru/)
 - Open-source launch and lineage doc: [docs/16_OPEN_SOURCE_AND_FORK_LINEAGE.md](./docs/16_OPEN_SOURCE_AND_FORK_LINEAGE.md)
 
-## Why people pay attention
+## What already makes it different
 
-Klava is trying to occupy a more valuable surface than "AI chat with tools":
+Most agent projects still stop at suggestions, shell snippets, or browser automation. Klava is built around a stricter local work loop:
 
-- it is local-first instead of assuming a remote control plane;
-- risky actions are approval-gated instead of buried inside free-form tool calls;
-- it already ships a desktop shell, guarded terminal flow, task transcript, and support bundle export;
-- the repo is published like a real product surface, with explicit lineage, docs, releases, and CI.
+- inspect the machine and project state;
+- ask for approval before risky changes;
+- execute bounded actions instead of free-form privileged text;
+- preserve an audit trail inside the task itself;
+- keep enough memory, retrieval context, and recovery state to resume work without bluffing.
 
-## Why Klava exists
-
-Most agents stop at suggestions, shell snippets, or browser automation.
-
-Klava is built around a local work loop:
-
-- understand the task;
-- inspect the local machine and project state;
-- request approval before risky changes;
-- execute typed workflows instead of free-form privileged text;
-- preserve an audit trail;
-- leave behind recovery hints and support bundles.
-
-The goal is a desktop tool that can do work, explain what changed, and leave usable records behind.
+The goal is not "vibe coding." The goal is a desktop tool that can do real machine work, explain what changed, and leave behind records another engineer can trust.
 
 ## Available today
 

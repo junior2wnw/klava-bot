@@ -3,25 +3,40 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Klava</title>
+    <title>Klava | Desktop agent for workstation repair, migrations, and approved machine work</title>
     <meta
       name="description"
-      content="Klava is a local-first desktop agent for guarded shell work, task history, and controlled machine changes on Windows and macOS."
+      content="Klava is a local-first desktop agent for workstation repair, repo and provider migrations, guarded terminal work, and audited machine changes on Windows and macOS."
     />
     <meta property="og:title" content="Klava" />
     <meta
       property="og:description"
-      content="A local-first desktop agent with explicit approvals, guarded shell work, and task history in one place."
+      content="A local-first desktop agent with explicit approvals, durable task history, guarded terminal work, and a real machine-attached audit trail."
     />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="./assets/klava-social-preview.svg" />
+    <meta property="og:url" content="https://junior2wnw.github.io/klava-bot/" />
+    <meta
+      property="og:image"
+      content="https://junior2wnw.github.io/klava-bot/assets/klava-social-preview.png"
+    />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="Actual Klava desktop screenshot showing task rail, compact live status, transcript, and diagnostics."
+    />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Klava" />
     <meta
       name="twitter:description"
-      content="A local-first desktop agent for guarded shell work, task history, and controlled machine changes."
+      content="Desktop agent for workstation repair, migrations, guarded terminal work, and audited machine changes."
+    />
+    <meta
+      name="twitter:image"
+      content="https://junior2wnw.github.io/klava-bot/assets/klava-social-preview.png"
     />
     <meta name="theme-color" content="#f4efe6" />
+    <link rel="canonical" href="https://junior2wnw.github.io/klava-bot/" />
     <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -43,11 +58,10 @@
         </div>
         <nav class="site-nav">
           <a href="https://github.com/junior2wnw/klava-bot">GitHub</a>
-          <a href="./pilot.html">Paid pilot</a>
           <a href="https://github.com/junior2wnw/klava-bot/releases/latest">Download</a>
-          <a href="#pressure-test">Field note</a>
-          <a href="#challenge">Task intake</a>
-          <a href="#design-partners">Design partners</a>
+          <a href="#proof">Proof</a>
+          <a href="#use-cases">Use cases</a>
+          <a href="./pilot.html">Paid pilot</a>
           <a href="./ru/">RU</a>
           <a href="https://github.com/junior2wnw/klava-bot/blob/main/README.md">README</a>
         </nav>
@@ -57,302 +71,165 @@
         <section class="hero">
           <div class="hero-copy">
             <p class="eyebrow">Local-first desktop agent. Explicit approvals. Real machine work.</p>
-            <h1>An AI desktop agent that can work on the actual machine without hiding what it did.</h1>
+            <h1>Fix workstations, run migrations, and make local changes without losing the trail.</h1>
             <p class="lede">
-              Klava brings together task history, guarded shell access, secret handling, and a local runtime so the
-              same tool can inspect the machine, make approved changes, and leave behind a usable record of what
-              happened.
+              Klava is for work that should not disappear into chat scrollback: workstation recovery, risky local
+              changes, guarded terminal execution, repo and provider migrations, and operator loops that need receipts.
             </p>
             <div class="hero-actions">
-              <a class="button button-primary" href="./pilot.html">
-                Book a paid pilot
+              <a class="button button-primary" href="https://github.com/junior2wnw/klava-bot/releases/latest">
+                Download the release
               </a>
               <a class="button button-secondary" href="https://github.com/junior2wnw/klava-bot">
                 Read the source
               </a>
-              <a
-                class="button button-secondary"
-                href="https://github.com/junior2wnw/klava-bot/releases/latest"
-              >
-                Download the release
+              <a class="button button-secondary" href="#proof">
+                Inspect the proof
               </a>
             </div>
             <ul class="signal-list">
               <li>Windows and macOS release builds</li>
-              <li>Public GitHub Actions CI</li>
-              <li>Local runtime API</li>
-              <li>Durable operations layer in Pro</li>
+              <li>Desktop shell plus local runtime API</li>
               <li>Approval-gated terminal actions</li>
-              <li>Task transcript and support bundles</li>
+              <li>Durable task transcript and support bundles</li>
+              <li>Execution journal with restart-safe resume</li>
+              <li>Semantic retrieval over task and tool history</li>
+              <li>Automatic context compression</li>
               <li>Explicit OpenClaw lineage</li>
             </ul>
           </div>
           <div class="hero-panel">
             <div class="hero-card hero-card-dark">
               <span class="card-kicker">Shipped now</span>
-              <h2>Public proof</h2>
+              <h2>What already exists</h2>
               <ul>
-                <li>Electron desktop shell</li>
-                <li>GitHub Actions CI</li>
-                <li>Multi-step operations in Pro</li>
-                <li>Vault-backed secret flow</li>
-                <li>Guarded terminal + approvals</li>
+                <li>compact desktop chat and task rail</li>
+                <li>guarded terminal flow with approvals</li>
+                <li>typed operations surface in Pro</li>
+                <li>task memory, retrieval, and recovery journal</li>
               </ul>
             </div>
             <div class="hero-card hero-card-light">
-              <span class="card-kicker">Operator environments</span>
-              <h2>Where the shape fits</h2>
+              <span class="card-kicker">Best fit</span>
+              <h2>Where the shape is strongest</h2>
               <ul>
-                <li>Consultants fixing real machines</li>
-                <li>Internal IT and platform teams</li>
-                <li>Migration-heavy engineering workflows</li>
-                <li>Typed helper operations next</li>
+                <li>workstation repair and recovery</li>
+                <li>repo, backend, or provider migrations</li>
+                <li>internal IT and platform runbooks</li>
+                <li>consultant workflows with audit pressure</li>
               </ul>
             </div>
             <img
               class="hero-shot"
-              src="./assets/klava-desktop-preview.svg"
-              alt="Simplified preview of the Klava desktop task rail, Pro surface, approvals, and diagnostics."
+              src="./assets/klava-desktop-screenshot.png"
+              alt="Actual Klava desktop screenshot showing the task rail, compact live status row, transcript, and diagnostics pane."
             />
           </div>
         </section>
 
-        <section class="story-grid" id="pressure-test">
-          <article class="story-card story-card-primary">
-            <p class="section-label">Field note 01</p>
-            <h2>GitHub's 2FA notice was a useful forcing function.</h2>
+        <section class="section-grid" id="proof">
+          <article class="section-card section-card-accent">
+            <p class="section-label">Why this repo is worth opening</p>
+            <h2>It is trying to be more useful than “AI chat with tools.”</h2>
             <p>
-              GitHub's contributor notice is not product validation. It did, however, force the repository to become
-              easier to evaluate at a glance.
+              Klava keeps local work in one accountable loop: inspect the machine, request approval, execute bounded
+              actions, keep the transcript, preserve recovery hints, and leave behind artifacts another engineer can
+              review later.
             </p>
-            <p class="story-note">
-              Practical version: if the account is active enough to receive a 2FA deadline, the repo should be legible
-              enough to inspect quickly through code, tests, and public artifacts.
-            </p>
-            <div class="story-actions">
-              <a class="button button-primary" href="https://github.com/junior2wnw/klava-bot/blob/main/FIELD_NOTES.md">
-                Read field notes
-              </a>
-              <a class="button button-secondary" href="./field-note-01.html">
-                Open field note 01
-              </a>
-            </div>
           </article>
-          <article class="story-card story-card-media">
-            <img
-              class="story-art"
-              src="./assets/2fa-pressure-test.svg"
-              alt="Illustration of a GitHub 2FA notice turned into a shipping deadline for Klava."
-            />
-          </article>
-        </section>
-
-        <section class="story-grid" id="challenge">
-          <article class="story-card story-card-cta">
-            <p class="section-label">Open task intake</p>
-            <h2>If you have machine work that still requires heroics, send the outline.</h2>
+          <article class="section-card section-card-cta">
+            <p class="section-label">Quick proof path</p>
+            <h2>Start with files that defend the shape.</h2>
             <p>
-              This is less a challenge than an intake queue for work that is too stateful or too risky for generic AI
-              demos. If a workflow needs notes, approvals, machine access, and a transcript, it belongs here.
+              First open the desktop surfaces, then the shared contracts, then the runtime tests. The repo is easier to
+              evaluate through code and proof than through slogans.
             </p>
-            <ul class="story-list">
-              <li>developer environment repair that always breaks in a new way</li>
-              <li>migration work that touches configs, secrets, and validation steps</li>
-              <li>internal IT flows that need explicit approvals and machine receipts</li>
-              <li>consultant workflows that currently live across notes, shell history, and memory</li>
-            </ul>
-            <div class="story-actions">
-              <a
-                class="button button-primary"
-                href="https://github.com/junior2wnw/machine-work-index/issues/new?template=case_note.md"
-              >
-                Open task intake
-              </a>
-              <a class="button button-secondary" href="https://github.com/junior2wnw/klava-bot/blob/main/FIELD_NOTES.md">
-                Read field notes
-              </a>
-            </div>
-          </article>
-          <article class="story-card story-card-proof">
-            <p class="section-label">Code-backed proof</p>
-            <h2>What the repo can defend right now</h2>
-            <div class="proof-sequence">
-              <span>draft</span>
-              <span>running</span>
-              <span>awaiting approval</span>
-              <span>succeeded / failed</span>
-            </div>
-            <p>
-              Klava already has a typed operations model, explicit note and terminal steps, approval pauses, and
-              task-attached history. The state machine is not a marketing mockup.
-            </p>
-            <ul class="story-list">
-              <li>typed operation status and step kinds in shared contracts</li>
-              <li>runtime tests for multi-step advance and approval rejection</li>
-              <li>desktop Pro surface for creating and continuing operations</li>
-            </ul>
             <div class="story-links">
+              <a class="inline-link" href="https://github.com/junior2wnw/klava-bot/blob/main/apps/desktop/src/features/chat/ChatSurface.tsx">ChatSurface.tsx</a>
+              <a class="inline-link" href="https://github.com/junior2wnw/klava-bot/blob/main/apps/desktop/src/features/pro/ProSurface.tsx">ProSurface.tsx</a>
               <a class="inline-link" href="https://github.com/junior2wnw/klava-bot/blob/main/packages/contracts/src/operations.ts">operations.ts</a>
               <a class="inline-link" href="https://github.com/junior2wnw/klava-bot/blob/main/packages/runtime/src/server.test.ts">server.test.ts</a>
-              <a class="inline-link" href="https://github.com/junior2wnw/klava-bot/blob/main/apps/desktop/src/features/pro/ProSurface.tsx">ProSurface.tsx</a>
             </div>
-          </article>
-        </section>
-
-        <section class="section-grid">
-          <article class="section-card section-card-accent">
-            <p class="section-label">What makes it different</p>
-            <h2>Built for local work, not just chat.</h2>
-            <p>
-              Klava is meant to keep local work in one place: inspect the machine, ask for approval, execute a bounded
-              action, and leave behind records another engineer can review.
-            </p>
-          </article>
-          <article class="section-card section-card-cta" id="design-partners">
-            <p class="section-label">Looking for 3 paid pilots</p>
-            <h2>Bring a painful workflow with budget behind it.</h2>
-            <p>
-              The serious path is not broad interest. It is a small number of expensive workflows with real operators,
-              security constraints, and money attached. If your team repeatedly repairs machines, migrates local
-              projects, or performs risky workstation changes, start with the paid-pilot page.
-            </p>
-            <a class="button button-primary button-inline" href="./pilot.html">Open pilot page</a>
           </article>
         </section>
 
         <section class="proof-grid">
           <article class="proof-card">
-            <p class="section-label">Trust signal</p>
-            <h3>Public CI and a shipped desktop shell</h3>
-            <p>
-              The repository is verified in public through GitHub Actions and already ships a desktop product surface
-              instead of a loose source snapshot.
-            </p>
+            <p class="section-label">What it is for</p>
+            <h3>Stateful local workflows</h3>
+            <p>Work that touches the machine, the terminal, approvals, validation steps, and rollback context in one run.</p>
           </article>
           <article class="proof-card">
-            <p class="section-label">Long tasks</p>
-            <h3>Operations, not just isolated commands</h3>
-            <p>
-              The Pro surface can now hold a multi-step local operation with explicit progress, terminal steps,
-              approval pauses, and durable history inside the same task.
-            </p>
+            <p class="section-label">What it is not</p>
+            <h3>Not just vibe coding</h3>
+            <p>Klava is aimed at recoveries, migrations, and operator-facing workflows where receipts matter more than flashy chat demos.</p>
           </article>
           <article class="proof-card">
-            <p class="section-label">Upstream lineage</p>
-            <h3>Fork boundary documented in the open</h3>
-            <p>
-              Klava grows from OpenClaw. The relationship is written down directly in the repo instead of being implied
-              by marketing language or a missing native fork badge.
-            </p>
-            <a class="inline-link" href="https://github.com/junior2wnw/klava-bot/blob/main/UPSTREAM.md">Read upstream notes</a>
-          </article>
-          <article class="proof-card">
-            <p class="section-label">First session</p>
-            <h3>One task, one guarded command, one transcript</h3>
-            <p>
-              Start with a task, run a bounded shell action, inspect the approval flow, and export the support bundle.
-              The product is built around an operator loop, not a blank chat canvas.
-            </p>
+            <p class="section-label">Why it can resume</p>
+            <h3>Durable memory and journal</h3>
+            <p>Context compression, semantic retrieval, and restart-safe execution journal reduce the chance of bluffing or losing the thread.</p>
           </article>
         </section>
 
-        <section class="capabilities">
+        <section class="capabilities" id="use-cases">
           <div class="section-heading">
-            <p class="section-label">Planned workflows</p>
-            <h2>Examples of the work surface</h2>
+            <p class="section-label">Representative workflows</p>
+            <h2>Examples of where Klava can earn its keep</h2>
           </div>
           <div class="capability-grid">
             <article>
-              <h3>System repair</h3>
-              <p>Inspect devices, prepare rollback context, reinstall a broken GPU, audio, or network driver, and validate the result.</p>
+              <h3>Workstation recovery</h3>
+              <p>Check devices, prepare rollback context, stage a guarded fix, and keep the result attached to the task history.</p>
             </article>
             <article>
-              <h3>Project migration</h3>
-              <p>Replace a BaaS or provider in a real codebase, rewrite config, run smoke checks, and summarize the diff.</p>
+              <h3>Repo migration</h3>
+              <p>Rewrite configuration, update adapters, run smoke checks, and leave a bounded change record with follow-up notes.</p>
             </article>
             <article>
-              <h3>Machine bootstrap</h3>
-              <p>Take a new machine from blank state to working developer environment through one desktop app and one task log.</p>
+              <h3>Provider switchovers</h3>
+              <p>Move a project between model providers without scattering model lists, validation steps, and rollback hints across chats.</p>
             </article>
             <article>
-              <h3>Support operations</h3>
-              <p>Collect logs, config snapshots, and runtime state into support bundles that are usable by another human.</p>
+              <h3>Internal IT workflows</h3>
+              <p>Keep risky machine changes behind explicit approvals instead of hiding them inside free-form privileged prompting.</p>
             </article>
             <article>
-              <h3>Local safety</h3>
-              <p>Keep secrets outside the transcript, route risky actions through approvals, and avoid raw privileged prompt execution.</p>
+              <h3>Consultant runbooks</h3>
+              <p>Replace ad-hoc notes and shell history with one task log that captures commands, approvals, and machine facts together.</p>
             </article>
             <article>
-              <h3>Operator clarity</h3>
-              <p>Make it obvious what changed, what was approved, what version executed it, and how to roll back when possible.</p>
+              <h3>Support handoff</h3>
+              <p>Export support bundles and transcripts so another engineer can pick up the case without reverse-engineering the session.</p>
             </article>
           </div>
         </section>
 
-        <section class="timeline">
-          <div class="section-heading">
-            <p class="section-label">Project maturity</p>
-            <h2>Clear separation between current scope and next steps</h2>
-          </div>
-          <div class="timeline-grid">
-            <article>
-              <span class="timeline-tag">Now</span>
-              <ul>
-                <li>Desktop shell</li>
-                <li>Local runtime</li>
-                <li>Secure onboarding</li>
-                <li>Guarded terminal</li>
-              </ul>
-            </article>
-            <article>
-              <span class="timeline-tag">Next</span>
-              <ul>
-                <li>Typed privileged helper</li>
-                <li>Richer support workflows</li>
-                <li>Stronger release ergonomics</li>
-                <li>More explicit audit records</li>
-              </ul>
-            </article>
-            <article>
-              <span class="timeline-tag">Later</span>
-              <ul>
-                <li>Cloud gateway</li>
-                <li>Voice and multimodal packs</li>
-                <li>Workflow packs</li>
-                <li>Broader system-repair library</li>
-              </ul>
-            </article>
-          </div>
-        </section>
-
-        <section class="docs-strip">
+        <section class="docs-strip" id="docs">
           <div>
-            <p class="section-label">Read the project</p>
-            <h2>Everything important is documented in the open.</h2>
+            <p class="section-label">Start with evidence</p>
+            <h2>Open the release, inspect the code, then decide if the shape fits your workflow.</h2>
+            <p>
+              If you are evaluating the repo for a team, start with the release, the runtime proof, and the safety docs.
+              The commercial path is secondary to the product evidence.
+            </p>
           </div>
           <div class="docs-links">
+            <a href="https://github.com/junior2wnw/klava-bot/releases/latest">Latest release</a>
             <a href="https://github.com/junior2wnw/klava-bot/blob/main/README.md">README</a>
-            <a href="https://github.com/junior2wnw/klava-bot/blob/main/ROADMAP.md">Roadmap</a>
-            <a href="https://github.com/junior2wnw/klava-bot/blob/main/DESIGN_PARTNERS.md">Design partners</a>
+            <a href="https://github.com/junior2wnw/klava-bot/blob/main/README.ru.md">README.ru</a>
+            <a href="https://github.com/junior2wnw/klava-bot/blob/main/docs/04_SECURITY_AND_PRIVILEGED_EXECUTION.md">Security model</a>
+            <a href="https://github.com/junior2wnw/klava-bot/blob/main/packages/runtime/src/semantic-retrieval.ts">Semantic retrieval</a>
+            <a href="https://github.com/junior2wnw/klava-bot/blob/main/packages/runtime/src/execution-journal.ts">Execution journal</a>
+            <a href="./pilot.html">Paid pilot</a>
             <a href="https://github.com/junior2wnw/klava-bot/blob/main/FIELD_NOTES.md">Field notes</a>
-            <a href="./field-note-01.html">Field note 01</a>
-            <a href="https://github.com/junior2wnw/machine-work-index">Machine work index</a>
-            <a href="https://github.com/junior2wnw/klava-bot/blob/main/GONKA_STATUS.md">Gonka status</a>
-            <a href="https://github.com/junior2wnw/klava-bot/blob/main/GOVERNANCE.md">Governance</a>
-            <a href="https://github.com/junior2wnw/klava-bot/blob/main/SECURITY.md">Security</a>
-            <a href="https://github.com/junior2wnw/klava-bot/blob/main/LAUNCH_POST.md">Launch copy</a>
-            <a href="https://github.com/junior2wnw/klava-bot/blob/main/docs/04_SECURITY_AND_PRIVILEGED_EXECUTION.md">Privileged execution</a>
-            <a href="https://github.com/junior2wnw/klava-bot/blob/main/docs/16_OPEN_SOURCE_AND_FORK_LINEAGE.md">Fork lineage</a>
           </div>
         </section>
       </main>
 
       <footer class="site-footer">
-        <p>Klava is a local-first desktop agent with a local runtime, explicit approvals, public CI, and documented OpenClaw lineage.</p>
+        <p>Klava is a desktop operator surface for local machine work that needs approvals, receipts, and recovery context.</p>
         <div class="footer-links">
           <a href="https://github.com/junior2wnw/klava-bot/releases/latest">Latest release</a>
-          <a href="./pilot.html">Paid pilot</a>
-          <a href="https://github.com/junior2wnw/klava-bot/issues/new?template=design_partner.md">Design partners</a>
           <a href="https://github.com/junior2wnw/klava-bot/issues">Issues</a>
           <a href="https://github.com/junior2wnw/klava-bot/discussions">Discussions</a>
         </div>

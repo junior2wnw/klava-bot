@@ -2,7 +2,7 @@
   "name": "klava-bot",
   "version": "0.1.0",
   "private": true,
-  "description": "Desktop agent built on OpenClaw for local tasks, approvals, and controlled computer operations.",
+  "description": "Local-first desktop agent for workstation repair, migrations, approvals, and audited machine work.",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -21,6 +21,12 @@
     "windows",
     "macos",
     "ai-agent",
+    "terminal-agent",
+    "workstation-automation",
+    "runbook-automation",
+    "it-automation",
+    "msp",
+    "audit-trail",
     "gonka"
   ],
   "workspaces": [
@@ -33,6 +39,7 @@
     "check": "node ./scripts/run-workspaces.mjs check @klava/contracts @klava/runtime @klava/ui @klava/desktop",
     "test": "node ./scripts/run-workspaces.mjs test @klava/runtime",
     "build": "node ./scripts/run-workspaces.mjs build @klava/contracts @klava/runtime @klava/ui @klava/desktop",
+    "capture:preview": "node ./scripts/capture-preview.mjs",
     "dist:win": "node ./scripts/release.mjs win",
     "dist:mac": "node ./scripts/release.mjs mac"
   },

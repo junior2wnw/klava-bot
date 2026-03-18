@@ -3,20 +3,40 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Klava</title>
+    <title>Klava | Desktop-агент для ремонта рабочих станций, миграций и контролируемых изменений</title>
     <meta
       name="description"
-      content="Klava — это desktop-агент для локальной работы на Windows и macOS, построенный поверх OpenClaw."
+      content="Klava — это локальный desktop-агент для ремонта рабочих станций, миграций проекта и провайдера, guarded terminal work и проверяемых изменений на Windows и macOS."
     />
     <meta property="og:title" content="Klava" />
     <meta
       property="og:description"
-      content="Один исполняемый файл, локальный рантайм, явные подтверждения и журнал задач в одном месте."
+      content="Локальный desktop-агент с явными подтверждениями, журналом задач, guarded terminal flow и машинно-проверяемым следом изменений."
     />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="../assets/klava-social-preview.svg" />
+    <meta property="og:url" content="https://junior2wnw.github.io/klava-bot/ru/" />
+    <meta
+      property="og:image"
+      content="https://junior2wnw.github.io/klava-bot/assets/klava-social-preview.png"
+    />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="Реальный скриншот интерфейса Klava с task rail, compact live status, transcript и diagnostics pane."
+    />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Klava" />
+    <meta
+      name="twitter:description"
+      content="Desktop-агент для ремонта рабочих станций, миграций, guarded terminal work и проверяемых изменений на машине."
+    />
+    <meta
+      name="twitter:image"
+      content="https://junior2wnw.github.io/klava-bot/assets/klava-social-preview.png"
+    />
     <meta name="theme-color" content="#f4efe6" />
+    <link rel="canonical" href="https://junior2wnw.github.io/klava-bot/ru/" />
     <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -30,16 +50,18 @@
     <div class="page-shell">
       <header class="site-header">
         <div class="brand">
-            <div class="brand-mark">K</div>
+          <div class="brand-mark">K</div>
           <div>
             <div class="brand-name">Klava</div>
             <div class="brand-subtitle">Desktop-агент на базе OpenClaw</div>
           </div>
         </div>
         <nav class="site-nav">
-          <a href="../pilot.html">Pilot</a>
           <a href="https://github.com/junior2wnw/klava-bot">GitHub</a>
           <a href="https://github.com/junior2wnw/klava-bot/releases/latest">Скачать</a>
+          <a href="#proof">Proof</a>
+          <a href="#use-cases">Сценарии</a>
+          <a href="../pilot.html">Paid pilot</a>
           <a href="../">EN</a>
           <a href="https://github.com/junior2wnw/klava-bot/blob/main/README.ru.md">README.ru</a>
         </nav>
@@ -48,168 +70,169 @@
       <main>
         <section class="hero">
           <div class="hero-copy">
-            <p class="eyebrow">Один исполняемый файл. Локальный рантайм. Явные подтверждения.</p>
-            <h1>Агент для локальной работы, терминала и согласованных изменений на машине.</h1>
+            <p class="eyebrow">Локальный desktop-агент. Явные подтверждения. Реальная работа на машине.</p>
+            <h1>Чините рабочие станции, проводите миграции и меняйте локальную машину без потери следа.</h1>
             <p class="lede">
-              Klava объединяет журнал задач, доступ к терминалу с подтверждениями, работу с секретами и локальный
-              рантайм, чтобы одна и та же программа могла проверить машину, внести согласованные изменения и оставить
-              понятную запись о результате.
+              Klava нужен для работы, которая не должна исчезать в истории чата: восстановление рабочей станции,
+              рискованные локальные изменения, guarded terminal execution, миграции репозитория и провайдера, а также
+              операторские циклы, где важны receipts.
             </p>
             <div class="hero-actions">
               <a class="button button-primary" href="https://github.com/junior2wnw/klava-bot/releases/latest">
-                Скачать сборку
+                Скачать релиз
               </a>
               <a class="button button-secondary" href="https://github.com/junior2wnw/klava-bot">
                 Читать исходники
               </a>
+              <a class="button button-secondary" href="#proof">
+                Посмотреть proof
+              </a>
             </div>
             <ul class="signal-list">
               <li>Сборки для Windows и macOS</li>
-              <li>Локальный runtime API</li>
-              <li>Терминал с подтверждением действий</li>
-              <li>Явно задокументированное происхождение от OpenClaw</li>
+              <li>Desktop shell и локальный runtime API</li>
+              <li>Guarded terminal flow с approvals</li>
+              <li>Журнал задач и support bundles</li>
+              <li>Execution journal с restart-safe resume</li>
+              <li>Semantic retrieval по истории и tool outputs</li>
+              <li>Автоматическое сжатие контекста</li>
+              <li>Явно показанная связь с OpenClaw</li>
             </ul>
           </div>
           <div class="hero-panel">
             <div class="hero-card hero-card-dark">
-              <span class="card-kicker">Доступно сейчас</span>
-              <h2>Что уже есть</h2>
+              <span class="card-kicker">Уже есть в репо</span>
+              <h2>Что уже работает</h2>
               <ul>
-                <li>Оболочка на Electron</li>
-                <li>Локальное хранилище секретов</li>
-                <li>Подключение GONKA и чат</li>
-                <li>Журнал задач и пакеты диагностики</li>
+                <li>компактный desktop chat и task rail</li>
+                <li>guarded terminal flow с approvals</li>
+                <li>типизированная operations surface в Pro</li>
+                <li>task memory, retrieval и recovery journal</li>
               </ul>
             </div>
             <div class="hero-card hero-card-light">
-              <span class="card-kicker">Следующий этап</span>
-              <h2>Какие сценарии добавлять дальше</h2>
+              <span class="card-kicker">Сильные сценарии</span>
+              <h2>Где форма особенно хороша</h2>
               <ul>
-                <li>Проверку и переустановку драйверов</li>
-                <li>Замену BaaS и провайдера в реальных проектах</li>
-                <li>Подготовку и восстановление рабочих станций</li>
-                <li>Типизированные привилегированные операции</li>
+                <li>ремонт и восстановление рабочих станций</li>
+                <li>миграции репозитория, backend или провайдера</li>
+                <li>internal IT и platform runbooks</li>
+                <li>консультантские workflows под аудит</li>
               </ul>
             </div>
             <img
               class="hero-shot"
-              src="../assets/klava-desktop-preview.svg"
-              alt="Simplified preview of the Klava desktop task rail, Pro surface, approvals, and diagnostics."
+              src="../assets/klava-desktop-screenshot.png"
+              alt="Реальный скриншот интерфейса Klava с task rail, compact live status, transcript и diagnostics pane."
             />
           </div>
         </section>
 
-        <section class="section-grid">
+        <section class="section-grid" id="proof">
           <article class="section-card section-card-accent">
-            <p class="section-label">Что делает его другим</p>
-            <h2>Проект про локальную работу, а не только про чат.</h2>
+            <p class="section-label">Почему этот репозиторий вообще стоит открыть</p>
+            <h2>Он пытается быть полезнее, чем просто “AI chat with tools”.</h2>
             <p>
-              Вся логика сводится к одному циклу: проверить машину, запросить подтверждение, выполнить ограниченное
-              действие и оставить записи, которые сможет проверить другой инженер.
+              Klava держит локальную работу в одном accountable loop: проверить машину, запросить approval, выполнить
+              ограниченное действие, сохранить transcript, оставить recovery hints и artifacts, которые потом сможет
+              проверить другой инженер.
             </p>
           </article>
-          <article class="section-card">
-            <p class="section-label">Происхождение</p>
-            <h2>Связь с OpenClaw описана прямо.</h2>
+          <article class="section-card section-card-cta">
+            <p class="section-label">Быстрый путь proof</p>
+            <h2>Открывайте файлы, которые защищают форму.</h2>
             <p>
-              Klava вырос из OpenClaw. Репозиторий показывает эту связь напрямую и объясняет, где проект остаётся
-              близким к upstream, а где уже пошёл своим путём.
+              Сначала desktop surfaces, потом shared contracts, затем runtime tests. Этот проект легче оценивать через
+              код и proof, чем через маркетинговые обещания.
             </p>
-            <a class="inline-link" href="https://github.com/junior2wnw/klava-bot/blob/main/UPSTREAM.md">Читать описание форка</a>
+            <div class="story-links">
+              <a class="inline-link" href="https://github.com/junior2wnw/klava-bot/blob/main/apps/desktop/src/features/chat/ChatSurface.tsx">ChatSurface.tsx</a>
+              <a class="inline-link" href="https://github.com/junior2wnw/klava-bot/blob/main/apps/desktop/src/features/pro/ProSurface.tsx">ProSurface.tsx</a>
+              <a class="inline-link" href="https://github.com/junior2wnw/klava-bot/blob/main/packages/contracts/src/operations.ts">operations.ts</a>
+              <a class="inline-link" href="https://github.com/junior2wnw/klava-bot/blob/main/packages/runtime/src/server.test.ts">server.test.ts</a>
+            </div>
           </article>
         </section>
 
-        <section class="capabilities">
+        <section class="proof-grid">
+          <article class="proof-card">
+            <p class="section-label">Для чего это</p>
+            <h3>Stateful local workflows</h3>
+            <p>Работа, где в одном цикле встречаются машина, терминал, approvals, проверки и rollback context.</p>
+          </article>
+          <article class="proof-card">
+            <p class="section-label">Для чего это не нужно</p>
+            <h3>Не только ради vibe coding</h3>
+            <p>Klava ориентирован на recoveries, migrations и operator-facing workflows, где receipts важнее эффектных chat demos.</p>
+          </article>
+          <article class="proof-card">
+            <p class="section-label">Почему это можно продолжать</p>
+            <h3>Durable memory и journal</h3>
+            <p>Context compression, semantic retrieval и restart-safe execution journal снижают шанс потерять нить или начать блефовать.</p>
+          </article>
+        </section>
+
+        <section class="capabilities" id="use-cases">
           <div class="section-heading">
-            <p class="section-label">Планируемые сценарии</p>
-            <h2>Примеры задач, под которые строится продукт</h2>
+            <p class="section-label">Representative workflows</p>
+            <h2>Примеры сценариев, где Klava может реально окупаться</h2>
           </div>
           <div class="capability-grid">
             <article>
-              <h3>Ремонт системы</h3>
-              <p>Проверить устройства, подготовить данные для отката, переустановить проблемный драйвер и проверить результат.</p>
+              <h3>Ремонт рабочей станции</h3>
+              <p>Проверить устройства, подготовить rollback context, провести guarded fix и оставить результат в task history.</p>
             </article>
             <article>
-              <h3>Миграция проекта</h3>
-              <p>Заменить BaaS или провайдера в кодовой базе, переписать конфигурацию, прогнать smoke checks и собрать сводку по изменениям.</p>
+              <h3>Миграция репозитория</h3>
+              <p>Переписать конфигурацию, обновить адаптеры, прогнать smoke checks и оставить bounded change record.</p>
             </article>
             <article>
-              <h3>Подготовка машины</h3>
-              <p>Поднять новую машину от пустого состояния до рабочего окружения через один исполняемый файл и один журнал задач.</p>
+              <h3>Смена AI-провайдера</h3>
+              <p>Перевести проект между провайдерами, не разбрасывая model lists, validation steps и rollback hints по чатам.</p>
             </article>
             <article>
-              <h3>Диагностика и поддержка</h3>
-              <p>Собрать логи, снимки конфигурации и состояние рантайма в пакет, которым сможет пользоваться другой инженер.</p>
+              <h3>Внутренние IT-процессы</h3>
+              <p>Держать рискованные действия за явными approvals, а не прятать их в free-form privileged prompting.</p>
             </article>
             <article>
-              <h3>Безопасность на машине</h3>
-              <p>Держать секреты вне журнала, пропускать рискованные действия через подтверждение и не давать модели общую привилегированную оболочку.</p>
+              <h3>Consultant runbooks</h3>
+              <p>Заменить ad-hoc notes и shell history на один task log с командами, approvals и machine facts.</p>
             </article>
             <article>
-              <h3>Понятный результат</h3>
-              <p>Показывать, что поменялось, что было подтверждено, какая версия это выполнила и как откатить изменения.</p>
+              <h3>Support handoff</h3>
+              <p>Выгружать support bundles и transcript так, чтобы другой инженер мог продолжить кейс без реконструкции с нуля.</p>
             </article>
           </div>
         </section>
 
-        <section class="timeline">
-          <div class="section-heading">
-            <p class="section-label">Зрелость проекта</p>
-            <h2>Текущий объём работы отделён от следующего этапа</h2>
-          </div>
-          <div class="timeline-grid">
-            <article>
-              <span class="timeline-tag">Сейчас</span>
-              <ul>
-                <li>Desktop-оболочка</li>
-                <li>Локальный рантайм</li>
-                <li>Безопасный onboarding</li>
-                <li>Терминал с подтверждениями</li>
-              </ul>
-            </article>
-            <article>
-              <span class="timeline-tag">Дальше</span>
-              <ul>
-                <li>Типизированный привилегированный помощник</li>
-                <li>Более сильные сценарии диагностики</li>
-                <li>Улучшение выпуска релизов</li>
-                <li>Более явный журнал действий</li>
-              </ul>
-            </article>
-            <article>
-              <span class="timeline-tag">Позже</span>
-              <ul>
-                <li>Облачный шлюз</li>
-                <li>Голосовые и мультимодальные пакеты</li>
-                <li>Библиотеки сценариев</li>
-                <li>Набор сценариев для ремонта системы</li>
-              </ul>
-            </article>
-          </div>
-        </section>
-
-        <section class="docs-strip">
+        <section class="docs-strip" id="docs">
           <div>
-            <p class="section-label">Читать проект</p>
-            <h2>Всё важное задокументировано открыто.</h2>
+            <p class="section-label">Начинать лучше с evidence</p>
+            <h2>Сначала релиз и код, потом уже разговор о пилотах.</h2>
+            <p>
+              Если вы оцениваете проект для команды, начинайте с релиза, runtime proof и safety docs. Коммерческий
+              путь вторичен по отношению к продуктовым доказательствам.
+            </p>
           </div>
           <div class="docs-links">
+            <a href="https://github.com/junior2wnw/klava-bot/releases/latest">Последний релиз</a>
             <a href="https://github.com/junior2wnw/klava-bot/blob/main/README.ru.md">README.ru</a>
-            <a href="https://github.com/junior2wnw/klava-bot/blob/main/ROADMAP.md">Дорожная карта</a>
-            <a href="https://github.com/junior2wnw/klava-bot/blob/main/GOVERNANCE.md">Управление проектом</a>
-            <a href="https://github.com/junior2wnw/klava-bot/blob/main/SECURITY.md">Безопасность</a>
-            <a href="https://github.com/junior2wnw/klava-bot/blob/main/docs/04_SECURITY_AND_PRIVILEGED_EXECUTION.md">Привилегированные действия</a>
-            <a href="https://github.com/junior2wnw/klava-bot/blob/main/docs/16_OPEN_SOURCE_AND_FORK_LINEAGE.md">Происхождение форка</a>
+            <a href="https://github.com/junior2wnw/klava-bot/blob/main/README.md">README</a>
+            <a href="https://github.com/junior2wnw/klava-bot/blob/main/docs/04_SECURITY_AND_PRIVILEGED_EXECUTION.md">Модель безопасности</a>
+            <a href="https://github.com/junior2wnw/klava-bot/blob/main/packages/runtime/src/semantic-retrieval.ts">Semantic retrieval</a>
+            <a href="https://github.com/junior2wnw/klava-bot/blob/main/packages/runtime/src/execution-journal.ts">Execution journal</a>
+            <a href="../pilot.html">Paid pilot</a>
+            <a href="https://github.com/junior2wnw/klava-bot/blob/main/FIELD_NOTES.md">Field notes</a>
           </div>
         </section>
       </main>
 
       <footer class="site-footer">
-        <p>Klava — это Windows-проект с локальным рантаймом, явными подтверждениями действий и прозрачным происхождением от OpenClaw.</p>
+        <p>Klava — это desktop operator surface для локальной работы на машине, где нужны approvals, receipts и recovery context.</p>
         <div class="footer-links">
           <a href="https://github.com/junior2wnw/klava-bot/releases/latest">Последний релиз</a>
-          <a href="https://github.com/junior2wnw/klava-bot/issues">Задачи</a>
-          <a href="https://github.com/junior2wnw/klava-bot/discussions">Обсуждения</a>
+          <a href="https://github.com/junior2wnw/klava-bot/issues">Issues</a>
+          <a href="https://github.com/junior2wnw/klava-bot/discussions">Discussions</a>
         </div>
       </footer>
     </div>

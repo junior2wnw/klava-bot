@@ -2,8 +2,8 @@
   "name": "@klava/desktop",
   "version": "0.1.0",
   "private": true,
-  "description": "Klava Bot desktop shell",
-  "author": "Codex",
+  "description": "Local-first desktop agent for guarded terminal work, workstation repair, and audited machine changes.",
+  "author": "junior2wnw",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev:renderer": "vite --host 127.0.0.1 --port 5173",

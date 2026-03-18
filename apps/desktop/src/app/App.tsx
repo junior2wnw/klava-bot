@@ -31,7 +31,7 @@ export function App() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showProviderSetup, setShowProviderSetup] = useState(false);
-  const platform = window.klava?.platform ?? "browser";
+  const platform = window.klava?.platform ?? import.meta.env.VITE_KLAVA_PLATFORM ?? "browser";
 
   const provider = snapshot?.provider ?? null;
   const selectedTask = snapshot?.selectedTask ?? null;

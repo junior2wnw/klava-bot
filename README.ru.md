@@ -9,11 +9,45 @@
 
 Languages: [English](./README.md) | **Русский**
 
-Он объединяет локальный рантайм, хранение секретов, подтверждения действий и журнал задач, чтобы чат, работа в терминале и изменения на машине жили в одном месте.
+![Реальный скриншот интерфейса Klava](./docs/assets/klava-desktop-screenshot.png)
+
+Klava — это локальный desktop-агент для ремонта рабочих станций, миграций проекта и провайдера, контролируемой работы в терминале и проверяемых изменений на машине.
+
+Он объединяет локальный рантайм, хранение секретов, подтверждения действий, журнал задач, semantic retrieval, execution journal и restart-safe recovery, чтобы чат, терминал и изменения на машине жили в одном проверяемом контуре.
+
+Скриншот выше снят с реального приложения на безопасном демо-состоянии. Это не иллюстрация и не содержит личной переписки.
 
 Коротко:
 
 > один исполняемый файл, один журнал задач, одна модель подтверждений и один инструмент, который умеет проверить машину, внести согласованные изменения и зафиксировать результат.
+
+## Зачем открывать этот репозиторий
+
+- здесь есть реальная desktop-оболочка, а не только веб-чат;
+- рискованные действия проходят через явные подтверждения и guarded terminal flow;
+- история задач, support bundles, execution journal и restart-safe resume уже собраны в одну поверхность;
+- контекст не режется тупо по последним сообщениям: есть автоматическое сжатие и semantic retrieval по истории и tool outputs;
+- типизированные операции и общие контракты можно проверить прямо в коде и тестах.
+
+## Быстрый путь проверки
+
+1. Откройте [последний релиз](https://github.com/junior2wnw/klava-bot/releases/latest) или [публичный сайт](https://junior2wnw.github.io/klava-bot/).
+2. Посмотрите [`apps/desktop/src/features/chat/ChatSurface.tsx`](./apps/desktop/src/features/chat/ChatSurface.tsx), [`apps/desktop/src/features/pro/ProSurface.tsx`](./apps/desktop/src/features/pro/ProSurface.tsx), [`packages/runtime/src/semantic-retrieval.ts`](./packages/runtime/src/semantic-retrieval.ts) и [`packages/runtime/src/execution-journal.ts`](./packages/runtime/src/execution-journal.ts).
+3. Откройте [`packages/contracts/src/operations.ts`](./packages/contracts/src/operations.ts) и [`packages/runtime/src/server.test.ts`](./packages/runtime/src/server.test.ts), чтобы увидеть модель состояния и runtime proof.
+4. Запустите локально:
+
+```bash
+npm install
+npm run dev
+npm run check
+```
+
+## Где Klava особенно уместен
+
+- ремонт и восстановление рабочих станций, где нужен rollback до изменений;
+- миграции репозитория, BaaS или AI-провайдера с проверками и сводкой результата;
+- внутренние IT и platform workflows, где нужны явные approvals и машинные receipts;
+- консультантские и support-циклы, которые сейчас размазаны между терминалом, заметками, чатами и памятью человека.
 
 Этот проект опубликован как самостоятельный репозиторий продукта, но связь с upstream указана явно:
 
