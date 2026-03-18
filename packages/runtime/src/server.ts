@@ -39,14 +39,18 @@ import {
   KLAVA_VERSION,
   MODEL_REFRESH_INTERVAL_MS,
 } from "./constants";
+import { compactConversationMessages } from "./context-window";
 import { ComputerOperator } from "./computer-operator";
+import { buildExecutionJournalPrompt } from "./execution-journal";
 import { GeminiService } from "./gemini-service";
 import { GonkaService } from "./gonka-service";
 import { GroqService } from "./groq-service";
 import { LocalAiService } from "./local-ai-service";
 import {
+  buildConversationalReply,
   buildLanguageInstruction,
   buildTranslationInstruction,
+  detectConversationalIntent,
   detectModelCommandIntent,
   detectPreferredAssistantLanguage,
   detectTextLanguage,
@@ -73,9 +77,12 @@ import {
   providerSecretName,
   providerSupportsChat,
 } from "./provider-catalog";
+import { verifyAssistantResponse } from "./response-verifier";
+import { buildRetrievedContextPrompt, retrieveTaskContext } from "./semantic-retrieval";
 import { SecretVault } from "./secrets";
 import { RuntimeStore, getAppPaths, type AppPaths } from "./storage";
 import { analyzeLocalRuntime, detectMachineProfile } from "./system-profile";
+import { buildTaskMemoryPrompt } from "./task-memory";
 import { assessCommand, runCommand } from "./terminal";
 
 type CreateRuntimeOptions = {
@@ -137,6 +144,66 @@ function isTimestampStale(value: string | null, maxAgeMs: number) {
 
 function uniqueModels(models: string[]) {
   return [...new Set(models.filter((model) => model.trim().length > 0))];
+}
+
+function selectionModeLabel(mode: ProviderSettings["selectionMode"], language: SupportedLanguage) {
+  if (language === "ru") {
+    return mode === "manual" ? "ручной выбор" : "автоматический выбор";
+  }
+
+  return mode === "manual" ? "manual selection" : "automatic selection";
+}
+
+function guardModeLabel(mode: TaskDetail["guardMode"], language: SupportedLanguage) {
+  if (language === "ru") {
+    switch (mode) {
+      case "strict":
+        return "строгий режим";
+      case "balanced":
+        return "режим с подтверждением";
+      case "off":
+      default:
+        return "режим без защиты";
+    }
+  }
+
+  switch (mode) {
+    case "strict":
+      return "strict mode";
+    case "balanced":
+      return "approval mode";
+    case "off":
+    default:
+      return "unprotected mode";
+  }
+}
+
+function localizedTerminalState(
+  kind: "blocked" | "strict_blocked" | "awaiting_approval",
+  reason: string | null,
+  language: SupportedLanguage,
+) {
+  if (language === "ru") {
+    if (kind === "awaiting_approval") {
+      return "Ожидает подтверждения.";
+    }
+
+    if (kind === "strict_blocked") {
+      return `Строгий режим заблокировал команду: ${reason ?? "недостаточно данных"}`;
+    }
+
+    return `Команда заблокирована: ${reason ?? "недостаточно данных"}`;
+  }
+
+  if (kind === "awaiting_approval") {
+    return "Awaiting approval.";
+  }
+
+  if (kind === "strict_blocked") {
+    return `Strict mode blocked the command: ${reason ?? "insufficient context"}`;
+  }
+
+  return `Blocked: ${reason ?? "insufficient context"}`;
 }
 
 function createMessage(
@@ -398,10 +465,51 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
     });
   }
 
-  function withLanguageSystemMessage(taskId: string, messages: TaskMessage[], language: SupportedLanguage) {
+  function latestUserPrompt(task: TaskDetail) {
+    return [...task.messages].reverse().find((message) => message.role === "user")?.content ?? task.title;
+  }
+
+  async function buildProviderConversationMessages(task: TaskDetail, language: SupportedLanguage) {
+    const messages = providerTranscriptMessages(task);
     const systemMessages = messages.filter((message) => message.role === "system");
     const nonSystemMessages = messages.filter((message) => message.role !== "system");
-    return [...systemMessages, createSyntheticSystemMessage(taskId, buildLanguageInstruction(language)), ...nonSystemMessages];
+    const compacted = compactConversationMessages(task.id, nonSystemMessages, {
+      maxChars: 10_000,
+      maxMessages: 10,
+      preserveRecentMessages: 8,
+      maxSummaryChars: 1_800,
+      summaryLabel: language === "ru" ? "Сжатая сводка более раннего диалога:" : "Compressed memory of earlier conversation:",
+    });
+    const taskMemoryPrompt = buildTaskMemoryPrompt(
+      store.getTask(task.id)?.memory ?? { summary: null, updatedAt: null, entries: [] },
+      language,
+    );
+    const journalPrompt = buildExecutionJournalPrompt(task.journal, language, 8);
+    const retrieval = await retrieveTaskContext(task, latestUserPrompt(task), process.cwd(), runtimeLog, {
+      maxHits: 6,
+      includeWorkspace: true,
+      maxWorkspaceFileHits: 4,
+    });
+    const retrievedContextPrompt = buildRetrievedContextPrompt(retrieval, language);
+
+    if (retrieval.hits.length) {
+      await store.appendTaskJournalEvent(task.id, {
+        scope: "retrieval",
+        kind: "retrieval.context",
+        title: "Relevant context retrieved",
+        detail: `${retrieval.query} -> ${retrieval.hits.length} hit(s)${retrieval.usedWorkspace ? ", workspace included" : ""}`,
+        level: "info",
+      });
+    }
+
+    return [
+      ...systemMessages,
+      createSyntheticSystemMessage(task.id, buildLanguageInstruction(language)),
+      ...(taskMemoryPrompt ? [createSyntheticSystemMessage(task.id, taskMemoryPrompt)] : []),
+      ...(journalPrompt ? [createSyntheticSystemMessage(task.id, journalPrompt)] : []),
+      ...(retrievedContextPrompt ? [createSyntheticSystemMessage(task.id, retrievedContextPrompt)] : []),
+      ...compacted.messages,
+    ];
   }
 
   function summarizeAvailableModels(provider: ProviderSettings, language: SupportedLanguage) {
@@ -409,7 +517,7 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
     if (language === "ru") {
       return [
         `${labelForProvider(provider.provider, provider, provider.provider === "local" ? provider.localRuntime : undefined)} сейчас использует модель ${provider.model}.`,
-        `Режим выбора: ${provider.selectionMode}.`,
+        `Режим выбора: ${selectionModeLabel(provider.selectionMode, language)}.`,
         `Доступные модели (${models.length}):`,
         ...models.slice(0, 40).map((model, index) => `${index + 1}. ${model}${model === provider.model ? " [текущая]" : ""}`),
       ].join("\n");
@@ -1114,6 +1222,8 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
           approvalCount: detail?.approvals.length ?? 0,
           operationCount: detail?.operations.length ?? 0,
           agentRunCount: detail?.agentRuns.length ?? 0,
+          journalEventCount: detail?.journal.events.length ?? 0,
+          activeResumeMode: detail?.journal.activeResume?.mode ?? null,
         };
       }),
       logs: {
@@ -1204,7 +1314,7 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
       let completion = await completeProviderRequest(
         activeProvider,
         secret,
-        withLanguageSystemMessage(task.id, providerTranscriptMessages(task), language),
+        await buildProviderConversationMessages(task, language),
       );
       if (!messageMatchesPreferredLanguage(completion, language)) {
         try {
@@ -1240,7 +1350,11 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
           );
         }
       }
-      await store.addMessage(task.id, createMessage(task.id, "assistant", completion), "succeeded");
+      const verified = verifyAssistantResponse(task, completion, language);
+      if (verified.issues.length) {
+        await runtimeLog.log(`Assistant response verifier adjusted provider reply for task ${task.id}: ${verified.issues.join(", ")}`);
+      }
+      await store.addMessage(task.id, createMessage(task.id, "assistant", verified.content), "succeeded");
       return { completed: true as const };
     } catch (error) {
       let finalError = error;
@@ -1284,7 +1398,7 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
             const completion = await completeProviderRequest(
               activeProvider.provider === "gonka" ? originalProvider : { ...activeProvider, model: candidate },
               secret,
-              withLanguageSystemMessage(task.id, task.messages, language),
+              await buildProviderConversationMessages(task, language),
             );
 
             if (candidate !== activeProvider.model) {
@@ -1294,7 +1408,11 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
             await runtimeLog.log(
               `${labelForProvider(activeProvider.provider, activeProvider, activeProvider.provider === "local" ? activeProvider.localRuntime : undefined)} automatically recovered from model ${attemptedModel} to ${candidate} after a provider-side model error.`,
             );
-            await store.addMessage(task.id, createMessage(task.id, "assistant", completion), "succeeded");
+            const verified = verifyAssistantResponse(task, completion, language);
+            if (verified.issues.length) {
+              await runtimeLog.log(`Assistant response verifier adjusted recovered provider reply for task ${task.id}: ${verified.issues.join(", ")}`);
+            }
+            await store.addMessage(task.id, createMessage(task.id, "assistant", verified.content), "succeeded");
             return { completed: true as const };
           } catch (retryError) {
             finalError = retryError;
@@ -1495,7 +1613,15 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
     }
 
     const resolved = await resolveActiveChatProvider();
-    const preferredLanguage = preferredLanguageOverride ?? detectPreferredAssistantLanguage(task.messages, resumeReason ?? "");
+    const preferredLanguage = preferredLanguageOverride ?? detectPreferredAssistantLanguage(task.messages);
+    await store.appendTaskJournalEvent(taskId, {
+      scope: "agent",
+      kind: "agent.resume",
+      title: "Agent run continued",
+      detail: resumeReason ?? "continuing the saved run",
+      level: "info",
+      agentRunId,
+    }, "running");
     await store.addMessage(
       taskId,
       createMessage(taskId, "assistant", buildAgentPlanningStatus(preferredLanguage), statusMeta("running", { agentRunId: agentRunId })),
@@ -1516,6 +1642,16 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
         updateRun: (update, status) => store.updateAgentRun(taskId, agentRunId, update, status),
         addToolMessage: (content, meta, status) => addAgentTaskMessage(taskId, "tool", content, meta, status),
         addAssistantMessage: (content, meta, status) => addAgentTaskMessage(taskId, "assistant", content, meta, status),
+        recordJournalEvent: (input) =>
+          store.appendTaskJournalEvent(
+            taskId,
+            {
+              ...input,
+              level: input.level ?? "info",
+              agentRunId,
+            },
+            input.level === "error" ? "failed" : undefined,
+          ).then(() => undefined),
         computerOperator,
         executeTerminal: (liveTask, command, binding) => executeTerminal(liveTask, command, false, binding),
         logger: runtimeLog,
@@ -1670,6 +1806,7 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
             resolved.task.id,
             resolved.approval.meta.agentRunId,
             `approval granted for ${resolved.approval.command}`,
+            responseLanguage,
           );
         }
       }
@@ -1743,6 +1880,7 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
           resolved.task.id,
           resolved.approval.meta.agentRunId,
           `approval rejected for ${resolved.approval.command}`,
+          responseLanguage,
         );
       }
     }
@@ -1765,7 +1903,13 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
     const assessment = assessCommand(command);
 
     if (assessment.kind === "blocked") {
-      const terminalEntry = createTerminalEntry(task.id, command, `Blocked: ${assessment.reason}`, 1, "blocked");
+      const terminalEntry = createTerminalEntry(
+        task.id,
+        command,
+        localizedTerminalState("blocked", assessment.reason, responseLanguage),
+        1,
+        "blocked",
+      );
       await store.addTerminalEntry(
         task.id,
         terminalEntry,
@@ -1792,7 +1936,7 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
         const terminalEntry = createTerminalEntry(
           task.id,
           command,
-          `Guard strict blocked the command: ${assessment.reason}`,
+          localizedTerminalState("strict_blocked", assessment.reason, responseLanguage),
           1,
           "blocked",
         );
@@ -1803,7 +1947,14 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
         );
         await store.addMessage(
           task.id,
-          createMessage(task.id, "assistant", `Guard strict blocked that command: ${assessment.reason}.`, bindingMeta),
+          createMessage(
+            task.id,
+            "assistant",
+            responseLanguage === "ru"
+              ? `Строгий режим заблокировал эту команду: ${assessment.reason}.`
+              : `Strict mode blocked that command: ${assessment.reason}.`,
+            bindingMeta,
+          ),
           "failed",
         );
         return {
@@ -1814,7 +1965,13 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
 
       if (task.guardMode === "balanced") {
         const approval = createApproval(task.id, command, assessment.reason, binding);
-        const terminalEntry = createTerminalEntry(task.id, command, "Awaiting approval.", 0, "pending_approval");
+        const terminalEntry = createTerminalEntry(
+          task.id,
+          command,
+          localizedTerminalState("awaiting_approval", null, responseLanguage),
+          0,
+          "pending_approval",
+        );
         await store.addApproval(task.id, approval);
         await store.addTerminalEntry(
           task.id,
@@ -2065,6 +2222,7 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
     const currentTask = store.getTask(task.id) ?? task;
     const raw = body.content.trim();
     const responseLanguage = detectPreferredAssistantLanguage(previousMessages, raw);
+    const conversationalIntent = detectConversationalIntent(raw);
     const terminalShortcut = raw.match(/^\/terminal\s+(.+)$/i) ?? raw.match(/^\$\s+(.+)$/);
     const guardShortcut = raw.match(/^guard\s+(strict|balanced|off)$/i);
     const modelCommand = detectModelCommandIntent(raw);
@@ -2109,7 +2267,9 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
         createMessage(
           task.id,
           "assistant",
-          responseLanguage === "ru" ? `Режим защиты переключён на ${nextMode}.` : `Guard mode set to ${nextMode}.`,
+          responseLanguage === "ru"
+            ? `Режим защиты переключён: ${guardModeLabel(nextMode, responseLanguage)}.`
+            : `Guard mode set to ${guardModeLabel(nextMode, responseLanguage)}.`,
         ),
         "idle",
       );
@@ -2193,6 +2353,15 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
       return buildSnapshot(task.id);
     }
 
+    if (conversationalIntent) {
+      await store.addMessage(
+        task.id,
+        createMessage(task.id, "assistant", buildConversationalReply(conversationalIntent, responseLanguage)),
+        "idle",
+      );
+      return buildSnapshot(task.id);
+    }
+
     if (modelCommand?.kind === "list") {
       const provider = store.getProvider();
       if (provider.provider === "gonka" || !providerReadyForChat(provider)) {
@@ -2269,7 +2438,7 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
               task.id,
               "assistant",
               responseLanguage === "ru"
-                ? `Модель переключена на ${provider.model}. Режим выбора: manual.`
+                ? `Модель переключена на ${provider.model}. Теперь используется ручной выбор модели.`
                 : `Switched to ${provider.model}. Selection mode is now manual.`,
             ),
             "succeeded",
@@ -2288,13 +2457,13 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
     if (latestPendingApproval) {
       await store.addMessage(
         task.id,
-        createMessage(
-          task.id,
-          "assistant",
-          responseLanguage === "ru"
-            ? `Команда всё ещё ждёт подтверждения: \`${latestPendingApproval.command}\`. Можно нажать Approve/Reject или просто ответить коротко: \`да\` / \`нет\`.`
-            : `A guarded command is still waiting for approval: \`${latestPendingApproval.command}\`. Use Approve/Reject in the task or reply with a short confirmation like \`yes\` or \`no\`.`,
-          statusMeta("awaiting_approval", {
+          createMessage(
+            task.id,
+            "assistant",
+            responseLanguage === "ru"
+              ? `Команда всё ещё ждёт подтверждения: \`${latestPendingApproval.command}\`. Можно нажать «Подтвердить» или «Отклонить», либо просто ответить коротко: \`да\` / \`нет\`.`
+              : `A guarded command is still waiting for approval: \`${latestPendingApproval.command}\`. Use Approve/Reject in the task or reply with a short confirmation like \`yes\` or \`no\`.`,
+            statusMeta("awaiting_approval", {
             pendingApprovalId: latestPendingApproval.id,
             terminalCommand: latestPendingApproval.command,
           }),
@@ -2307,7 +2476,7 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
     const activeAgentRun = getActiveAgentRun(store.getTask(task.id) ?? currentTask);
     if (/^continue(?:\s+agent)?$/i.test(raw) && activeAgentRun && activeAgentRun.status !== "awaiting_approval") {
       try {
-        await continueAgentRun(currentTask.id, activeAgentRun.id, "operator requested another agent pass");
+        await continueAgentRun(currentTask.id, activeAgentRun.id, "operator requested another agent pass", responseLanguage);
       } catch (error) {
         await store.addMessage(
           task.id,
@@ -2394,7 +2563,7 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
     );
 
     try {
-      await continueAgentRun(currentTask.id, agentRun.id, "initial operator request");
+      await continueAgentRun(currentTask.id, agentRun.id, "initial operator request", responseLanguage);
     } catch (error) {
       await store.updateAgentRun(
         task.id,

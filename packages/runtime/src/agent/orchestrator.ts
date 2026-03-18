@@ -12,9 +12,14 @@ import type {
 } from "@klava/contracts";
 import { buildKlavaAgentPrompt } from "../assistant-prompt";
 import type { ComputerOperator } from "../computer-operator";
+import { compactConversationMessages } from "../context-window";
+import { buildExecutionJournalPrompt } from "../execution-journal";
 import type { RuntimeLogger } from "../logging";
 import { buildLanguageInstruction, detectTextLanguage, type SupportedLanguage } from "../operator-language";
 import { buildAgentToolStartStatus } from "../operator-messages";
+import { verifyAssistantResponse } from "../response-verifier";
+import { buildRetrievedContextPrompt, retrieveTaskContext } from "../semantic-retrieval";
+import { buildTaskMemoryPrompt } from "../task-memory";
 import { buildBlockedObjectiveMessage, assessAgentObjective } from "./safety";
 import { parseAgentDecision } from "./parser";
 import { readTextFileSnippet, searchWorkspaceText } from "./tools";
@@ -60,6 +65,16 @@ export type AgentOrchestratorBindings = {
   ) => Promise<AgentRun | null>;
   addToolMessage: (content: string, meta: TaskMessage["meta"], status?: TaskStatus) => Promise<void>;
   addAssistantMessage: (content: string, meta: TaskMessage["meta"], status?: TaskStatus) => Promise<void>;
+  recordJournalEvent: (input: {
+    scope: "agent" | "retrieval";
+    kind: string;
+    title: string;
+    detail?: string | null;
+    level?: "info" | "warning" | "error";
+    approvalId?: string | null;
+    terminalEntryId?: string | null;
+    toolCallId?: string | null;
+  }) => Promise<void>;
   computerOperator: ComputerOperator;
   executeTerminal: (task: TaskDetail, command: string, binding: AgentExecutionBinding) => Promise<AgentTerminalExecutionResult>;
   logger: RuntimeLogger;
@@ -96,6 +111,9 @@ type FilesystemReadToolDecision = ToolDecision & {
 };
 type FilesystemSearchToolDecision = ToolDecision & {
   tool: Extract<NonNullable<AgentDecision["tool"]>, { name: "filesystem.search" }>;
+};
+type ContextRetrieveToolDecision = ToolDecision & {
+  tool: Extract<NonNullable<AgentDecision["tool"]>, { name: "context.retrieve" }>;
 };
 
 function nowIso() {
@@ -145,14 +163,30 @@ function toTaskStatus(status: AgentRunStatus): TaskStatus {
   }
 }
 
-function summarizeRecentTranscript(task: TaskDetail, runId: string) {
-  return task.messages
+function buildTranscriptContext(task: TaskDetail, runId: string, language: SupportedLanguage) {
+  const transcriptMessages = task.messages
     .filter((message) => message.role === "user" || message.role === "assistant")
     .filter((message) => message.meta.presentation !== "status" && message.meta.presentation !== "artifact")
-    .filter((message) => message.meta.agentRunId !== runId)
-    .slice(-6)
+    .filter((message) => message.meta.agentRunId !== runId);
+
+  const compacted = compactConversationMessages(task.id, transcriptMessages, {
+    maxChars: 2_400,
+    maxMessages: 7,
+    preserveRecentMessages: 6,
+    maxSummaryChars: 1_400,
+    summaryLabel: language === "ru" ? "Сжатая сводка более раннего диалога:" : "Compressed memory of earlier conversation:",
+  });
+
+  const summary = compacted.messages.find((message) => message.role === "system")?.content ?? null;
+  const recentTranscript = compacted.messages
+    .filter((message) => message.role !== "system")
     .map((message) => `${message.role.toUpperCase()}: ${message.content}`)
     .join("\n\n");
+
+  return {
+    summary,
+    recentTranscript: recentTranscript || null,
+  };
 }
 
 function summarizePlan(plan: AgentPlanItem[]) {
@@ -179,13 +213,16 @@ function summarizeToolCalls(toolCalls: AgentToolCall[]) {
     .join("\n");
 }
 
-function buildAgentMessages(
+async function buildAgentMessages(
   task: TaskDetail,
   run: AgentRun,
-  bindings: Pick<AgentOrchestratorBindings, "cwd" | "guardMode" | "machineSummary" | "providerId" | "model" | "preferredLanguage">,
+  bindings: Pick<
+    AgentOrchestratorBindings,
+    "cwd" | "guardMode" | "machineSummary" | "providerId" | "model" | "preferredLanguage" | "logger"
+  >,
   resumeReason: string | null,
-): TaskMessage[] {
-  const recentTranscript = summarizeRecentTranscript(task, run.id);
+): Promise<TaskMessage[]> {
+  const transcriptContext = buildTranscriptContext(task, run.id, bindings.preferredLanguage);
   const planSummary = summarizePlan(run.plan);
   const toolSummary = summarizeToolCalls(run.toolCalls);
   const runtimeContext = [
@@ -197,6 +234,19 @@ function buildAgentMessages(
     `Task title: ${task.title}`,
     `Task status: ${task.status}`,
   ].join("\n");
+  const journalPrompt = buildExecutionJournalPrompt(task.journal, bindings.preferredLanguage, 10);
+  const retrieval = await retrieveTaskContext(
+    task,
+    [run.goal, run.summary ?? "", resumeReason ?? ""].filter(Boolean).join("\n"),
+    bindings.cwd,
+    bindings.logger,
+    {
+      maxHits: 6,
+      includeWorkspace: true,
+      maxWorkspaceFileHits: 4,
+    },
+  );
+  const retrievedContextPrompt = buildRetrievedContextPrompt(retrieval, bindings.preferredLanguage);
 
   const userPrompt = [
     `Goal: ${run.goal}`,
@@ -234,12 +284,57 @@ function buildAgentMessages(
     },
   ];
 
-  if (recentTranscript) {
+  if (transcriptContext.summary) {
     messages.push({
       id: crypto.randomUUID(),
       taskId: run.taskId,
       role: "system",
-      content: `Recent task transcript:\n${recentTranscript}`,
+      content: transcriptContext.summary,
+      createdAt: nowIso(),
+      meta: {},
+    });
+  }
+
+  const taskMemoryPrompt = buildTaskMemoryPrompt(task.memory, bindings.preferredLanguage, 8);
+  if (taskMemoryPrompt) {
+    messages.push({
+      id: crypto.randomUUID(),
+      taskId: run.taskId,
+      role: "system",
+      content: taskMemoryPrompt,
+      createdAt: nowIso(),
+      meta: {},
+    });
+  }
+
+  if (journalPrompt) {
+    messages.push({
+      id: crypto.randomUUID(),
+      taskId: run.taskId,
+      role: "system",
+      content: journalPrompt,
+      createdAt: nowIso(),
+      meta: {},
+    });
+  }
+
+  if (retrievedContextPrompt) {
+    messages.push({
+      id: crypto.randomUUID(),
+      taskId: run.taskId,
+      role: "system",
+      content: retrievedContextPrompt,
+      createdAt: nowIso(),
+      meta: {},
+    });
+  }
+
+  if (transcriptContext.recentTranscript) {
+    messages.push({
+      id: crypto.randomUUID(),
+      taskId: run.taskId,
+      role: "system",
+      content: `Recent task transcript:\n${transcriptContext.recentTranscript}`,
       createdAt: nowIso(),
       meta: {},
     });
@@ -393,6 +488,12 @@ async function finalizeRun(
   bindings: AgentOrchestratorBindings,
   decision: FinalDecision,
 ) {
+  const task = bindings.getTask();
+  const run = bindings.getRun();
+  const verifiedMessage =
+    task && run
+      ? verifyAssistantResponse(task, decision.message, bindings.preferredLanguage, { agentRunId: run.id }).content
+      : decision.message;
   const nextStatus: AgentRunStatus =
     decision.kind === "final" ? "succeeded" : decision.kind === "blocked" ? "blocked" : "needs_input";
 
@@ -400,7 +501,7 @@ async function finalizeRun(
     (run) => {
       run.status = nextStatus;
       run.summary = decision.summary;
-      run.lastAssistantMessage = decision.message;
+      run.lastAssistantMessage = verifiedMessage;
       run.plan = normalizePlan(decision.plan);
       run.pendingApprovalId = null;
       run.finishedAt = nextStatus === "needs_input" ? null : nowIso();
@@ -408,7 +509,7 @@ async function finalizeRun(
     toTaskStatus(nextStatus),
   );
 
-  await bindings.addAssistantMessage(decision.message, { agentRunId: bindings.getRun()?.id ?? null }, toTaskStatus(nextStatus));
+  await bindings.addAssistantMessage(verifiedMessage, { agentRunId: bindings.getRun()?.id ?? null }, toTaskStatus(nextStatus));
 }
 
 async function handleComputerTool(
@@ -686,6 +787,70 @@ async function handleFilesystemSearchTool(
   };
 }
 
+async function handleContextRetrieveTool(
+  decision: ContextRetrieveToolDecision,
+  run: AgentRun,
+  bindings: AgentOrchestratorBindings,
+): Promise<ToolObservation> {
+  const task = bindings.getTask();
+  if (!task) {
+    throw new Error("Task disappeared before semantic retrieval could run.");
+  }
+
+  const toolCallId = crypto.randomUUID();
+  await bindings.addAssistantMessage(
+    buildAgentToolStartStatus(decision.tool, bindings.preferredLanguage),
+    statusMeta(run.id, "running"),
+    "running",
+  );
+
+  const retrieval = await retrieveTaskContext(task, decision.tool.query, bindings.cwd, bindings.logger, {
+    maxHits: decision.tool.maxResults ?? 6,
+    includeWorkspace: decision.tool.scope !== "history",
+    maxWorkspaceFileHits: decision.tool.scope === "workspace" ? Math.min(decision.tool.maxResults ?? 6, 6) : 4,
+  });
+  const outputPreview =
+    buildRetrievedContextPrompt(retrieval, bindings.preferredLanguage) ??
+    (bindings.preferredLanguage === "ru"
+      ? "Релевантный контекст по этому запросу не найден."
+      : "No relevant context was found for that query.");
+
+  await bindings.addToolMessage(
+    outputPreview,
+    toolArtifactMeta(run.id, toolCallId, decision.tool.name),
+    "running",
+  );
+  await bindings.recordJournalEvent({
+    scope: "retrieval",
+    kind: "agent.retrieval",
+    title: "Agent semantic retrieval executed",
+    detail: `${decision.tool.query} -> ${retrieval.hits.length} hit(s)${retrieval.usedWorkspace ? ", workspace included" : ""}`,
+    level: "info",
+    toolCallId,
+  });
+  await recordToolCall(bindings, {
+    id: toolCallId,
+    kind: "context.retrieve",
+    status: "completed",
+    summary: decision.summary,
+    input: decision.tool.query,
+    command: null,
+    outputPreview: truncatePreview(outputPreview),
+    terminalEntryId: null,
+    approvalId: null,
+    startedAt: nowIso(),
+    finishedAt: nowIso(),
+  });
+  return {
+    summary:
+      retrieval.hits.length > 0
+        ? `Retrieved ${retrieval.hits.length} relevant context hit(s).`
+        : "No relevant context hits were found.",
+    outputPreview,
+    status: "completed",
+  };
+}
+
 async function executeTool(
   decision: ToolDecision,
   run: AgentRun,
@@ -693,6 +858,10 @@ async function executeTool(
 ) {
   if (decision.tool.name === "computer.inspect") {
     return handleComputerTool(decision as ComputerToolDecision, run, bindings);
+  }
+
+  if (decision.tool.name === "context.retrieve") {
+    return handleContextRetrieveTool(decision as ContextRetrieveToolDecision, run, bindings);
   }
 
   if (decision.tool.name === "filesystem.read") {
@@ -744,7 +913,12 @@ export async function runAgentLoop(bindings: AgentOrchestratorBindings, resumeRe
       "running",
     );
 
-    const messages = buildAgentMessages(task, run, bindings, pass === 0 ? resumeReason : "continue after the previous tool result");
+    const messages = await buildAgentMessages(
+      task,
+      run,
+      bindings,
+      pass === 0 ? resumeReason : "continue after the previous tool result",
+    );
     let decision: AgentDecision;
     try {
       decision = await parseDecisionWithRepair(bindings, messages);

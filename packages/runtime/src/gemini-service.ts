@@ -196,7 +196,6 @@ async function requestJson<T>(path: string, secret: string, init: RequestInit = 
 
 function toGeminiContents(messages: TaskMessage[]) {
   return messages
-    .slice(-10)
     .filter((message) => message.role !== "system")
     .map((message) => ({
       role: message.role === "assistant" ? "model" : "user",

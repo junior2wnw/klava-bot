@@ -1,4 +1,4 @@
-import type { CSSProperties, PropsWithChildren, ReactNode } from "react";
+import type { CSSProperties, KeyboardEventHandler, PropsWithChildren, ReactNode } from "react";
 import { tokens } from "./tokens";
 
 type CardProps = PropsWithChildren<{
@@ -118,6 +118,7 @@ export function Button({
 type TextFieldProps = {
   value: string;
   onChange: (value: string) => void;
+  onKeyDown?: KeyboardEventHandler<HTMLInputElement | HTMLTextAreaElement>;
   placeholder?: string;
   type?: string;
   multiline?: boolean;
@@ -131,6 +132,7 @@ export function TextField({
   autoComplete,
   multiline,
   onChange,
+  onKeyDown,
   placeholder,
   rows = 3,
   spellCheck,
@@ -163,6 +165,7 @@ export function TextField({
         style={sharedStyle}
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        onKeyDown={onKeyDown}
       />
     );
   }
@@ -176,6 +179,7 @@ export function TextField({
       type={type}
       value={value}
       onChange={(event) => onChange(event.target.value)}
+      onKeyDown={onKeyDown}
     />
   );
 }

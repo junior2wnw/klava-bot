@@ -109,7 +109,7 @@ const GONKA_MNEMONIC_ADDRESS_MATCH_SCAN_DEPTH = 9;
 const PROBE_PROMPT = "Reply with exactly OK.";
 
 function toOpenAiMessages(messages: TaskMessage[]) {
-  return messages.slice(-10).map<ChatCompletionMessageParam>((message) => {
+  return messages.map<ChatCompletionMessageParam>((message) => {
     if (message.role === "assistant") {
       return { role: "assistant", content: message.content };
     }

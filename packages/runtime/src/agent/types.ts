@@ -24,6 +24,13 @@ export const filesystemSearchToolSchema = z.object({
   maxResults: z.number().int().positive().max(100).optional(),
 });
 
+export const contextRetrieveToolSchema = z.object({
+  name: z.literal("context.retrieve"),
+  query: z.string().trim().min(2).max(320),
+  scope: z.enum(["auto", "workspace", "history"]).optional(),
+  maxResults: z.number().int().positive().max(12).optional(),
+});
+
 export const shellCommandToolSchema = z.object({
   name: z.literal("shell.command"),
   command: z.string().trim().min(1).max(800),
@@ -34,6 +41,7 @@ export const agentToolSchema = z.discriminatedUnion("name", [
   computerInspectToolSchema,
   filesystemReadToolSchema,
   filesystemSearchToolSchema,
+  contextRetrieveToolSchema,
   shellCommandToolSchema,
 ]);
 

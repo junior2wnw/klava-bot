@@ -12,6 +12,8 @@ import type {
   ProviderBalance,
   ProviderSettings,
   TaskDetail,
+  TaskExecutionJournal,
+  TaskMemory,
   TaskMessage,
   TaskStatus,
   TaskSummary,
@@ -19,6 +21,14 @@ import type {
   WorkspaceSnapshot,
 } from "@klava/contracts";
 import { defaultApiBaseUrlForProvider, defaultModelForProvider } from "./provider-catalog";
+import {
+  appendJournalEvent,
+  createExecutionJournal,
+  createJournalEvent,
+  recoverInterruptedTask,
+  syncTaskExecutionJournal,
+} from "./execution-journal";
+import { deriveTaskMemory } from "./task-memory";
 
 type RuntimeState = {
   provider: ProviderSettings;
@@ -343,6 +353,7 @@ function normalizeAgentRun(run?: Partial<AgentRun> | null): AgentRun {
           id: typeof toolCall?.id === "string" ? toolCall.id : crypto.randomUUID(),
           kind:
             toolCall?.kind === "computer.inspect" ||
+            toolCall?.kind === "context.retrieve" ||
             toolCall?.kind === "shell.command" ||
             toolCall?.kind === "filesystem.read" ||
             toolCall?.kind === "filesystem.search"
@@ -382,6 +393,106 @@ function normalizeTask(task?: Partial<TaskDetail> | null): TaskDetail {
       : fallback.approvals,
     operations: Array.isArray(task?.operations) ? task.operations.map((operation) => normalizeOperation(operation)) : [],
     agentRuns: Array.isArray(task?.agentRuns) ? task.agentRuns.map((run) => normalizeAgentRun(run)) : [],
+    memory: normalizeTaskMemory(task?.memory),
+    journal: normalizeTaskJournal(task?.journal, typeof task?.id === "string" ? task.id : fallback.id),
+  };
+}
+
+function normalizeTaskMemory(memory?: Partial<TaskMemory> | null): TaskMemory {
+  return {
+    summary: typeof memory?.summary === "string" ? memory.summary : null,
+    updatedAt: typeof memory?.updatedAt === "string" ? memory.updatedAt : null,
+    entries: Array.isArray(memory?.entries)
+      ? memory.entries
+          .filter((entry) => entry && typeof entry === "object")
+          .map((entry) => ({
+            id: typeof entry.id === "string" ? entry.id : crypto.randomUUID(),
+            kind:
+              entry.kind === "goal" ||
+              entry.kind === "constraint" ||
+              entry.kind === "preference" ||
+              entry.kind === "decision" ||
+              entry.kind === "fact" ||
+              entry.kind === "open_loop"
+                ? entry.kind
+                : "fact",
+            content: typeof entry.content === "string" ? entry.content : "Memory entry",
+            sourceMessageId: typeof entry.sourceMessageId === "string" ? entry.sourceMessageId : null,
+            sourceRunId: typeof entry.sourceRunId === "string" ? entry.sourceRunId : null,
+            score: typeof entry.score === "number" && Number.isFinite(entry.score) && entry.score >= 0 ? entry.score : 0,
+            status: entry.status === "active" || entry.status === "resolved" || entry.status === "stale" ? entry.status : "active",
+            updatedAt: typeof entry.updatedAt === "string" ? entry.updatedAt : nowIso(),
+          }))
+      : [],
+  };
+}
+
+function normalizeTaskJournal(journal?: Partial<TaskExecutionJournal> | null, taskId = ""): TaskExecutionJournal {
+  const fallback = createExecutionJournal();
+  return {
+    updatedAt: typeof journal?.updatedAt === "string" ? journal.updatedAt : fallback.updatedAt,
+    activeResume:
+      journal?.activeResume && typeof journal.activeResume === "object"
+        ? {
+            mode:
+              journal.activeResume.mode === "continue_agent" ||
+              journal.activeResume.mode === "awaiting_approval" ||
+              journal.activeResume.mode === "retry_operation"
+                ? journal.activeResume.mode
+                : "continue_agent",
+            taskId: typeof journal.activeResume.taskId === "string" && journal.activeResume.taskId.length > 0 ? journal.activeResume.taskId : taskId,
+            reason:
+              typeof journal.activeResume.reason === "string" && journal.activeResume.reason.trim().length > 0
+                ? journal.activeResume.reason
+                : "Resume point available.",
+            preferredLanguage:
+              journal.activeResume.preferredLanguage === "ru" || journal.activeResume.preferredLanguage === "en"
+                ? journal.activeResume.preferredLanguage
+                : null,
+            recoverable: journal.activeResume.recoverable ?? true,
+            agentRunId: typeof journal.activeResume.agentRunId === "string" ? journal.activeResume.agentRunId : null,
+            operationId: typeof journal.activeResume.operationId === "string" ? journal.activeResume.operationId : null,
+            approvalId: typeof journal.activeResume.approvalId === "string" ? journal.activeResume.approvalId : null,
+            updatedAt: typeof journal.activeResume.updatedAt === "string" ? journal.activeResume.updatedAt : nowIso(),
+          }
+        : null,
+    events: Array.isArray(journal?.events)
+      ? journal.events
+          .filter((event) => event && typeof event === "object")
+          .map((event) => ({
+            id: typeof event.id === "string" ? event.id : crypto.randomUUID(),
+            taskId: typeof event.taskId === "string" && event.taskId.length > 0 ? event.taskId : taskId,
+            scope:
+              event.scope === "task" ||
+              event.scope === "message" ||
+              event.scope === "agent" ||
+              event.scope === "terminal" ||
+              event.scope === "approval" ||
+              event.scope === "operation" ||
+              event.scope === "runtime" ||
+              event.scope === "retrieval"
+                ? event.scope
+                : "task",
+            kind: typeof event.kind === "string" && event.kind.trim().length > 0 ? event.kind : "task.event",
+            title: typeof event.title === "string" && event.title.trim().length > 0 ? event.title : "Task event",
+            detail: typeof event.detail === "string" ? event.detail : null,
+            level: event.level === "warning" || event.level === "error" ? event.level : "info",
+            taskStatus:
+              event.taskStatus === "idle" ||
+              event.taskStatus === "running" ||
+              event.taskStatus === "awaiting_approval" ||
+              event.taskStatus === "succeeded" ||
+              event.taskStatus === "failed"
+                ? event.taskStatus
+                : "idle",
+            createdAt: typeof event.createdAt === "string" ? event.createdAt : nowIso(),
+            agentRunId: typeof event.agentRunId === "string" ? event.agentRunId : null,
+            operationId: typeof event.operationId === "string" ? event.operationId : null,
+            approvalId: typeof event.approvalId === "string" ? event.approvalId : null,
+            terminalEntryId: typeof event.terminalEntryId === "string" ? event.terminalEntryId : null,
+            toolCallId: typeof event.toolCallId === "string" ? event.toolCallId : null,
+          }))
+      : fallback.events,
   };
 }
 
@@ -399,14 +510,28 @@ export function createTaskTemplate(title?: string, language: TaskLanguage = "en"
     role: "system",
     content:
       language === "ru"
-        ? "Задача готова. Спросите Клаву о чём угодно, используйте /terminal <команда>, $ <команда> или переключайте режим защиты через guard strict|balanced|off."
-        : "Task ready. Ask Klava anything, use /terminal <command>, $ <command>, or change guard mode with guard strict|balanced|off.",
+        ? "Задача готова. Опишите цель, используйте `/terminal <команда>` или `$ <команда>`. Режим защиты можно переключить командами `guard strict`, `guard balanced` и `guard off`."
+        : "Task ready. Describe a goal, use /terminal <command>, $ <command>, or change guard mode with guard strict|balanced|off.",
     createdAt: timestamp,
     meta: {
       presentation: "status",
       statusState: "info",
     },
   };
+
+  const journal = createExecutionJournal();
+  journal.events.push(
+    createJournalEvent(id, {
+      scope: "task",
+      kind: "task.created",
+      title: language === "ru" ? "Задача создана" : "Task created",
+      detail: title?.trim() || defaultTitle,
+      level: "info",
+      taskStatus: "idle",
+      createdAt: timestamp,
+    }),
+  );
+  journal.updatedAt = timestamp;
 
   return {
     id,
@@ -422,6 +547,12 @@ export function createTaskTemplate(title?: string, language: TaskLanguage = "en"
     approvals: [],
     operations: [],
     agentRuns: [],
+    memory: {
+      summary: null,
+      updatedAt: null,
+      entries: [],
+    },
+    journal,
   };
 }
 
@@ -501,6 +632,10 @@ export class RuntimeStore {
       this.state.selectedTaskId = this.state.tasks[0]?.id ?? fallbackTask.id;
     }
 
+    for (const task of this.state.tasks) {
+      recoverInterruptedTask(task);
+    }
+
     this.recalculateDerivedFields();
     await this.flush();
   }
@@ -509,11 +644,15 @@ export class RuntimeStore {
     this.state.tasks = this.state.tasks.map((task) => {
       const lastMessage = [...task.messages].reverse().find((message) => isPreviewableMessage(message)) ?? null;
       const pendingApprovalCount = task.approvals.filter((approval) => approval.status === "pending").length;
-      return {
+      const memory = deriveTaskMemory(task);
+      const nextTask: TaskDetail = {
         ...task,
         lastMessagePreview: lastMessage?.content ?? null,
         pendingApprovalCount,
+        memory,
       };
+      syncTaskExecutionJournal(nextTask);
+      return nextTask;
     });
   }
 
@@ -527,6 +666,19 @@ export class RuntimeStore {
     if (status) {
       task.status = status;
     }
+  }
+
+  private recordTaskEvent(
+    task: TaskDetail,
+    input: Omit<Parameters<typeof createJournalEvent>[1], "taskStatus"> & { taskStatus?: TaskStatus },
+  ) {
+    appendJournalEvent(
+      task,
+      createJournalEvent(task.id, {
+        ...input,
+        taskStatus: input.taskStatus ?? task.status,
+      }),
+    );
   }
 
   listTaskSummaries() {
@@ -609,6 +761,26 @@ export class RuntimeStore {
 
     task.messages.push(message);
     this.touchTask(task, status);
+    if (message.role === "user") {
+      this.recordTaskEvent(task, {
+        scope: "message",
+        kind: "message.user",
+        title: "Operator message received",
+        detail: message.content,
+        level: "info",
+      });
+    } else if (message.role === "assistant" && message.meta.presentation !== "status") {
+      this.recordTaskEvent(task, {
+        scope: "message",
+        kind: "message.assistant",
+        title: "Assistant reply recorded",
+        detail: message.content,
+        level: "info",
+        agentRunId: message.meta.agentRunId ?? null,
+        terminalEntryId: message.meta.terminalEntryId ?? null,
+        toolCallId: message.meta.agentToolCallId ?? null,
+      });
+    }
     await this.flush();
     return task;
   }
@@ -633,6 +805,21 @@ export class RuntimeStore {
 
     task.terminalEntries.push(entry);
     this.touchTask(task, status);
+    this.recordTaskEvent(task, {
+      scope: "terminal",
+      kind: `terminal.${entry.status}`,
+      title:
+        entry.status === "completed"
+          ? "Terminal command completed"
+          : entry.status === "pending_approval"
+            ? "Terminal command paused for approval"
+            : entry.status === "blocked"
+              ? "Terminal command blocked"
+              : "Terminal command failed",
+      detail: entry.command,
+      level: entry.status === "completed" ? "info" : entry.status === "pending_approval" ? "warning" : "error",
+      terminalEntryId: entry.id,
+    });
     await this.flush();
     return task;
   }
@@ -645,6 +832,16 @@ export class RuntimeStore {
 
     task.approvals.push(approval);
     this.touchTask(task, "awaiting_approval");
+    this.recordTaskEvent(task, {
+      scope: "approval",
+      kind: "approval.requested",
+      title: "Approval requested",
+      detail: `${approval.command} - ${approval.impact}`,
+      level: "warning",
+      approvalId: approval.id,
+      agentRunId: approval.meta.agentRunId ?? null,
+      operationId: approval.meta.operationId ?? null,
+    });
     await this.flush();
     return task;
   }
@@ -657,6 +854,14 @@ export class RuntimeStore {
 
     task.operations.unshift(operation);
     this.touchTask(task, status);
+    this.recordTaskEvent(task, {
+      scope: "operation",
+      kind: "operation.created",
+      title: `Operation created: ${operation.title}`,
+      detail: operation.goal,
+      level: "info",
+      operationId: operation.id,
+    });
     await this.flush();
     return operation;
   }
@@ -669,8 +874,32 @@ export class RuntimeStore {
 
     task.agentRuns.unshift(normalizeAgentRun(agentRun));
     this.touchTask(task, status);
+    this.recordTaskEvent(task, {
+      scope: "agent",
+      kind: "agent.started",
+      title: `Agent run started: ${agentRun.title}`,
+      detail: agentRun.goal,
+      level: "info",
+      agentRunId: agentRun.id,
+    });
     await this.flush();
     return agentRun;
+  }
+
+  async appendTaskJournalEvent(
+    taskId: string,
+    input: Omit<Parameters<typeof createJournalEvent>[1], "taskStatus"> & { taskStatus?: TaskStatus },
+    status?: TaskStatus,
+  ) {
+    const task = this.getTask(taskId);
+    if (!task) {
+      return null;
+    }
+
+    this.touchTask(task, status);
+    this.recordTaskEvent(task, input);
+    await this.flush();
+    return task;
   }
 
   async updateOperation(
@@ -689,10 +918,27 @@ export class RuntimeStore {
       return null;
     }
 
+    const previousStatus = operation.status;
+    const previousSummary = operation.summary;
+    const previousActiveStepId = operation.activeStepId;
     update(operation);
     operation.updatedAt = nowIso();
     const nextStatus = typeof status === "function" ? status(operation) : status;
     this.touchTask(task, nextStatus);
+    if (
+      operation.status !== previousStatus ||
+      operation.summary !== previousSummary ||
+      operation.activeStepId !== previousActiveStepId
+    ) {
+      this.recordTaskEvent(task, {
+        scope: "operation",
+        kind: `operation.${operation.status}`,
+        title: `Operation ${operation.status}: ${operation.title}`,
+        detail: operation.summary ?? operation.goal,
+        level: operation.status === "failed" ? "error" : operation.status === "awaiting_approval" ? "warning" : "info",
+        operationId: operation.id,
+      });
+    }
     await this.flush();
     return operation;
   }
@@ -713,10 +959,33 @@ export class RuntimeStore {
       return null;
     }
 
+    const previousStatus = agentRun.status;
+    const previousSummary = agentRun.summary;
+    const previousPendingApprovalId = agentRun.pendingApprovalId;
     update(agentRun);
     agentRun.updatedAt = nowIso();
     const nextStatus = typeof status === "function" ? status(agentRun) : status;
     this.touchTask(task, nextStatus);
+    if (
+      agentRun.status !== previousStatus ||
+      agentRun.summary !== previousSummary ||
+      agentRun.pendingApprovalId !== previousPendingApprovalId
+    ) {
+      this.recordTaskEvent(task, {
+        scope: "agent",
+        kind: `agent.${agentRun.status}`,
+        title: `Agent run ${agentRun.status}: ${agentRun.title}`,
+        detail: agentRun.summary ?? agentRun.goal,
+        level:
+          agentRun.status === "failed" || agentRun.status === "blocked"
+            ? "error"
+            : agentRun.status === "awaiting_approval"
+              ? "warning"
+              : "info",
+        agentRunId: agentRun.id,
+        approvalId: agentRun.pendingApprovalId,
+      });
+    }
     await this.flush();
     return agentRun;
   }
@@ -732,6 +1001,16 @@ export class RuntimeStore {
       approval.resolvedAt = nowIso();
       task.status = status === "rejected" ? "idle" : task.status;
       task.updatedAt = nowIso();
+      this.recordTaskEvent(task, {
+        scope: "approval",
+        kind: `approval.${status}`,
+        title: status === "approved" ? "Approval granted" : "Approval rejected",
+        detail: approval.command,
+        level: status === "approved" ? "info" : "warning",
+        approvalId: approval.id,
+        agentRunId: approval.meta.agentRunId ?? null,
+        operationId: approval.meta.operationId ?? null,
+      });
       await this.flush();
       return { approval, task };
     }

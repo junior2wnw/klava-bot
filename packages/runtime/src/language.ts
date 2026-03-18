@@ -447,7 +447,7 @@ const russianStructuredReplacements: LocalizedReplacement[] = [
     pattern:
       /I matched this to a local Windows package action for (.+?)\. The exact command is ready and will go through guard approval if your task is not in off mode\./gi,
     replace:
-      "Я распознала это как локальное действие управления пакетом Windows для $1. Точная команда уже подготовлена и пройдёт через guard approval, если у задачи не выключен режим защиты.",
+      "Я распознала это как локальное действие управления пакетом Windows для $1. Точная команда уже подготовлена и пройдёт через подтверждение, если у задачи не выключен режим защиты.",
   },
   {
     pattern: /^Collected local version signals for (.+?)\.$/gim,

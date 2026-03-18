@@ -17,6 +17,8 @@ export const supportBundleTaskSchema = z.object({
   approvalCount: z.number().int().nonnegative(),
   operationCount: z.number().int().nonnegative(),
   agentRunCount: z.number().int().nonnegative(),
+  journalEventCount: z.number().int().nonnegative(),
+  activeResumeMode: z.enum(["continue_agent", "awaiting_approval", "retry_operation"]).nullable(),
 });
 
 export const supportBundleLogsSchema = z.object({

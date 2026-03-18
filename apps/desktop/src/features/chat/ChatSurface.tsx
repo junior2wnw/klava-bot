@@ -1,36 +1,19 @@
+import type { KeyboardEvent } from "react";
 import { useMemo, useState } from "react";
 import type { TaskDetail, TaskMessage } from "@klava/contracts";
-import { Button, PanelCard, Stack, TextField } from "@klava/ui";
+import { Button, TextField } from "@klava/ui";
 import { useAppI18n } from "../../i18n/AppI18n";
 
 function shouldShowMessage(message: TaskMessage) {
-  if (message.meta.presentation === "artifact") {
+  if (message.meta.presentation === "artifact" || message.meta.presentation === "status") {
     return false;
   }
 
-  if (message.role === "tool") {
-    return message.meta.presentation === "status";
-  }
-
-  if (message.role === "system") {
-    return message.meta.presentation === "status";
-  }
-
-  return true;
+  return message.role === "user" || message.role === "assistant";
 }
 
 function roleLabel(message: TaskMessage, t: (english: string, russian: string) => string) {
-  if (message.meta.presentation === "status") {
-    return t("Status", "Статус");
-  }
-
-  return message.role === "assistant"
-    ? "Klava"
-    : message.role === "user"
-      ? t("You", "Вы")
-      : message.role === "tool"
-        ? t("Tool", "Инструмент")
-        : t("System", "Система");
+  return message.role === "assistant" ? "Klava" : t("You", "Вы");
 }
 
 function statusStateLabel(
@@ -41,7 +24,7 @@ function statusStateLabel(
     case "running":
       return t("In progress", "В процессе");
     case "awaiting_approval":
-      return t("Needs approval", "Ждёт подтверждения");
+      return t("Needs approval", "Нужно подтверждение");
     case "succeeded":
       return t("Done", "Готово");
     case "failed":
@@ -62,7 +45,7 @@ function agentRunStatusLabel(
     case "awaiting_approval":
       return t("Waiting for approval", "Ждёт подтверждения");
     case "needs_input":
-      return t("Needs input", "Нужен ответ");
+      return t("Ready to continue", "Готова продолжить");
     case "succeeded":
       return t("Done", "Готово");
     case "blocked":
@@ -73,39 +56,32 @@ function agentRunStatusLabel(
   }
 }
 
-function planItemStatusLabel(
-  status: TaskDetail["agentRuns"][number]["plan"][number]["status"],
-  t: (english: string, russian: string) => string,
-) {
-  switch (status) {
+function liveTone(
+  activeAgentRun: TaskDetail["agentRuns"][number] | null,
+  latestStatusMessage: TaskMessage | null,
+): NonNullable<TaskMessage["meta"]["statusState"]> {
+  if (latestStatusMessage?.meta.statusState) {
+    return latestStatusMessage.meta.statusState;
+  }
+
+  if (!activeAgentRun) {
+    return "info";
+  }
+
+  switch (activeAgentRun.status) {
     case "running":
-      return t("In progress", "В процессе");
-    case "completed":
-      return t("Done", "Готово");
+      return "running";
+    case "awaiting_approval":
+      return "awaiting_approval";
+    case "succeeded":
+      return "succeeded";
     case "failed":
-      return t("Failed", "Ошибка");
     case "blocked":
-      return t("Blocked", "Заблокировано");
-    case "pending":
+      return "failed";
+    case "needs_input":
     default:
-      return t("Queued", "В очереди");
+      return "info";
   }
-}
-
-function planItemTone(status: TaskDetail["agentRuns"][number]["plan"][number]["status"]) {
-  if (status === "running") {
-    return "running";
-  }
-
-  if (status === "completed") {
-    return "succeeded";
-  }
-
-  if (status === "failed" || status === "blocked") {
-    return "failed";
-  }
-
-  return "info";
 }
 
 export function ChatSurface({
@@ -136,9 +112,36 @@ export function ChatSurface({
     [task.agentRuns],
   );
   const latestStatusMessage = useMemo(
-    () => [...visibleMessages].reverse().find((message) => message.meta.presentation === "status") ?? null,
-    [visibleMessages],
+    () => [...task.messages].reverse().find((message) => message.meta.presentation === "status") ?? null,
+    [task.messages],
   );
+  const liveApprovalId =
+    latestStatusMessage?.meta.pendingApprovalId ??
+    activeAgentRun?.pendingApprovalId ??
+    task.journal.activeResume?.approvalId ??
+    null;
+  const liveApproval = liveApprovalId ? approvalById.get(liveApprovalId) ?? null : null;
+  const liveStatusText =
+    latestStatusMessage?.content ??
+    activeAgentRun?.summary ??
+    activeAgentRun?.lastAssistantMessage ??
+    task.journal.activeResume?.reason ??
+    null;
+  const liveStatusTime = latestStatusMessage
+    ? formatTime(latestStatusMessage.createdAt)
+    : activeAgentRun
+      ? formatTime(activeAgentRun.updatedAt)
+      : task.journal.activeResume
+        ? formatTime(task.journal.activeResume.updatedAt)
+        : null;
+  const liveStatusTone = liveTone(activeAgentRun, latestStatusMessage);
+  const liveStatusLabel = latestStatusMessage?.meta.statusState
+    ? statusStateLabel(latestStatusMessage.meta.statusState, t)
+    : activeAgentRun
+      ? agentRunStatusLabel(activeAgentRun.status, t)
+      : task.journal.activeResume
+        ? t("Resume available", "Можно продолжить")
+        : null;
 
   async function handleSubmit() {
     const trimmed = value.trim();
@@ -150,135 +153,83 @@ export function ChatSurface({
     setValue("");
   }
 
+  function handleComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key !== "Enter" || event.shiftKey) {
+      return;
+    }
+
+    event.preventDefault();
+    void handleSubmit();
+  }
+
   return (
-    <div className="surface-stack">
-      {activeAgentRun || latestStatusMessage ? (
-        <PanelCard
-          title={t("Current activity", "Что сейчас делает Клава")}
-          subtitle={
-            activeAgentRun
-              ? `${agentRunStatusLabel(activeAgentRun.status, t)}${activeAgentRun.model ? ` • ${activeAgentRun.model}` : ""}`
-              : t("Recent runtime status", "Последний статус выполнения")
-          }
-        >
-          <div className="activity-card">
-            {latestStatusMessage ? <div className="activity-card__summary">{latestStatusMessage.content}</div> : null}
-            {latestStatusMessage?.meta.statusState ? (
-              <div className="onboarding-status">
-                <span className={`status-chip status-chip--${latestStatusMessage.meta.statusState}`}>
-                  {statusStateLabel(latestStatusMessage.meta.statusState, t)}
-                </span>
-              </div>
-            ) : null}
-            {activeAgentRun?.plan.length ? (
-              <div className="activity-plan">
-                {activeAgentRun.plan.map((item) => (
-                  <div key={item.id} className="activity-plan__item">
-                    <span className={`status-chip status-chip--${planItemTone(item.status)}`}>
-                      {planItemStatusLabel(item.status, t)}
-                    </span>
-                    <div className="activity-plan__copy">
-                      <strong>{item.title}</strong>
-                      {item.detail ? <span>{item.detail}</span> : null}
-                    </div>
-                  </div>
-                ))}
+    <div className="surface-stack chat-surface">
+      {liveStatusText ? (
+        <div className={`live-status live-status--${liveStatusTone}`}>
+          <div className="live-status__signal" aria-hidden="true" />
+          <div className="live-status__body">
+            <div className="live-status__text">{liveStatusText}</div>
+            {liveApproval?.status === "pending" ? (
+              <div className="approval-item__actions live-status__actions">
+                <Button
+                  variant="secondary"
+                  onClick={() => void onReject(liveApproval.id)}
+                  disabled={busy}
+                  style={{ height: 28 }}
+                >
+                  {t("Reject", "Отклонить")}
+                </Button>
+                <Button onClick={() => void onApprove(liveApproval.id)} disabled={busy} style={{ height: 28 }}>
+                  {t("Approve", "Подтвердить")}
+                </Button>
               </div>
             ) : null}
           </div>
-        </PanelCard>
+          <div className="live-status__meta">
+            {liveStatusLabel ? <span className={`status-chip status-chip--${liveStatusTone}`}>{liveStatusLabel}</span> : null}
+            {liveStatusTime ? <span className="live-status__time">{liveStatusTime}</span> : null}
+          </div>
+        </div>
       ) : null}
 
-      <div className="transcript">
-        <Stack gap={12}>
-          {visibleMessages.map((message) => {
-            const approval = message.meta.pendingApprovalId ? approvalById.get(message.meta.pendingApprovalId) : null;
-            return (
-              <PanelCard
-                key={message.id}
-                title={roleLabel(message, t)}
-                subtitle={formatTime(message.createdAt)}
-                style={{
-                  background:
-                    message.meta.presentation === "status"
-                      ? "rgba(255, 245, 235, 0.03)"
-                      : message.role === "user"
-                        ? "rgba(196, 112, 74, 0.04)"
-                        : undefined,
-                  borderColor:
-                    message.meta.presentation === "status"
-                      ? "rgba(255, 245, 235, 0.06)"
-                      : message.role === "assistant"
-                        ? "rgba(196, 112, 74, 0.10)"
-                        : undefined,
-                }}
-              >
-                {message.meta.statusState ? (
-                  <div className="message-status-row">
-                    <span className={`status-chip status-chip--${message.meta.statusState}`}>
-                      {statusStateLabel(message.meta.statusState, t)}
-                    </span>
-                  </div>
-                ) : null}
-                <div className={`message-content${message.meta.presentation === "status" ? " message-content--status" : ""}`}>
-                  {message.content}
-                </div>
-                {message.meta.pendingApprovalId ? (
-                  <div className="message-approval">
-                    <span className="message-tag">
-                      {approval?.status === "pending"
-                        ? t("Approval pending", "Ожидает подтверждения")
-                        : approval?.status === "approved"
-                          ? t("Approved", "Подтверждено")
-                          : t("Rejected", "Отклонено")}
-                    </span>
-                    {approval?.status === "pending" ? (
-                      <div className="approval-item__actions">
-                        <Button
-                          variant="secondary"
-                          onClick={() => void onReject(message.meta.pendingApprovalId!)}
-                          disabled={busy}
-                          style={{ height: 30 }}
-                        >
-                          {t("Reject", "Отклонить")}
-                        </Button>
-                        <Button
-                          onClick={() => void onApprove(message.meta.pendingApprovalId!)}
-                          disabled={busy}
-                          style={{ height: 30 }}
-                        >
-                          {t("Approve", "Подтвердить")}
-                        </Button>
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
-              </PanelCard>
-            );
-          })}
-        </Stack>
+      <div className="transcript chat-transcript">
+        <div className="chat-message-list">
+          {visibleMessages.map((message) => (
+            <article
+              key={message.id}
+              className={`chat-message chat-message--${message.role === "user" ? "user" : "assistant"}`}
+            >
+              <div className="chat-message__meta">
+                <span className="chat-message__role">{roleLabel(message, t)}</span>
+                <span className="chat-message__time">{formatTime(message.createdAt)}</span>
+              </div>
+              <div className="chat-message__bubble">
+                <div className="message-content">{message.content}</div>
+              </div>
+            </article>
+          ))}
+        </div>
       </div>
 
-      <PanelCard
-        title={t("Composer", "Сообщение")}
-        subtitle={t(
-          "Persistent agent chat, translation, model switching, natural language computer tasks, /terminal, $ command, /models, /model, or guard strict|balanced|off",
-          "Постоянный чат с агентом, переводы, смена модели, команды компьютеру обычным языком, /terminal, $ команда, /models, /model и guard strict|balanced|off",
-        )}
-      >
-        <div className="composer">
-          <TextField
-            multiline
-            rows={4}
-            placeholder={t(
-              "Give Klava a real machine goal. It can inspect the computer, read or search files, run commands behind guard checks, switch models, and explain each current step.",
-              "Опишите реальную задачу для компьютера. Klava умеет проверять систему, читать и искать по файлам, запускать команды через guard и по ходу объяснять, что делает прямо сейчас.",
-            )}
-            value={value}
-            onChange={setValue}
-          />
+      <div className="chat-composer">
+        <TextField
+          multiline
+          rows={3}
+          placeholder={t(
+            "Describe the result you want. Enter sends, Shift+Enter adds a new line.",
+            "Опиши нужный результат. Enter отправляет, Shift+Enter делает новую строку.",
+          )}
+          value={value}
+          onChange={setValue}
+          onKeyDown={handleComposerKeyDown}
+          style={{ minHeight: 88, resize: "none" }}
+        />
+        <div className="chat-composer__footer">
+          <span className="chat-composer__hint">
+            {t("Enter sends • Shift+Enter newline", "Enter отправляет • Shift+Enter новая строка")}
+          </span>
           <div className="composer__actions">
-            <Button variant="secondary" onClick={() => setValue("")} disabled={busy}>
+            <Button variant="secondary" onClick={() => setValue("")} disabled={busy || value.length === 0}>
               {t("Clear", "Очистить")}
             </Button>
             <Button onClick={() => void handleSubmit()} disabled={busy || !value.trim()}>
@@ -286,7 +237,7 @@ export function ChatSurface({
             </Button>
           </div>
         </div>
-      </PanelCard>
+      </div>
     </div>
   );
 }

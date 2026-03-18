@@ -76,12 +76,100 @@ export const terminalEntrySchema = z.object({
 
 export type TerminalEntry = z.infer<typeof terminalEntrySchema>;
 
+export const taskMemoryEntryKindSchema = z.enum(["goal", "constraint", "preference", "decision", "fact", "open_loop"]);
+export type TaskMemoryEntryKind = z.infer<typeof taskMemoryEntryKindSchema>;
+
+export const taskMemoryEntryStatusSchema = z.enum(["active", "resolved", "stale"]);
+export type TaskMemoryEntryStatus = z.infer<typeof taskMemoryEntryStatusSchema>;
+
+export const taskMemoryEntrySchema = z.object({
+  id: z.string(),
+  kind: taskMemoryEntryKindSchema,
+  content: z.string(),
+  sourceMessageId: z.string().nullable(),
+  sourceRunId: z.string().nullable(),
+  score: z.number().nonnegative(),
+  status: taskMemoryEntryStatusSchema,
+  updatedAt: z.string(),
+});
+
+export type TaskMemoryEntry = z.infer<typeof taskMemoryEntrySchema>;
+
+export const taskMemorySchema = z.object({
+  summary: z.string().nullable(),
+  updatedAt: z.string().nullable(),
+  entries: z.array(taskMemoryEntrySchema),
+});
+
+export type TaskMemory = z.infer<typeof taskMemorySchema>;
+
+export const taskResumeModeSchema = z.enum(["continue_agent", "awaiting_approval", "retry_operation"]);
+export type TaskResumeMode = z.infer<typeof taskResumeModeSchema>;
+
+export const taskResumeStateSchema = z.object({
+  mode: taskResumeModeSchema,
+  taskId: z.string(),
+  reason: z.string(),
+  preferredLanguage: z.enum(["en", "ru"]).nullable(),
+  recoverable: z.boolean(),
+  agentRunId: z.string().nullable(),
+  operationId: z.string().nullable(),
+  approvalId: z.string().nullable(),
+  updatedAt: z.string(),
+});
+
+export type TaskResumeState = z.infer<typeof taskResumeStateSchema>;
+
+export const taskJournalScopeSchema = z.enum([
+  "task",
+  "message",
+  "agent",
+  "terminal",
+  "approval",
+  "operation",
+  "runtime",
+  "retrieval",
+]);
+export type TaskJournalScope = z.infer<typeof taskJournalScopeSchema>;
+
+export const taskJournalLevelSchema = z.enum(["info", "warning", "error"]);
+export type TaskJournalLevel = z.infer<typeof taskJournalLevelSchema>;
+
+export const taskJournalEventSchema = z.object({
+  id: z.string(),
+  taskId: z.string(),
+  scope: taskJournalScopeSchema,
+  kind: z.string().trim().min(1).max(80),
+  title: z.string().trim().min(1).max(200),
+  detail: z.string().trim().max(2_000).nullable(),
+  level: taskJournalLevelSchema,
+  taskStatus: taskStatusSchema,
+  createdAt: z.string(),
+  agentRunId: z.string().nullable(),
+  operationId: z.string().nullable(),
+  approvalId: z.string().nullable(),
+  terminalEntryId: z.string().nullable(),
+  toolCallId: z.string().nullable(),
+});
+
+export type TaskJournalEvent = z.infer<typeof taskJournalEventSchema>;
+
+export const taskExecutionJournalSchema = z.object({
+  updatedAt: z.string().nullable(),
+  activeResume: taskResumeStateSchema.nullable(),
+  events: z.array(taskJournalEventSchema),
+});
+
+export type TaskExecutionJournal = z.infer<typeof taskExecutionJournalSchema>;
+
 export const taskDetailSchema = taskSummarySchema.extend({
   messages: z.array(taskMessageSchema),
   terminalEntries: z.array(terminalEntrySchema),
   approvals: z.array(approvalRequestSchema),
   operations: z.array(operationRunSchema),
   agentRuns: z.array(agentRunSchema),
+  memory: taskMemorySchema,
+  journal: taskExecutionJournalSchema,
 });
 
 export type TaskDetail = z.infer<typeof taskDetailSchema>;

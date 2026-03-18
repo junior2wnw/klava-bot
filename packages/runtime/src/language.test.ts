@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { TaskMessage } from "@klava/contracts";
-import { detectModelCommandIntent, detectPreferredAssistantLanguage, detectTranslationIntent } from "./operator-language";
+import {
+  buildConversationalReply,
+  detectConversationalIntent,
+  detectModelCommandIntent,
+  detectPreferredAssistantLanguage,
+  detectTranslationIntent,
+} from "./operator-language";
 
 function message(role: TaskMessage["role"], content: string): TaskMessage {
   return {
@@ -69,4 +75,16 @@ test("preferred assistant language respects an explicit language request from th
   );
 
   assert.equal(language, "ru");
+});
+
+test("short greetings are detected as conversational intent", () => {
+  assert.deepEqual(detectConversationalIntent("салют"), { kind: "greeting" });
+  assert.equal(
+    buildConversationalReply({ kind: "greeting" }, "ru"),
+    "Привет! Я на связи. Напиши, что нужно сделать, и я сразу подключусь.",
+  );
+});
+
+test("greeting plus a real task does not get downgraded to small talk", () => {
+  assert.equal(detectConversationalIntent("привет, проверь package.json"), null);
 });

@@ -26,7 +26,7 @@ function uniqueModels(models: string[]) {
 }
 
 function toOpenAiMessages(messages: TaskMessage[]) {
-  return messages.slice(-10).map<ChatCompletionMessageParam>((message) => {
+  return messages.map<ChatCompletionMessageParam>((message) => {
     if (message.role === "assistant") {
       return { role: "assistant", content: message.content };
     }

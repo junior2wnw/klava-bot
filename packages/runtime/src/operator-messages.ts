@@ -141,6 +141,18 @@ export function buildAgentToolStartStatus(tool: AgentToolRequest, language: Supp
             `Searching the workspace for ${backtick(tool.pattern)}.`,
             `Ищу ${backtick(tool.pattern)} по рабочей папке.`,
           );
+    case "context.retrieve":
+      return tool.scope === "history"
+        ? inLanguage(
+            language,
+            `Retrieving relevant task history for ${backtick(tool.query)}.`,
+            `Подбираю релевантную историю задачи по запросу ${backtick(tool.query)}.`,
+          )
+        : inLanguage(
+            language,
+            `Retrieving relevant context for ${backtick(tool.query)}.`,
+            `Подбираю релевантный контекст по запросу ${backtick(tool.query)}.`,
+          );
     case "shell.command":
     default:
       return describeTerminalAction(tool.command, language);

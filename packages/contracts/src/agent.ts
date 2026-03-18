@@ -14,7 +14,13 @@ export type AgentRunStatus = z.infer<typeof agentRunStatusSchema>;
 export const agentPlanItemStatusSchema = z.enum(["pending", "running", "completed", "failed", "blocked"]);
 export type AgentPlanItemStatus = z.infer<typeof agentPlanItemStatusSchema>;
 
-export const agentToolKindSchema = z.enum(["computer.inspect", "shell.command", "filesystem.read", "filesystem.search"]);
+export const agentToolKindSchema = z.enum([
+  "computer.inspect",
+  "shell.command",
+  "filesystem.read",
+  "filesystem.search",
+  "context.retrieve",
+]);
 export type AgentToolKind = z.infer<typeof agentToolKindSchema>;
 
 export const agentToolCallStatusSchema = z.enum(["completed", "failed", "awaiting_approval", "blocked"]);

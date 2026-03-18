@@ -250,6 +250,339 @@ test("chat messages go through the configured openai provider", async () => {
   }
 });
 
+test("short greetings stay local, follow the latest user language, and avoid agent planning noise", async () => {
+  const originalValidate = OpenAIService.prototype.validate;
+  const originalComplete = OpenAIService.prototype.complete;
+  let providerCalled = false;
+
+  OpenAIService.prototype.validate = async function validate(secret: string) {
+    assert.equal(secret, "sk-greeting-local");
+    return {
+      model: "gpt-5.2",
+      models: ["gpt-5.2"],
+    };
+  };
+  OpenAIService.prototype.complete = async function complete() {
+    providerCalled = true;
+    return "This provider call should not happen for a plain greeting.";
+  };
+
+  try {
+    await withTempAppPaths(async (paths) => {
+      const runtime = await createKlavaRuntime({ paths });
+
+      try {
+        const onboarding = await runtime.server.inject({
+          method: "POST",
+          url: "/api/onboarding/validate",
+          payload: {
+            provider: "openai",
+            secret: "sk-greeting-local",
+          },
+        });
+
+        assert.equal(onboarding.statusCode, 200);
+
+        const workspace = await runtime.server.inject({
+          method: "GET",
+          url: "/api/workspace",
+        });
+        const taskId = workspace.json().selectedTask.id as string;
+
+        const firstGreeting = await runtime.server.inject({
+          method: "POST",
+          url: `/api/tasks/${taskId}/messages`,
+          payload: {
+            content: "hello",
+          },
+        });
+
+        assert.equal(firstGreeting.statusCode, 200);
+        assert.equal(
+          firstGreeting.json().selectedTask.messages.at(-1).content,
+          "Hi! I'm here and ready to help. Tell me what you want to do, and I'll jump in.",
+        );
+
+        const secondGreeting = await runtime.server.inject({
+          method: "POST",
+          url: `/api/tasks/${taskId}/messages`,
+          payload: {
+            content: "салют",
+          },
+        });
+
+        assert.equal(secondGreeting.statusCode, 200);
+        const snapshot = secondGreeting.json();
+        const messages = snapshot.selectedTask.messages as Array<{
+          role: string;
+          content: string;
+          meta: { presentation?: string | null };
+        }>;
+
+        assert.equal(snapshot.selectedTask.agentRuns.length, 0);
+        assert.equal(
+          messages.at(-1)?.content,
+          "Привет! Я на связи. Напиши, что нужно сделать, и я сразу подключусь.",
+        );
+        assert.equal(
+          messages.some(
+            (message) =>
+              message.meta.presentation === "status" &&
+              /Building the plan|Reviewing the request and choosing the next step/i.test(message.content),
+          ),
+          false,
+        );
+        assert.equal(providerCalled, false);
+      } finally {
+        await runtime.stop();
+      }
+    });
+  } finally {
+    OpenAIService.prototype.validate = originalValidate;
+    OpenAIService.prototype.complete = originalComplete;
+  }
+});
+
+test("provider chat requests include persistent task memory in system context", async () => {
+  const originalValidate = OpenAIService.prototype.validate;
+  const originalComplete = OpenAIService.prototype.complete;
+  let callCount = 0;
+  let sawMemoryPrompt = false;
+  let sawOperatorPreference = false;
+  let sawLatestGoal = false;
+
+  OpenAIService.prototype.validate = async function validate(secret: string) {
+    assert.equal(secret, "sk-memory-context");
+    return {
+      model: "gpt-5.2",
+      models: ["gpt-5.2"],
+    };
+  };
+  OpenAIService.prototype.complete = async function complete({ messages }) {
+    callCount += 1;
+    const joined = messages.map((message) => `${message.role}:${message.content}`).join("\n");
+    if (/Persistent task memory|Долговременная память задачи/i.test(joined)) {
+      sawMemoryPrompt = true;
+    }
+    if (/avoid toy solutions/i.test(joined)) {
+      sawOperatorPreference = true;
+    }
+    if (/Latest operator request|Последний запрос|Latest operator request:|Agent objective:/i.test(joined)) {
+      sawLatestGoal = true;
+    }
+
+    if (callCount === 1) {
+      return "Noted.";
+    }
+
+    return "I still remember the instruction.";
+  };
+
+  try {
+    await withTempAppPaths(async (paths) => {
+      const runtime = await createKlavaRuntime({ paths });
+
+      try {
+        const onboarding = await runtime.server.inject({
+          method: "POST",
+          url: "/api/onboarding/validate",
+          payload: {
+            provider: "openai",
+            secret: "sk-memory-context",
+          },
+        });
+
+        assert.equal(onboarding.statusCode, 200);
+
+        const workspace = await runtime.server.inject({
+          method: "GET",
+          url: "/api/workspace",
+        });
+        const taskId = workspace.json().selectedTask.id as string;
+
+        const first = await runtime.server.inject({
+          method: "POST",
+          url: `/api/tasks/${taskId}/messages`,
+          payload: {
+            content: "Reply in Russian and avoid toy solutions.",
+          },
+        });
+
+        assert.equal(first.statusCode, 200);
+
+        const second = await runtime.server.inject({
+          method: "POST",
+          url: `/api/tasks/${taskId}/messages`,
+          payload: {
+            content: "What do you remember about my preferences?",
+          },
+        });
+
+        assert.equal(second.statusCode, 200);
+        assert.ok(callCount >= 2);
+        assert.equal(sawMemoryPrompt, true);
+        assert.equal(sawOperatorPreference, true);
+        assert.equal(sawLatestGoal, true);
+        const snapshot = second.json();
+        assert.ok(snapshot.selectedTask.memory);
+        assert.ok(snapshot.selectedTask.memory.entries.length > 0);
+      } finally {
+        await runtime.stop();
+      }
+    });
+  } finally {
+    OpenAIService.prototype.validate = originalValidate;
+    OpenAIService.prototype.complete = originalComplete;
+  }
+});
+
+test("provider chat requests include execution journal and semantic retrieval context", async () => {
+  const originalValidate = OpenAIService.prototype.validate;
+  const originalComplete = OpenAIService.prototype.complete;
+  let sawJournalPrompt = false;
+  let sawRetrievedContext = false;
+  let sawWorkspaceContext = false;
+
+  OpenAIService.prototype.validate = async function validate(secret: string) {
+    assert.equal(secret, "sk-retrieval-context");
+    return {
+      model: "gpt-5.2",
+      models: ["gpt-5.2"],
+    };
+  };
+  OpenAIService.prototype.complete = async function complete({ messages }) {
+    const joined = messages.map((message) => `${message.role}:${message.content}`).join("\n");
+    if (/Execution journal|Журнал выполнения/i.test(joined)) {
+      sawJournalPrompt = true;
+    }
+    if (/Semantically ranked relevant context|Семантически отобранный релевантный контекст/i.test(joined)) {
+      sawRetrievedContext = true;
+    }
+    if (/context-window\.ts|workspace/i.test(joined)) {
+      sawWorkspaceContext = true;
+    }
+
+    return "Retrieved context acknowledged.";
+  };
+
+  try {
+    await withTempAppPaths(async (paths) => {
+      const runtime = await createKlavaRuntime({ paths });
+
+      try {
+        const onboarding = await runtime.server.inject({
+          method: "POST",
+          url: "/api/onboarding/validate",
+          payload: {
+            provider: "openai",
+            secret: "sk-retrieval-context",
+          },
+        });
+
+        assert.equal(onboarding.statusCode, 200);
+
+        const workspace = await runtime.server.inject({
+          method: "GET",
+          url: "/api/workspace",
+        });
+        const taskId = workspace.json().selectedTask.id as string;
+
+        const first = await runtime.server.inject({
+          method: "POST",
+          url: `/api/tasks/${taskId}/messages`,
+          payload: {
+            content: "Remember that restart-safe resume matters.",
+          },
+        });
+
+        assert.equal(first.statusCode, 200);
+
+        const second = await runtime.server.inject({
+          method: "POST",
+          url: `/api/tasks/${taskId}/messages`,
+          payload: {
+            content: "What do you know about context-window compression and resume context?",
+          },
+        });
+
+        assert.equal(second.statusCode, 200);
+        assert.equal(sawJournalPrompt, true);
+        assert.equal(sawRetrievedContext, true);
+        assert.equal(sawWorkspaceContext, true);
+        const snapshot = second.json();
+        assert.equal(
+          snapshot.selectedTask.journal.events.some((event: { kind: string }) => event.kind === "retrieval.context"),
+          true,
+        );
+      } finally {
+        await runtime.stop();
+      }
+    });
+  } finally {
+    OpenAIService.prototype.validate = originalValidate;
+    OpenAIService.prototype.complete = originalComplete;
+  }
+});
+
+test("provider chat replies are softened when they claim execution without evidence", async () => {
+  const originalValidate = OpenAIService.prototype.validate;
+  const originalComplete = OpenAIService.prototype.complete;
+
+  OpenAIService.prototype.validate = async function validate(secret: string) {
+    assert.equal(secret, "sk-response-verifier");
+    return {
+      model: "gpt-5.2",
+      models: ["gpt-5.2"],
+    };
+  };
+  OpenAIService.prototype.complete = async function complete() {
+    return "I checked package.json. Everything looks correct.";
+  };
+
+  try {
+    await withTempAppPaths(async (paths) => {
+      const runtime = await createKlavaRuntime({ paths });
+
+      try {
+        const onboarding = await runtime.server.inject({
+          method: "POST",
+          url: "/api/onboarding/validate",
+          payload: {
+            provider: "openai",
+            secret: "sk-response-verifier",
+          },
+        });
+
+        assert.equal(onboarding.statusCode, 200);
+
+        const workspace = await runtime.server.inject({
+          method: "GET",
+          url: "/api/workspace",
+        });
+        const taskId = workspace.json().selectedTask.id as string;
+
+        const response = await runtime.server.inject({
+          method: "POST",
+          url: `/api/tasks/${taskId}/messages`,
+          payload: {
+            content: "What do you think about package.json?",
+          },
+        });
+
+        assert.equal(response.statusCode, 200);
+        const finalMessage = response.json().selectedTask.messages.at(-1).content as string;
+        assert.match(finalMessage, /do not have a verified local execution result/i);
+        assert.doesNotMatch(finalMessage, /^I checked package\.json/i);
+      } finally {
+        await runtime.stop();
+      }
+    });
+  } finally {
+    OpenAIService.prototype.validate = originalValidate;
+    OpenAIService.prototype.complete = originalComplete;
+  }
+});
+
 test("chat messages go through the configured groq provider", async () => {
   const originalValidate = GroqService.prototype.validate;
   const originalComplete = GroqService.prototype.complete;

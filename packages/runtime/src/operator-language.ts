@@ -14,6 +14,12 @@ export type ModelCommandIntent =
   | { kind: "auto" }
   | { kind: "pin"; model: string };
 
+export type ConversationalIntent =
+  | { kind: "greeting" }
+  | { kind: "gratitude" }
+  | { kind: "farewell" }
+  | { kind: "check_in" };
+
 const cyrillicPattern = /\p{Script=Cyrillic}/gu;
 const latinPattern = /[A-Za-z]/g;
 
@@ -24,6 +30,58 @@ const englishLanguagePattern =
 const translationRequestPattern = /(?:перевед|перевод|translate|translation)/i;
 const translateOnlyPattern =
   /^(?:переведи(?:\s+это|\s+текст)?(?:\s+на\s+\S+|\s+по-\S+)?|translate(?:\s+this|\s+the\s+following\s+text)?(?:\s+to\s+\w+|\s+in\s+\w+)?)$/i;
+
+const conversationalActionCuePattern =
+  /(?:\b(?:check|inspect|fix|write|build|create|open|find|install|run|show|explain|debug|translate|help|do|make|review|analyze|search)\b|(?:проверь|провести|проверить|исправ|почини|сделай|создай|открой|найди|установи|запусти|покажи|объясни|переведи|помоги|собери|проанализируй|посмотри))/i;
+
+const greetingPhrases = new Set([
+  "hi",
+  "hello",
+  "hey",
+  "yo",
+  "good morning",
+  "good afternoon",
+  "good evening",
+  "привет",
+  "салют",
+  "здравствуй",
+  "здравствуйте",
+  "доброе утро",
+  "добрый день",
+  "добрый вечер",
+  "хай",
+  "ку",
+]);
+
+const gratitudePhrases = new Set([
+  "thanks",
+  "thank you",
+  "thx",
+  "ty",
+  "спасибо",
+  "спс",
+  "благодарю",
+]);
+
+const farewellPhrases = new Set([
+  "bye",
+  "goodbye",
+  "see you",
+  "see ya",
+  "пока",
+  "до связи",
+  "до скорого",
+  "увидимся",
+]);
+
+const checkInPhrases = new Set([
+  "how are you",
+  "how is it going",
+  "how's it going",
+  "как дела",
+  "как ты",
+  "как жизнь",
+]);
 
 function countMatches(pattern: RegExp, value: string) {
   return value.match(pattern)?.length ?? 0;
@@ -199,6 +257,44 @@ function normalizeCommandText(raw: string) {
   return raw.trim().replace(/\s+/g, " ");
 }
 
+function normalizeConversationalText(raw: string) {
+  return raw
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function detectConversationalIntent(raw: string): ConversationalIntent | null {
+  const normalized = normalizeConversationalText(raw);
+  if (!normalized) {
+    return null;
+  }
+
+  const wordCount = normalized.split(" ").filter(Boolean).length;
+  if (wordCount > 8 || conversationalActionCuePattern.test(normalized)) {
+    return null;
+  }
+
+  if (greetingPhrases.has(normalized)) {
+    return { kind: "greeting" };
+  }
+
+  if (gratitudePhrases.has(normalized)) {
+    return { kind: "gratitude" };
+  }
+
+  if (farewellPhrases.has(normalized)) {
+    return { kind: "farewell" };
+  }
+
+  if (checkInPhrases.has(normalized)) {
+    return { kind: "check_in" };
+  }
+
+  return null;
+}
+
 export function detectModelCommandIntent(raw: string): ModelCommandIntent | null {
   const normalized = normalizeCommandText(raw);
 
@@ -254,6 +350,36 @@ export function buildLanguageInstruction(language: SupportedLanguage) {
   return language === "ru"
     ? "Reply in Russian unless the operator explicitly requests another language."
     : "Reply in English unless the operator explicitly requests another language.";
+}
+
+export function buildConversationalReply(intent: ConversationalIntent, language: SupportedLanguage) {
+  if (language === "ru") {
+    switch (intent.kind) {
+      case "greeting":
+        return "Привет! Я на связи. Напиши, что нужно сделать, и я сразу подключусь.";
+      case "gratitude":
+        return "Пожалуйста. Если хочешь, можем сразу перейти к следующей задаче.";
+      case "farewell":
+        return "Хорошо. Я рядом, если захочешь продолжить позже.";
+      case "check_in":
+        return "Всё в порядке и я готова работать. Что сделаем?";
+      default:
+        return "Я на связи.";
+    }
+  }
+
+  switch (intent.kind) {
+    case "greeting":
+      return "Hi! I'm here and ready to help. Tell me what you want to do, and I'll jump in.";
+    case "gratitude":
+      return "You're welcome. If you want, we can move straight to the next task.";
+    case "farewell":
+      return "Sounds good. I'll be here when you want to continue.";
+    case "check_in":
+      return "I'm doing well and ready to work. What should we tackle?";
+    default:
+      return "I'm here and ready to help.";
+  }
 }
 
 export function buildTranslationInstruction(language: SupportedLanguage) {
