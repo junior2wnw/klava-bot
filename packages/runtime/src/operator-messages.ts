@@ -43,6 +43,50 @@ export function describeTerminalAction(command: string, language: SupportedLangu
   const lowered = normalized.toLowerCase();
   const wingetId = extractWingetPackageId(normalized);
 
+  if (/\bopenclaw\s+status\b/i.test(lowered) || /\bopenclaw\s+gateway\s+status\b/i.test(lowered)) {
+    return inLanguage(language, "Checking the upstream OpenClaw status.", "Проверяю состояние upstream OpenClaw.");
+  }
+
+  if (/\bopenclaw\s+dashboard\b/i.test(lowered)) {
+    return inLanguage(language, "Opening the OpenClaw Control UI.", "Открываю OpenClaw Control UI.");
+  }
+
+  if (/\bopenclaw\s+update\b/i.test(lowered)) {
+    return inLanguage(language, "Updating the OpenClaw runtime.", "Обновляю runtime OpenClaw.");
+  }
+
+  if (/\bopenclaw\s+gateway\s+(start|stop|restart|run)\b/i.test(lowered)) {
+    return inLanguage(language, "Managing the OpenClaw gateway lifecycle.", "Управляю lifecycle OpenClaw gateway.");
+  }
+
+  if (/\bopenclaw\s+channels\s+(list|status|capabilities|resolve)\b/i.test(lowered)) {
+    return inLanguage(language, "Inspecting OpenClaw social/channel state.", "Проверяю состояние соцсетей и каналов OpenClaw.");
+  }
+
+  if (/\bopenclaw\s+channels\s+(add|remove|login|logout)\b/i.test(lowered)) {
+    return inLanguage(language, "Configuring an OpenClaw social/channel account.", "Настраиваю соцсеть или канал в OpenClaw.");
+  }
+
+  if (/\bopenclaw\s+cron\s+(list|status|runs)\b/i.test(lowered)) {
+    return inLanguage(language, "Inspecting OpenClaw trigger jobs.", "Проверяю trigger-задачи OpenClaw.");
+  }
+
+  if (/\bopenclaw\s+cron\s+(add|edit|rm|enable|disable|run)\b/i.test(lowered)) {
+    return inLanguage(language, "Configuring an OpenClaw trigger job.", "Настраиваю trigger-задачу OpenClaw.");
+  }
+
+  if (/\bopenclaw\s+hooks\s+(list|info|check)\b/i.test(lowered)) {
+    return inLanguage(language, "Inspecting OpenClaw hooks.", "Проверяю hooks OpenClaw.");
+  }
+
+  if (/\bopenclaw\s+hooks\s+(enable|disable|install|update)\b/i.test(lowered)) {
+    return inLanguage(language, "Managing OpenClaw hooks.", "Управляю hooks OpenClaw.");
+  }
+
+  if (/\bopenclaw\s+webhooks\s+gmail\s+(setup|run)\b/i.test(lowered)) {
+    return inLanguage(language, "Configuring the OpenClaw Gmail webhook trigger.", "Настраиваю Gmail webhook trigger в OpenClaw.");
+  }
+
   if (/\bwinget\s+install\b/i.test(lowered)) {
     return wingetId
       ? inLanguage(language, `Installing ${backtick(wingetId)} via winget.`, `Устанавливаю ${backtick(wingetId)} через winget.`)
@@ -159,11 +203,23 @@ export function buildAgentToolStartStatus(tool: AgentToolRequest, language: Supp
   }
 }
 
-export function buildAwaitingApprovalStatus(command: string, impact: string, language: SupportedLanguage) {
+export function buildAwaitingApprovalStatus(
+  command: string,
+  impact: string,
+  language: SupportedLanguage,
+  requiresAdmin = false,
+) {
+  const adminNote = requiresAdmin
+    ? inLanguage(
+        language,
+        " Windows will show a UAC prompt before the command starts.",
+        " Windows покажет запрос UAC перед запуском команды.",
+      )
+    : "";
   return inLanguage(
     language,
-    `${describeTerminalAction(command, language)} Waiting for approval because ${impact}.`,
-    `${describeTerminalAction(command, language)} Нужна проверка и подтверждение, потому что ${impact}.`,
+    `${describeTerminalAction(command, language)} Waiting for approval because ${impact}.${adminNote}`,
+    `${describeTerminalAction(command, language)} Нужна проверка и подтверждение, потому что ${impact}.${adminNote}`,
   );
 }
 
@@ -189,12 +245,24 @@ export function buildCommandFinishedStatus(command: string, succeeded: boolean, 
       );
 }
 
-export function buildApprovalResolvedStatus(command: string, approved: boolean, language: SupportedLanguage) {
+export function buildApprovalResolvedStatus(
+  command: string,
+  approved: boolean,
+  language: SupportedLanguage,
+  requiresAdmin = false,
+) {
+  const adminNote = requiresAdmin
+    ? inLanguage(
+        language,
+        " Windows will show a UAC prompt now.",
+        " Сейчас Windows покажет запрос UAC.",
+      )
+    : "";
   return approved
     ? inLanguage(
         language,
-        `Approval granted. ${describeTerminalAction(command, language)}`,
-        `Подтверждение получено. ${describeTerminalAction(command, language)}`,
+        `Approval granted.${adminNote} ${describeTerminalAction(command, language)}`,
+        `Подтверждение получено.${adminNote} ${describeTerminalAction(command, language)}`,
       )
     : inLanguage(
         language,

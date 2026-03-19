@@ -1,5 +1,6 @@
 export * from "./agent";
 export * from "./approvals";
+export * from "./desktop";
 export * from "./health";
 export * from "./onboarding";
 export * from "./operations";

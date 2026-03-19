@@ -11,7 +11,7 @@ export const taskStatusSchema = z.enum([
   "failed",
 ]);
 
-export const surfaceModeSchema = z.enum(["chat", "terminal", "pro"]);
+export const surfaceModeSchema = z.enum(["chat", "terminal", "pro", "openclaw"]);
 export const guardModeSchema = z.enum(["strict", "balanced", "off"]);
 
 export type TaskStatus = z.infer<typeof taskStatusSchema>;

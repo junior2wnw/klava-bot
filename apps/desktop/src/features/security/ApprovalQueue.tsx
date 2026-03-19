@@ -43,6 +43,14 @@ export function ApprovalQueue({
               </div>
               <code>{approval.command}</code>
               <p>{approval.impact}</p>
+              {approval.requiresAdmin ? (
+                <p>
+                  {t(
+                    "Admin rights required. Windows will show a UAC prompt before this starts.",
+                    "Нужны права администратора. Перед запуском Windows покажет запрос UAC.",
+                  )}
+                </p>
+              ) : null}
               {approval.status === "pending" ? (
                 <div className="approval-item__actions">
                   <Button variant="secondary" onClick={() => onReject(approval.id)} style={{ height: 34 }}>

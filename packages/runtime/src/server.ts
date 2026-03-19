@@ -61,6 +61,7 @@ import {
 import { localizeStructuredComputerText } from "./language";
 import { RuntimeLogger } from "./logging";
 import { OpenAIService } from "./openai-service";
+import { resolveOpenClawDialog } from "./openclaw-dialog";
 import {
   buildApprovalResolvedStatus,
   buildAwaitingApprovalStatus,
@@ -83,12 +84,14 @@ import { SecretVault } from "./secrets";
 import { RuntimeStore, getAppPaths, type AppPaths } from "./storage";
 import { analyzeLocalRuntime, detectMachineProfile } from "./system-profile";
 import { buildTaskMemoryPrompt } from "./task-memory";
-import { assessCommand, runCommand } from "./terminal";
+import { assessCommand, commandRequiresAdmin, runCommand, runElevatedCommand, type CommandResult } from "./terminal";
 
 type CreateRuntimeOptions = {
   host?: string;
   port?: number;
   paths?: AppPaths;
+  commandRunner?: (command: string) => Promise<CommandResult>;
+  elevatedCommandRunner?: (command: string) => Promise<CommandResult>;
 };
 
 type ExecutionBinding = {
@@ -272,15 +275,21 @@ function createTerminalEntry(
   };
 }
 
-function createApproval(taskId: string, command: string, impact: string, binding?: ExecutionBinding): ApprovalRequest {
+function createApproval(
+  taskId: string,
+  command: string,
+  impact: string,
+  requiresAdmin: boolean,
+  binding?: ExecutionBinding,
+): ApprovalRequest {
   return {
     id: crypto.randomUUID(),
     taskId,
-    action: "Guarded terminal command",
+    action: requiresAdmin ? "Guarded admin command" : "Guarded terminal command",
     command,
     riskClass: "guarded",
     impact,
-    requiresAdmin: false,
+    requiresAdmin,
     status: "pending",
     createdAt: nowIso(),
     resolvedAt: null,
@@ -403,6 +412,8 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
   const openrouter = new OpenRouterService();
   const localAi = new LocalAiService();
   const runtimeLog = new RuntimeLogger(appPaths);
+  const commandRunner = options.commandRunner ?? runCommand;
+  const elevatedCommandRunner = options.elevatedCommandRunner ?? runElevatedCommand;
   const machineProfile = await detectMachineProfile();
   const localRuntimeAdvice = analyzeLocalRuntime(machineProfile);
   const computerOperator = new ComputerOperator({
@@ -1724,6 +1735,68 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
     ].includes(normalized);
   }
 
+  async function runTerminalCommand(
+    task: TaskDetail,
+    command: string,
+    responseLanguage: SupportedLanguage,
+    bindingMeta: TaskMessage["meta"],
+    requiresAdmin: boolean,
+  ) {
+    await store.addMessage(
+      task.id,
+      createMessage(
+        task.id,
+        "assistant",
+        describeTerminalAction(command, responseLanguage),
+        statusMeta("running", bindingMeta),
+      ),
+      "running",
+    );
+
+    const result = requiresAdmin ? await elevatedCommandRunner(command) : await commandRunner(command);
+    const terminalEntry = createTerminalEntry(
+      task.id,
+      command,
+      result.output,
+      result.exitCode,
+      result.exitCode === 0 ? "completed" : "failed",
+    );
+    await store.addTerminalEntry(
+      task.id,
+      terminalEntry,
+      result.exitCode === 0 ? "succeeded" : "failed",
+    );
+    await store.addMessage(
+      task.id,
+      createMessage(
+        task.id,
+        "tool",
+        result.output,
+        artifactMeta({ ...bindingMeta, terminalCommand: command, terminalEntryId: terminalEntry.id }),
+      ),
+      result.exitCode === 0 ? "succeeded" : "failed",
+    );
+    await store.addMessage(
+      task.id,
+      createMessage(
+        task.id,
+        "assistant",
+        buildCommandFinishedStatus(command, result.exitCode === 0, responseLanguage),
+        statusMeta(result.exitCode === 0 ? "succeeded" : "failed", {
+          ...bindingMeta,
+          terminalEntryId: terminalEntry.id,
+        }),
+      ),
+      result.exitCode === 0 ? "succeeded" : "failed",
+    );
+
+    return {
+      kind: "completed" as const,
+      terminalEntry,
+      succeeded: result.exitCode === 0,
+    };
+  }
+
   async function approveResolvedApproval(approvalId: string) {
     const resolved = await store.resolveApproval(approvalId, "approved");
     if (!resolved) {
@@ -1737,7 +1810,12 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
       createMessage(
         resolved.task.id,
         "assistant",
-        buildApprovalResolvedStatus(resolved.approval.command, true, responseLanguage),
+        buildApprovalResolvedStatus(
+          resolved.approval.command,
+          true,
+          responseLanguage,
+          resolved.approval.requiresAdmin,
+        ),
         statusMeta("running"),
       ),
       "running",
@@ -1895,6 +1973,7 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
     binding?: ExecutionBinding,
   ): Promise<TerminalExecutionResult> {
     const responseLanguage = binding?.language ?? detectPreferredAssistantLanguage(task.messages);
+    const requiresAdmin = commandRequiresAdmin(command);
     const bindingMeta = {
       agentRunId: binding?.agentRunId ?? null,
       agentToolCallId: binding?.agentToolCallId ?? null,
@@ -1964,7 +2043,7 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
       }
 
       if (task.guardMode === "balanced") {
-        const approval = createApproval(task.id, command, assessment.reason, binding);
+        const approval = createApproval(task.id, command, assessment.reason, requiresAdmin, binding);
         const terminalEntry = createTerminalEntry(
           task.id,
           command,
@@ -1983,7 +2062,7 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
           createMessage(
             task.id,
             "assistant",
-            buildAwaitingApprovalStatus(command, assessment.reason, responseLanguage),
+            buildAwaitingApprovalStatus(command, assessment.reason, responseLanguage, requiresAdmin),
             statusMeta("awaiting_approval", {
               ...bindingMeta,
               terminalCommand: command,
@@ -2001,54 +2080,7 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
       }
     }
 
-    await store.addMessage(
-      task.id,
-      createMessage(
-        task.id,
-        "assistant",
-        describeTerminalAction(command, responseLanguage),
-        statusMeta("running", bindingMeta),
-      ),
-      "running",
-    );
-    const result = await runCommand(command);
-    const terminalEntry = createTerminalEntry(
-      task.id,
-      command,
-      result.output,
-      result.exitCode,
-      result.exitCode === 0 ? "completed" : "failed",
-    );
-    await store.addTerminalEntry(
-      task.id,
-      terminalEntry,
-      result.exitCode === 0 ? "succeeded" : "failed",
-    );
-    await store.addMessage(
-      task.id,
-      createMessage(
-        task.id,
-        "tool",
-        result.output,
-        artifactMeta({ ...bindingMeta, terminalCommand: command, terminalEntryId: terminalEntry.id }),
-      ),
-      result.exitCode === 0 ? "succeeded" : "failed",
-    );
-    await store.addMessage(
-      task.id,
-      createMessage(
-        task.id,
-        "assistant",
-        buildCommandFinishedStatus(command, result.exitCode === 0, responseLanguage),
-        statusMeta(result.exitCode === 0 ? "succeeded" : "failed", { ...bindingMeta, terminalEntryId: terminalEntry.id }),
-      ),
-      result.exitCode === 0 ? "succeeded" : "failed",
-    );
-    return {
-      kind: "completed",
-      terminalEntry,
-      succeeded: result.exitCode === 0,
-    };
+    return runTerminalCommand(task, command, responseLanguage, bindingMeta, requiresAdmin);
   }
 
   async function createOperation(
@@ -2227,6 +2259,7 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
     const guardShortcut = raw.match(/^guard\s+(strict|balanced|off)$/i);
     const modelCommand = detectModelCommandIntent(raw);
     const translationIntent = detectTranslationIntent(raw, previousMessages);
+    const openClawDialog = resolveOpenClawDialog(raw, responseLanguage);
 
     if (/^new task$/i.test(raw)) {
       const nextTask = await store.createTask();
@@ -2252,6 +2285,22 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
         createMessage(task.id, "assistant", "Voice control is not available in this build, so there is no voice toggle to change."),
         "idle",
       );
+      return buildSnapshot(task.id);
+    }
+
+    if (openClawDialog) {
+      if (openClawDialog.kind === "message") {
+        await store.addMessage(
+          task.id,
+          createMessage(task.id, "assistant", openClawDialog.message),
+          openClawDialog.level === "warning" ? "failed" : "idle",
+        );
+        return buildSnapshot(task.id);
+      }
+
+      await executeTerminal(currentTask, openClawDialog.command, false, {
+        language: responseLanguage,
+      });
       return buildSnapshot(task.id);
     }
 
@@ -2295,7 +2344,12 @@ export async function createKlavaRuntime(options: CreateRuntimeOptions = {}) {
           createMessage(
             task.id,
             "assistant",
-            buildApprovalResolvedStatus(latestPendingApproval.command, true, responseLanguage),
+            buildApprovalResolvedStatus(
+              latestPendingApproval.command,
+              true,
+              responseLanguage,
+              latestPendingApproval.requiresAdmin,
+            ),
             statusMeta("running", { pendingApprovalId: latestPendingApproval.id, terminalCommand: latestPendingApproval.command }),
           ),
           "running",

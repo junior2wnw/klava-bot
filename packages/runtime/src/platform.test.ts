@@ -34,3 +34,21 @@ test("assessCommand guards macOS package management and elevated shell execution
     reason: "elevated shell execution is guarded",
   });
 });
+
+test("assessCommand distinguishes safe OpenClaw reads from guarded OpenClaw mutations", () => {
+  assert.deepEqual(assessCommand("openclaw channels status"), {
+    kind: "safe",
+  });
+
+  assert.deepEqual(
+    assessCommand("openclaw cron add --name 'Morning brief' --cron '0 7 * * *' --message 'Summarize overnight updates.'"),
+    {
+      kind: "guarded",
+      reason: "OpenClaw trigger changes affect background automation",
+    },
+  );
+
+  assert.deepEqual(assessCommand("openclaw update --dry-run --json"), {
+    kind: "safe",
+  });
+});

@@ -1,4 +1,10 @@
-import type { HealthResponse, LocalRuntimeAdvice, MachineProfile, ProviderSettings } from "@klava/contracts";
+import type {
+  HealthResponse,
+  LocalRuntimeAdvice,
+  MachineProfile,
+  OpenClawBridgeState,
+  ProviderSettings,
+} from "@klava/contracts";
 import { Button, PanelCard } from "@klava/ui";
 import { useAppI18n } from "../../i18n/AppI18n";
 import { getProviderLabel, isProviderReady } from "../providers/providerMeta";
@@ -60,7 +66,46 @@ function formatModelPolicy(
     return t(`model pinned manually in ${providerLabel}`, `Модель выбрана вручную в ${providerLabel}`);
   }
 
-  return t(`${providerLabel} selects the model automatically`, `${providerLabel} подбирает модель автоматически`);
+  return t(
+    `${providerLabel} selects the model automatically`,
+    `${providerLabel} подбирает модель автоматически`,
+  );
+}
+
+function formatOpenClawBridgeMode(
+  openClawState: OpenClawBridgeState | null,
+  t: (english: string, russian: string) => string,
+) {
+  if (!openClawState) {
+    return t("not detected", "не обнаружен");
+  }
+
+  return openClawState.bridgeMode === "embedded_plus_openclaw"
+    ? t("Klava + OpenClaw", "Klava + OpenClaw")
+    : t("Klava only", "Только Klava");
+}
+
+function formatOpenClawGateway(
+  openClawState: OpenClawBridgeState | null,
+  t: (english: string, russian: string) => string,
+) {
+  switch (openClawState?.gatewayStatus) {
+    case "starting":
+      return t("starting", "Р·Р°РїСѓСЃРєР°РµС‚СЃСЏ");
+    case "running":
+      return t("running", "запущен");
+    case "degraded":
+      return t("degraded", "частично доступен");
+    case "stopped":
+      return t("stopped", "остановлен");
+    case "unreachable":
+      return t("unreachable", "недоступен");
+    case "not_installed":
+      return t("not installed", "не установлен");
+    case "unknown":
+    default:
+      return t("unknown", "неизвестно");
+  }
 }
 
 export function DiagnosticsPanel({
@@ -68,19 +113,23 @@ export function DiagnosticsPanel({
   localRuntimeAdvice,
   machineProfile,
   onExportSupportBundle,
+  openClawState,
   provider,
 }: {
   health: HealthResponse | null;
   localRuntimeAdvice: LocalRuntimeAdvice | null;
   machineProfile: MachineProfile | null;
   onExportSupportBundle: () => void;
+  openClawState: OpenClawBridgeState | null;
   provider: ProviderSettings | null;
 }) {
   const { formatDateTime, language, t } = useAppI18n();
   const providerReady = isProviderReady(provider);
   const providerLabel = getProviderLabel(provider, { language });
   const gpuSummary =
-    machineProfile?.gpus.length ? machineProfile.gpus.map((gpu) => gpu.name).join(", ") : t("no GPU detected", "GPU не обнаружен");
+    machineProfile?.gpus.length
+      ? machineProfile.gpus.map((gpu) => gpu.name).join(", ")
+      : t("no GPU detected", "GPU не обнаружен");
 
   return (
     <PanelCard
@@ -123,19 +172,53 @@ export function DiagnosticsPanel({
       <div className="detail-line">
         <span>{t("Endpoint", "API-адрес")}</span>
         <strong className="detail-line__value">
-          {provider?.provider === "gonka" ? t("n/a for GONKA", "н/д для GONKA") : provider?.apiBaseUrl ?? t("not configured", "не настроено")}
+          {provider?.provider === "gonka"
+            ? t("n/a for GONKA", "н/д для GONKA")
+            : provider?.apiBaseUrl ?? t("not configured", "не настроено")}
         </strong>
       </div>
       <div className="detail-line">
         <span>{t("Local runtime", "Локальная ИИ-служба")}</span>
         <strong className="detail-line__value">
-          {provider?.provider === "local" ? getProviderLabel("local", { localRuntime: provider.localRuntime, language }) : t("n/a", "н/д")}
+          {provider?.provider === "local"
+            ? getProviderLabel("local", { localRuntime: provider.localRuntime, language })
+            : t("n/a", "н/д")}
+        </strong>
+      </div>
+      <div className="detail-line">
+        <span>{t("OpenClaw bridge", "OpenClaw bridge")}</span>
+        <strong className="detail-line__value">{formatOpenClawBridgeMode(openClawState, t)}</strong>
+      </div>
+      <div className="detail-line">
+        <span>{t("OpenClaw gateway", "OpenClaw gateway")}</span>
+        <strong className="detail-line__value">{formatOpenClawGateway(openClawState, t)}</strong>
+      </div>
+      <div className="detail-line">
+        <span>{t("Gateway process owner", "Владелец gateway-процесса")}</span>
+        <strong className="detail-line__value">
+          {openClawState
+            ? openClawState.desktopOwnsGatewayProcess
+              ? t("this Klava app", "эта Klava")
+              : t("attached or external", "подключённый или внешний")
+            : t("unknown", "неизвестно")}
+        </strong>
+      </div>
+      <div className="detail-line">
+        <span>{t("OpenClaw browser", "OpenClaw browser")}</span>
+        <strong className="detail-line__value">
+          {openClawState
+            ? openClawState.browserAutomationReady
+              ? t("ready", "готов")
+              : t("not ready", "не готов")
+            : t("unknown", "неизвестно")}
         </strong>
       </div>
       <div className="detail-line">
         <span>{t("Requester", "Адрес requester-сервиса")}</span>
         <strong className="detail-line__value">
-          {provider?.provider === "gonka" ? provider.requesterAddress ?? t("not configured", "не настроено") : t("n/a", "н/д")}
+          {provider?.provider === "gonka"
+            ? provider.requesterAddress ?? t("not configured", "не настроено")
+            : t("n/a", "н/д")}
         </strong>
       </div>
       <div className="detail-line">
@@ -179,7 +262,9 @@ export function DiagnosticsPanel({
       <div className="detail-line">
         <span>{t("Machine", "Машина")}</span>
         <strong className="detail-line__value">
-          {machineProfile ? `${machineProfile.platformLabel}, ${machineProfile.memoryGb.toFixed(1)} ${language === "ru" ? "ГБ ОЗУ" : "GB RAM"}` : t("unknown", "неизвестно")}
+          {machineProfile
+            ? `${machineProfile.platformLabel}, ${machineProfile.memoryGb.toFixed(1)} ${language === "ru" ? "ГБ ОЗУ" : "GB RAM"}`
+            : t("unknown", "неизвестно")}
         </strong>
       </div>
       <div className="detail-line">
@@ -192,7 +277,9 @@ export function DiagnosticsPanel({
       </div>
       <div className="detail-line">
         <span>{t("Local advice", "Рекомендация по локальному запуску")}</span>
-        <strong className="detail-line__value">{localRuntimeAdvice?.summary ?? t("not available", "недоступно")}</strong>
+        <strong className="detail-line__value">
+          {localRuntimeAdvice?.summary ?? t("not available", "недоступно")}
+        </strong>
       </div>
       <div className="detail-line">
         <span>{t("Preferred local", "Итоговая оценка")}</span>

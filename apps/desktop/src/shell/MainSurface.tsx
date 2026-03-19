@@ -1,6 +1,7 @@
-import type { CreateOperationRequest, GuardMode, SurfaceMode, TaskDetail } from "@klava/contracts";
+import type { CreateOperationRequest, GuardMode, OpenClawBridgeState, SurfaceMode, TaskDetail } from "@klava/contracts";
 import { Button, ShellRegion } from "@klava/ui";
 import { ChatSurface } from "../features/chat/ChatSurface";
+import { OpenClawSurface } from "../features/openclaw/OpenClawSurface";
 import { ProSurface } from "../features/pro/ProSurface";
 import { TerminalSurface } from "../features/terminal/TerminalSurface";
 import { useAppI18n } from "../i18n/AppI18n";
@@ -18,6 +19,11 @@ export function MainSurface({
   onCreateOperation,
   onAdvanceOperation,
   onContinueAgent,
+  openClawState,
+  onRefreshOpenClaw,
+  onOpenOpenClawWindow,
+  onStartOpenClawGateway,
+  onStopOpenClawGateway,
 }: {
   busy: boolean;
   onApprove: (approvalId: string) => Promise<void>;
@@ -31,17 +37,23 @@ export function MainSurface({
   onCreateOperation: (payload: CreateOperationRequest) => Promise<void>;
   onAdvanceOperation: (operationId: string) => Promise<void>;
   onContinueAgent: (agentRunId: string) => Promise<void>;
+  openClawState: OpenClawBridgeState | null;
+  onRefreshOpenClaw: () => Promise<void>;
+  onOpenOpenClawWindow: () => Promise<void>;
+  onStartOpenClawGateway: () => Promise<void>;
+  onStopOpenClawGateway: () => Promise<void>;
 }) {
   const { t } = useAppI18n();
   const surfaceOptions: Array<{ id: SurfaceMode; label: string }> = [
     { id: "chat", label: t("Chat", "Чат") },
     { id: "terminal", label: t("Terminal", "Терминал") },
     { id: "pro", label: "Pro" },
+    { id: "openclaw", label: "OpenClaw" },
   ];
 
   return (
     <ShellRegion
-      title={task?.title ?? t("Main Surface", "Основная панель")}
+      title={surfaceMode === "openclaw" ? "OpenClaw" : task?.title ?? t("Main Surface", "Основная панель")}
       actions={
         <div className="surface-tabs">
           {surfaceOptions.map((option) => (
@@ -57,7 +69,16 @@ export function MainSurface({
         </div>
       }
     >
-      {!task ? (
+      {surfaceMode === "openclaw" ? (
+        <OpenClawSurface
+          busy={busy}
+          state={openClawState}
+          onRefresh={onRefreshOpenClaw}
+          onOpenControlUi={onOpenOpenClawWindow}
+          onStartGateway={onStartOpenClawGateway}
+          onStopGateway={onStopOpenClawGateway}
+        />
+      ) : !task ? (
         <div className="empty-state">{t("No task selected.", "Задача не выбрана.")}</div>
       ) : surfaceMode === "terminal" ? (
         <TerminalSurface busy={busy} task={task} onRunCommand={onRunTerminal} onSetGuardMode={onSetGuardMode} />

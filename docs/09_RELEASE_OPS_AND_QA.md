@@ -11,11 +11,10 @@ The release system exists to protect three things:
 
 ## Release Model
 
-The product should ship a small number of artifacts:
-- `Desktop Shell`
-- `Runtime Bundle`
-- optional `Privileged Helper`
-- optional module assets such as voice packs
+The default release should ship one primary desktop artifact:
+- `Klava.exe` / packaged desktop app with the bundled OpenClaw runtime already inside;
+- optional `Privileged Helper` only if a privileged workflow exists;
+- optional module assets such as voice packs.
 
 Rule:
 - do not create more release complexity than the product actually needs.
@@ -47,6 +46,8 @@ Always required:
 Required before release:
 - app starts;
 - runtime connects;
+- bundled OpenClaw gateway auto-starts;
+- bundled OpenClaw gateway stops on app exit when desktop-owned;
 - first useful task works;
 - guarded approval flow works;
 - packaged build launches.
@@ -81,6 +82,33 @@ Klava is ready to ship when:
 - secrets stay out of transcript and logs;
 - approvals behave predictably;
 - diagnostics are understandable.
+- the desktop does not require a separate global `openclaw` install.
+
+## Windows One-Exe Checklist
+
+Before shipping a Windows build:
+1. `npm run check`
+2. `npm test`
+3. `npm run build`
+4. `npm run dist:win`
+
+Then verify release contents:
+- `apps/desktop/release/win-unpacked/resources/app.asar` exists;
+- `apps/desktop/release/win-unpacked/resources/app.asar.unpacked/vendor/openclaw-runtime/` exists;
+- bundled `node.exe` and `openclaw` entrypoint are present.
+
+Then verify runtime behavior:
+- the packaged desktop can resolve the bundled OpenClaw runtime;
+- the packaged runtime answers `openclaw --version`;
+- the packaged gateway responds on the configured loopback port;
+- closing the desktop stops the desktop-owned gateway.
+
+Manual interactive smoke still matters:
+- launch the packaged app normally from the desktop shell;
+- confirm the UI window appears;
+- confirm diagnostics show bundled runtime and gateway ownership;
+- open the Control UI from inside Klava;
+- close the app and verify the gateway is no longer reachable.
 
 ## Observability
 
@@ -109,6 +137,7 @@ Support bundle should include:
 - sanitized logs;
 - environment basics;
 - task metadata summary.
+- OpenClaw bridge state and bundled runtime metadata.
 
 Support bundle should exclude:
 - raw secrets;

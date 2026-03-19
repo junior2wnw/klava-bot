@@ -1,6 +1,12 @@
 import path from "node:path";
 import { app, BrowserWindow, dialog } from "electron";
+import { registerDesktopIpcHandlers } from "./ipc";
 import { appendDesktopLog, ensureRuntime, getDesktopLogPath, stopRuntime } from "./openclaw";
+
+let mainWindow: BrowserWindow | null = null;
+let mainWindowCreationPromise: Promise<BrowserWindow> | null = null;
+let shutdownPromise: Promise<void> | null = null;
+let allowQuitAfterShutdown = false;
 
 function registerProcessDiagnostics() {
   process.on("uncaughtException", (error) => {
@@ -18,6 +24,19 @@ function registerProcessDiagnostics() {
 }
 
 async function createMainWindow() {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    if (!mainWindow.isVisible()) {
+      mainWindow.show();
+    }
+    mainWindow.focus();
+    return mainWindow;
+  }
+
+  if (mainWindowCreationPromise) {
+    return mainWindowCreationPromise;
+  }
+
+  mainWindowCreationPromise = (async () => {
   await ensureRuntime();
   const appRoot = app.getAppPath();
   await appendDesktopLog(`Creating main window from ${appRoot}.`);
@@ -37,6 +56,7 @@ async function createMainWindow() {
       nodeIntegration: false,
     },
   });
+  mainWindow = win;
 
   if (process.platform !== "darwin") {
     win.removeMenu();
@@ -60,6 +80,12 @@ async function createMainWindow() {
     void appendDesktopLog(`renderer console[${level}] ${sourceId}:${line} ${message}`);
   });
 
+  win.on("closed", () => {
+    if (mainWindow === win) {
+      mainWindow = null;
+    }
+  });
+
   win.webContents.on("render-process-gone", (_event, details) => {
     void appendDesktopLog(`renderer process gone: reason=${details.reason} exitCode=${details.exitCode}`);
   });
@@ -69,18 +95,55 @@ async function createMainWindow() {
     await appendDesktopLog(`Loading renderer from dev server ${devServerUrl}.`);
     await win.loadURL(devServerUrl);
     win.webContents.openDevTools({ mode: "detach" });
-    return;
+    return win;
   }
 
   await appendDesktopLog("Loading packaged renderer from dist/index.html.");
   await win.loadFile(path.join(appRoot, "dist", "index.html"));
+  return win;
+  })()
+    .finally(() => {
+      mainWindowCreationPromise = null;
+    });
+
+  return mainWindowCreationPromise;
+}
+
+function beginGracefulShutdown() {
+  if (shutdownPromise) {
+    return shutdownPromise;
+  }
+
+  shutdownPromise = (async () => {
+    await appendDesktopLog("Desktop shutdown requested; stopping managed services before exit.");
+    try {
+      await stopRuntime();
+      await appendDesktopLog("Managed services stopped cleanly.");
+    } catch (error) {
+      await appendDesktopLog(`Managed shutdown failed: ${error instanceof Error ? error.stack ?? error.message : String(error)}`);
+      throw error;
+    }
+  })()
+    .finally(() => {
+      shutdownPromise = null;
+    });
+
+  return shutdownPromise;
 }
 
 registerProcessDiagnostics();
+registerDesktopIpcHandlers();
 
 app.whenReady().then(async () => {
   await appendDesktopLog("Electron app ready.");
-  await createMainWindow();
+  try {
+    await createMainWindow();
+  } catch (error) {
+    const message = error instanceof Error ? error.stack ?? error.message : String(error);
+    await appendDesktopLog(`createMainWindow failed: ${message}`);
+    dialog.showErrorBox("Klava startup failed", `${message}\n\nDesktop log: ${getDesktopLogPath()}`);
+    app.exit(1);
+  }
 });
 
 app.on("window-all-closed", () => {
@@ -90,11 +153,31 @@ app.on("window-all-closed", () => {
 });
 
 app.on("activate", () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    if (!mainWindow.isVisible()) {
+      mainWindow.show();
+    }
+    mainWindow.focus();
+    return;
+  }
+
   if (BrowserWindow.getAllWindows().length === 0) {
     void createMainWindow();
   }
 });
 
-app.on("before-quit", async () => {
-  await stopRuntime();
+app.on("before-quit", (event) => {
+  if (allowQuitAfterShutdown) {
+    return;
+  }
+
+  event.preventDefault();
+  void beginGracefulShutdown()
+    .catch(() => {
+      // Shutdown failures are already logged; still allow the process to exit.
+    })
+    .finally(() => {
+      allowQuitAfterShutdown = true;
+      app.quit();
+    });
 });

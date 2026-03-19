@@ -6,11 +6,14 @@ This document turns the strategy into an implementation sequence that another AI
 
 ## Current Repository Reality
 
-This repository now contains a working MVP foundation:
+This repository now contains a working desktop foundation:
 - npm workspace monorepo;
 - Electron + React desktop shell;
 - local runtime package with tasks, persistence, approvals, secrets, and diagnostics;
-- desktop packaging for Windows and macOS.
+- desktop packaging for Windows and macOS;
+- bundled OpenClaw runtime vendored into desktop builds;
+- dialog-level `/openclaw ...` pass-through for forward compatibility;
+- desktop bridge diagnostics and Control UI handoff.
 
 The next work should extend and harden this baseline rather than reset it.
 
@@ -18,7 +21,7 @@ The next work should extend and harden this baseline rather than reset it.
 
 Unless the user says otherwise, every AI should assume:
 - `OpenClaw` is the core runtime;
-- `Klava` is a thin desktop shell around it;
+- `Klava` is a thin desktop shell around it, but the desktop bundle already carries a pinned OpenClaw runtime;
 - Windows is the first target;
 - `Electron + React + TypeScript + Vite` is the shell stack;
 - npm workspaces are preferred over adding extra tooling;
@@ -37,7 +40,7 @@ Unless the user says otherwise, every AI should assume:
 
 Build in this order:
 1. preserve the existing workspace and shell frame;
-2. harden the runtime boundary and `OpenClaw` integration seam;
+2. harden the runtime boundary, bundled OpenClaw lifecycle, and chat integration seam;
 3. polish onboarding and diagnostics;
 4. improve supportability and packaging;
 5. add optional modules one by one.
@@ -145,9 +148,9 @@ Create:
 - `apps/desktop/src/features/diagnostics/`
 
 Definition of done:
-- the shell can detect or start the local runtime reliably;
+- the shell can detect, start, stop, and recover the bundled OpenClaw runtime reliably;
 - the `OpenClaw` seam remains explicit;
-- the UI shows runtime health, version, and connection state.
+- the UI shows runtime health, version, connection state, and gateway ownership.
 
 ### Phase 2. Polish Onboarding And First Useful Task
 
@@ -200,7 +203,7 @@ Create or extend:
 Definition of done:
 - packaged app launches reliably;
 - diagnostics are readable;
-- release checks verify the basic product path;
+- release checks verify the basic product path and bundled OpenClaw lifecycle;
 - branded assets and startup smoke checks are in place.
 
 ### Phase 6. Add Optional Modules Only After Core Is Stable
@@ -294,6 +297,13 @@ Any AI continuing this project should do the following in order:
 4. Read this file.
 5. Read `design-system/MASTER.md` if it exists.
 6. Work only on the next incomplete phase.
+
+When touching OpenClaw integration, the AI must verify these specific contracts:
+- one packaged desktop app should work without a separate global `openclaw` install;
+- chat-side `openclaw ...` commands should route into the bundled runtime first;
+- the desktop should auto-start the bundled gateway when needed;
+- the desktop should stop the desktop-owned gateway on shutdown;
+- recovery after crash should adopt an already running managed gateway instead of spawning duplicates.
 
 Before editing the fork, the AI must answer:
 - why can this not be done in the shell;

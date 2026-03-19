@@ -353,6 +353,15 @@ pre {
   place-items: center;
 }
 
+.app-fatal-stack {
+  width: min(1120px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  overflow: auto;
+}
+
 .model-dock {
   position: relative;
   z-index: 1;
@@ -482,6 +491,88 @@ pre {
 
 .chat-surface {
   gap: 10px;
+}
+
+.openclaw-surface {
+  gap: 12px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.openclaw-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.openclaw-summary {
+  margin: 12px 0 0;
+  color: rgba(237, 227, 215, 0.70);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.openclaw-capability {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 245, 235, 0.04);
+  background: rgba(255, 245, 235, 0.02);
+}
+
+.openclaw-capability__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.openclaw-capability__head strong {
+  color: rgba(237, 227, 215, 0.82);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.openclaw-capability p {
+  margin: 0;
+  color: rgba(237, 227, 215, 0.42);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.openclaw-notes {
+  display: grid;
+  gap: 8px;
+}
+
+.openclaw-notes p {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 245, 235, 0.04);
+  background: rgba(255, 245, 235, 0.02);
+  color: rgba(237, 227, 215, 0.52);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.openclaw-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.openclaw-actions code {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 245, 235, 0.04);
+  background: rgba(0, 0, 0, 0.22);
+  color: rgba(237, 227, 215, 0.70);
+  font-size: 11px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
 .chat-transcript {
@@ -1329,6 +1420,11 @@ pre {
   }
 
   .app-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .app-fatal-stack,
+  .openclaw-grid {
     grid-template-columns: 1fr;
   }
 

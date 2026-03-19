@@ -1269,6 +1269,109 @@ test("natural-language package installs route into guarded terminal approvals", 
   }
 });
 
+test("openclaw status requests route through chat into a safe upstream CLI command", async () => {
+  await withTempAppPaths(async (paths) => {
+    const executedCommands: string[] = [];
+    const runtime = await createKlavaRuntime({
+      paths,
+      commandRunner: async (command: string) => {
+        executedCommands.push(command);
+        return {
+          output: `ok: ${command}`,
+          exitCode: 0,
+        };
+      },
+    });
+
+    try {
+      const workspace = await runtime.server.inject({
+        method: "GET",
+        url: "/api/workspace",
+      });
+      const taskId = workspace.json().selectedTask.id as string;
+
+      const response = await runtime.server.inject({
+        method: "POST",
+        url: `/api/tasks/${taskId}/messages`,
+        payload: {
+          content: "status openclaw",
+        },
+      });
+
+      assert.equal(response.statusCode, 200);
+      const snapshot = response.json();
+      assert.equal(executedCommands.at(-1), "openclaw status --deep");
+      assert.equal(snapshot.selectedTask.approvals.length, 0);
+      assert.equal(snapshot.selectedTask.terminalEntries.at(-1).command, "openclaw status --deep");
+      assert.match(snapshot.selectedTask.terminalEntries.at(-1).output, /ok: openclaw status --deep/i);
+    } finally {
+      await runtime.stop();
+    }
+  });
+});
+
+test("daily trigger requests create guarded OpenClaw cron approvals through chat", async () => {
+  await withTempAppPaths(async (paths) => {
+    const runtime = await createKlavaRuntime({ paths });
+
+    try {
+      const workspace = await runtime.server.inject({
+        method: "GET",
+        url: "/api/workspace",
+      });
+      const taskId = workspace.json().selectedTask.id as string;
+
+      const response = await runtime.server.inject({
+        method: "POST",
+        url: `/api/tasks/${taskId}/messages`,
+        payload: {
+          content: "every day at 07:00 summarize overnight updates",
+        },
+      });
+
+      assert.equal(response.statusCode, 200);
+      const snapshot = response.json();
+      assert.equal(snapshot.selectedTask.status, "awaiting_approval");
+      assert.equal(snapshot.selectedTask.approvals.length, 1);
+      assert.match(snapshot.selectedTask.approvals[0].command, /^openclaw cron add /i);
+      assert.match(snapshot.selectedTask.approvals[0].command, /--cron '0 7 \* \* \*'/i);
+      assert.match(snapshot.selectedTask.approvals[0].command, /--message 'summarize overnight updates'/i);
+    } finally {
+      await runtime.stop();
+    }
+  });
+});
+
+test("social channel connect requests return OpenClaw setup guidance instead of faking an interactive login", async () => {
+  await withTempAppPaths(async (paths) => {
+    const runtime = await createKlavaRuntime({ paths });
+
+    try {
+      const workspace = await runtime.server.inject({
+        method: "GET",
+        url: "/api/workspace",
+      });
+      const taskId = workspace.json().selectedTask.id as string;
+
+      const response = await runtime.server.inject({
+        method: "POST",
+        url: `/api/tasks/${taskId}/messages`,
+        payload: {
+          content: "connect telegram",
+        },
+      });
+
+      assert.equal(response.statusCode, 200);
+      const snapshot = response.json();
+      assert.equal(snapshot.selectedTask.terminalEntries.length, 0);
+      assert.match(snapshot.selectedTask.messages.at(-1).content, /channels add --channel telegram --token/i);
+      assert.match(snapshot.selectedTask.messages.at(-1).content, /dashboard/i);
+    } finally {
+      await runtime.stop();
+    }
+  });
+});
+
 test("russian computer-diagnostic requests return localized structured output", async () => {
   const originalHandle = ComputerOperator.prototype.handle;
 
@@ -1761,6 +1864,80 @@ test("guarded terminal commands create approvals and rejection returns the task 
       const rejectedSnapshot = rejectResponse.json();
       assert.equal(rejectedSnapshot.selectedTask.status, "idle");
       assert.equal(rejectedSnapshot.selectedTask.approvals[0].status, "rejected");
+    } finally {
+      await runtime.stop();
+    }
+  });
+});
+
+test("approved Windows admin commands surface UAC requirement and use the elevated runner", async () => {
+  await withTempAppPaths(async (paths) => {
+    let normalRunnerCalls = 0;
+    let elevatedRunnerCalls = 0;
+    const runtime = await createKlavaRuntime({
+      paths,
+      commandRunner: async (command: string) => {
+        normalRunnerCalls += 1;
+        return {
+          output: `normal runner: ${command}`,
+          exitCode: 0,
+        };
+      },
+      elevatedCommandRunner: async (command: string) => {
+        elevatedRunnerCalls += 1;
+        return {
+          output: `elevated runner: ${command}`,
+          exitCode: 0,
+        };
+      },
+    });
+
+    try {
+      const createTaskResponse = await runtime.server.inject({
+        method: "POST",
+        url: "/api/tasks",
+        payload: {
+          title: "UAC flow",
+        },
+      });
+
+      assert.equal(createTaskResponse.statusCode, 200);
+      const taskId = createTaskResponse.json().selectedTask.id as string;
+
+      const guardedResponse = await runtime.server.inject({
+        method: "POST",
+        url: `/api/tasks/${taskId}/terminal`,
+        payload: {
+          command: "winget install example-package",
+        },
+      });
+
+      assert.equal(guardedResponse.statusCode, 200);
+      const guardedSnapshot = guardedResponse.json();
+      const approval = guardedSnapshot.selectedTask.approvals[0] as {
+        id: string;
+        requiresAdmin: boolean;
+      };
+      assert.equal(approval.requiresAdmin, process.platform === "win32");
+
+      const approveResponse = await runtime.server.inject({
+        method: "POST",
+        url: `/api/approvals/${approval.id}/approve`,
+      });
+
+      assert.equal(approveResponse.statusCode, 200);
+      const approvedSnapshot = approveResponse.json();
+      assert.equal(approvedSnapshot.selectedTask.approvals[0].status, "approved");
+
+      if (process.platform === "win32") {
+        assert.equal(elevatedRunnerCalls, 1);
+        assert.equal(normalRunnerCalls, 0);
+        assert.match(approvedSnapshot.selectedTask.terminalEntries.at(-1).output, /elevated runner/i);
+      } else {
+        assert.equal(elevatedRunnerCalls, 0);
+        assert.equal(normalRunnerCalls, 1);
+        assert.match(approvedSnapshot.selectedTask.terminalEntries.at(-1).output, /normal runner/i);
+      }
     } finally {
       await runtime.stop();
     }

@@ -20,31 +20,33 @@ Default decision order:
 ## Simplified Topology
 
 ```text
-+-----------------------+
-| Klava Desktop Shell   |
-| Electron + React UI   |
-+-----------+-----------+
-            |
-            v
-+-----------------------+
-| Thin Klava Adapter    |
-| typed contracts       |
-| health + state sync   |
-+-----------+-----------+
-            |
-            v
-+-----------------------+
-| OpenClaw Core Runtime |
-| tasks, tools, agents  |
-| providers, sessions   |
-+-----+---------+-------+
-      |         |
-      v         v
-+-----------+  +-------------------+
-| Vault/UI  |  | Optional Modules  |
-| wrappers  |  | voice, helper,    |
-| approvals |  | cloud, packs      |
-+-----------+  +-------------------+
++---------------------------+
+| Klava Desktop Shell       |
+| Electron + React UI       |
++-------------+-------------+
+              |
+              v
++---------------------------+
+| Thin Klava Adapter        |
+| typed contracts           |
+| approvals + health sync   |
+| dialog -> /openclaw path  |
++-------------+-------------+
+              |
+              v
++---------------------------+
+| Bundled OpenClaw Runtime  |
+| vendored upstream package |
+| bundled node launcher     |
+| managed gateway lifecycle |
++-----+--------------+------+
+      |              |
+      v              v
++-----------+   +-------------------+
+| Vault/UI  |   | Optional Modules  |
+| wrappers  |   | voice, helper,    |
+| approvals |   | cloud, packs      |
++-----------+   +-------------------+
 ```
 
 ## Mandatory Building Blocks
@@ -74,6 +76,21 @@ This is a thin product shell responsible for:
 Rule:
 - the shell must not become a second runtime.
 
+### 2a. Managed Bundled OpenClaw Runtime
+
+Current product reality on Windows:
+- the desktop build vendors a pinned upstream `openclaw` package into the app bundle;
+- the desktop also carries a bundled `node.exe` launcher for that runtime;
+- startup configures process env so both shell-side probes and chat-side `openclaw ...` commands resolve to the bundled runtime first.
+
+Lifecycle rules:
+- opening `Klava.exe` should automatically start the bundled OpenClaw gateway in the background;
+- if Klava crashes and the managed gateway is still alive, the next launch should adopt that process instead of spawning a duplicate;
+- closing the desktop should stop the desktop-owned gateway before the app exits;
+- the shell must distinguish "desktop manages the bridge" from "this exact gateway process is owned by this desktop instance".
+
+This preserves the one-`exe` product promise without rewriting upstream OpenClaw into a separate local clone.
+
 ### 3. Thin Klava Adapter
 
 This is the only required bridge between the shell and `OpenClaw`.
@@ -83,6 +100,7 @@ Responsibilities:
 - runtime bootstrap;
 - health and version reporting;
 - minimal state normalization for the UI.
+- dialog mapping for `/openclaw ...` pass-through and guarded OpenClaw mutations.
 
 Rule:
 - keep the adapter narrow enough that upstream sync stays cheap.
@@ -117,6 +135,7 @@ Rule:
 - Fork patches must stay near zero and be easy to explain.
 - New capability should land as a wrapper or module before any fork edit is considered.
 - A feature path should be understandable by an average programmer without reading the full repo.
+- When a future upstream capability already exists in CLI or gateway form, Klava should expose it through pass-through, bridge state, or Control UI embedding before considering any local reimplementation.
 
 ## UI Architecture
 
@@ -156,9 +175,14 @@ Required qualities:
 
 Use the simplest path that works:
 - `Electron` shell;
-- local `OpenClaw` runtime;
+- bundled `OpenClaw` runtime inside the desktop package;
 - installer and updater as thin product layers;
 - no hidden platform complexity until it is required.
+
+Default Windows artifact:
+- one desktop package that already contains the pinned OpenClaw runtime;
+- no separate global `openclaw` installation required for normal use;
+- all lifecycle control should happen from the desktop shell.
 
 ### macOS Later
 

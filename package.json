@@ -37,7 +37,7 @@
   "scripts": {
     "dev": "node ./scripts/dev.mjs",
     "check": "node ./scripts/run-workspaces.mjs check @klava/contracts @klava/runtime @klava/ui @klava/desktop",
-    "test": "node ./scripts/run-workspaces.mjs test @klava/runtime",
+    "test": "node ./scripts/run-workspaces.mjs test @klava/runtime @klava/desktop",
     "build": "node ./scripts/run-workspaces.mjs build @klava/contracts @klava/runtime @klava/ui @klava/desktop",
     "capture:preview": "node ./scripts/capture-preview.mjs",
     "dist:win": "node ./scripts/release.mjs win",
